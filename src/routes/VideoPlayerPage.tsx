@@ -1,0 +1,108 @@
+import { useEffect, useState } from "react";
+import { Box, CircularProgress, Typography } from "@mui/material";
+import { useParams } from "react-router-dom";
+import type { LibraryItem } from "../../shared/types";
+import { fetchItem } from "../lib/api";
+
+export function VideoPlayerPage() {
+  const { itemId } = useParams();
+  const [item, setItem] = useState<LibraryItem | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!itemId) {
+      setLoading(false);
+      setError("Video non trovato.");
+      return () => {
+        active = false;
+      };
+    }
+
+    setLoading(true);
+    setError(null);
+
+    void fetchItem(itemId)
+      .then((nextItem) => {
+        if (!active) {
+          return;
+        }
+
+        setItem(nextItem);
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        setError("Video non disponibile su questo host.");
+        setItem(null);
+      })
+      .finally(() => {
+        if (!active) {
+          return;
+        }
+
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [itemId]);
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          bgcolor: "#04090f"
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!item || item.kind !== "video" || !item.streamUrl) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          bgcolor: "#04090f",
+          px: 3
+        }}
+      >
+        <Typography color="common.white" variant="h5" textAlign="center">
+          {error ?? "Questo contenuto non e un video riproducibile."}
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ minHeight: "100vh", bgcolor: "#000" }}>
+      <Box
+        component="video"
+        controls
+        autoPlay
+        playsInline
+        src={item.streamUrl}
+        aria-label={`Player video ${item.name}`}
+        sx={{
+          width: "100vw",
+          height: "100vh",
+          display: "block",
+          bgcolor: "#000",
+          objectFit: "contain"
+        }}
+      />
+    </Box>
+  );
+}

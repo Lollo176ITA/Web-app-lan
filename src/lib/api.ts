@@ -27,6 +27,10 @@ export function fetchItems() {
   return readJson<LibraryItem[]>("/api/items");
 }
 
+export function fetchItem(itemId: string) {
+  return readJson<LibraryItem>(`/api/items/${itemId}`);
+}
+
 export async function fetchSnapshot() {
   const [session, items] = await Promise.all([fetchSession(), fetchItems()]);
   return { session, items };

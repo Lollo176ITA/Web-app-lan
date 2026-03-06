@@ -119,6 +119,23 @@ function buildPreviewShareUrl(lanUrl: string, itemId: string) {
   return shareUrl.toString();
 }
 
+function buildVideoPlayerUrl(lanUrl: string, itemId: string) {
+  const browserUrl = new URL(window.location.href);
+  const sessionUrl = new URL(lanUrl);
+  const shareUrl = new URL(browserUrl.href);
+
+  if (browserUrl.hostname === "localhost" || browserUrl.hostname === "127.0.0.1") {
+    shareUrl.protocol = sessionUrl.protocol;
+    shareUrl.hostname = sessionUrl.hostname;
+  }
+
+  shareUrl.pathname = `/player/${itemId}`;
+  shareUrl.search = "";
+  shareUrl.hash = "";
+
+  return shareUrl.toString();
+}
+
 export function AppPage() {
   const [searchParams] = useSearchParams();
   const initialLinkedItemId = searchParams.get("item");
@@ -403,7 +420,10 @@ export function AppPage() {
 
     setQrItemTarget({
       item,
-      url: buildPreviewShareUrl(session.lanUrl, item.id)
+      url:
+        item.kind === "video"
+          ? buildVideoPlayerUrl(session.lanUrl, item.id)
+          : buildPreviewShareUrl(session.lanUrl, item.id)
     });
   }
 

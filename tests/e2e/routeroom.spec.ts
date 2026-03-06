@@ -22,11 +22,13 @@ test("landing and library manager handle folder uploads, previews, layouts, and 
   await page.getByLabel("Azioni sample-video.webm").first().click();
   await page.getByRole("menuitem", { name: "Mostra QR code" }).click();
   await expect(page.getByRole("heading", { name: "QR code player video" })).toBeVisible();
-  const qrShareUrl = await page.locator("text=/http:\\/\\/.*\\/app\\?item=/").textContent();
-  const qrItemId = new URL(qrShareUrl ?? "").searchParams.get("item");
-  expect(qrItemId).toBeTruthy();
-  await page.goto(`/app?item=${qrItemId}`);
+  const qrShareUrl = await page.locator("text=/http:\\/\\/.*\\/player\\//").textContent();
+  const qrVideoId = new URL(qrShareUrl ?? "").pathname.split("/").at(-1);
+  expect(qrVideoId).toBeTruthy();
+  await page.goto(`/player/${qrVideoId}`);
   await expect(page.locator("video")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Routeroom LAN" })).toHaveCount(0);
+  await page.goto("/app");
 
   await page.getByRole("button", { name: "Nuova cartella" }).click();
   await page.getByLabel("Nome cartella").fill("Salotto demo");

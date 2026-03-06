@@ -235,6 +235,17 @@ export async function createApp(options: CreateAppOptions = {}) {
     response.json(store.getItems());
   });
 
+  app.get("/api/items/:id", (request, response) => {
+    const item = store.findItem(request.params.id);
+
+    if (!item) {
+      response.status(404).json({ message: "Elemento non trovato." });
+      return;
+    }
+
+    response.json(item);
+  });
+
   app.post("/api/folders", async (request, response, next) => {
     try {
       const payload = request.body as CreateFolderRequest;
