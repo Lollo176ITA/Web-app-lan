@@ -1,13 +1,12 @@
+import { useEffect, useState } from "react";
+import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import ArrowOutwardRoundedIcon from "@mui/icons-material/ArrowOutwardRounded";
 import CloudOffRoundedIcon from "@mui/icons-material/CloudOffRounded";
-import DevicesRoundedIcon from "@mui/icons-material/DevicesRounded";
 import FlashOnRoundedIcon from "@mui/icons-material/FlashOnRounded";
-import LanRoundedIcon from "@mui/icons-material/LanRounded";
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
+import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import {
-  AppBar,
-  Avatar,
   Box,
   Button,
   Card,
@@ -16,11 +15,15 @@ import {
   Chip,
   Container,
   Stack,
-  Toolbar,
-  Typography
+  Typography,
+  Avatar
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import { Link as RouterLink } from "react-router-dom";
+import { PageHeader } from "../components/PageHeader";
+import { openLibraryEvents } from "../lib/api";
+
+type LiveState = "live" | "fallback" | "connecting";
 
 const featureCards = [
   {
@@ -40,49 +43,48 @@ const featureCards = [
   }
 ];
 
-const proofPanels = [
-  {
-    title: "Shell operativa live",
-    body: "Libreria popolata, preview media e pannello dettaglio in chiave Material.",
-    image: "/screenshots/routeroom-app-desktop.png"
-  },
-  {
-    title: "Controllo mobile in rete locale",
-    body: "Filtri e contenuti restano leggibili anche su smartphone.",
-    image: "/screenshots/routeroom-app-mobile.png"
-  }
-];
-
 export function LandingPage() {
+  const [liveState, setLiveState] = useState<LiveState>("connecting");
+  const theme = useTheme();
+
+  useEffect(() => {
+    const source = openLibraryEvents(
+      () => {
+        setLiveState("live");
+      },
+      () => {
+        setLiveState("fallback");
+      },
+      () => {
+        setLiveState("live");
+      }
+    );
+
+    return () => {
+      source.close();
+    };
+  }, []);
+
   return (
     <Box sx={{ pb: 8 }}>
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
-        <AppBar
-          position="static"
-          color="transparent"
-          sx={{
-            borderRadius: { xs: 3, md: 4 },
-            px: { xs: 0.5, md: 1.5 }
-          }}
-        >
-          <Toolbar
-            sx={{
-              justifyContent: "space-between",
-              alignItems: { xs: "flex-start", md: "center" },
-              flexDirection: { xs: "column", sm: "row" },
-              gap: 1.5,
-              minHeight: { xs: 76, md: 88 },
-              py: { xs: 1.5, sm: 0 }
-            }}
-          >
-            <Stack direction="row" spacing={1.5} alignItems="center">
-              <Avatar sx={{ bgcolor: "primary.main" }}>
-                <LanRoundedIcon />
-              </Avatar>
-              <Typography variant="h6">Routeroom</Typography>
-            </Stack>
-          </Toolbar>
-        </AppBar>
+        <PageHeader
+          title="Routeroom"
+          subtitle="LAN media relay"
+          trailing={
+            <Avatar
+              sx={{
+                width: 40,
+                height: 40,
+                bgcolor:
+                  liveState === "live" ? alpha(theme.palette.secondary.main, 0.18) : alpha("#10273a", 0.08),
+                color: liveState === "live" ? "secondary.main" : "text.secondary"
+              }}
+            >
+              {liveState === "live" ? <WifiRoundedIcon /> : <AutorenewRoundedIcon />}
+            </Avatar>
+          }
+        />
 
         <Card sx={{ mt: 3, overflow: "hidden" }}>
           <CardContent sx={{ p: { xs: 2.5, md: 4.5 } }}>
@@ -98,7 +100,11 @@ export function LandingPage() {
                 <Chip
                   icon={<CloudOffRoundedIcon />}
                   label="Solo rete locale, nessun passaggio cloud"
-                  sx={{ alignSelf: "flex-start", bgcolor: alpha("#1769aa", 0.1) }}
+                  sx={{
+                    alignSelf: "flex-start",
+                    bgcolor: alpha("#1769aa", 0.1),
+                    boxShadow: `inset 0 0 0 1px ${alpha("#1769aa", 0.08)}`
+                  }}
                 />
                 <Typography variant="h1">
                   Trasferisci file e guarda media alla velocità della tua LAN.
@@ -107,8 +113,21 @@ export function LandingPage() {
                   Routeroom trasforma un laptop o un desktop in un hub locale per file, video, audio e documenti. Avvii il server, condividi l’URL del router e tutti i device sulla stessa rete entrano subito.
                 </Typography>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-                  <Button component={RouterLink} to="/app" size="large" variant="contained" endIcon={<ArrowOutwardRoundedIcon />}>
+                  <Button
+                    component={RouterLink}
+                    to="/app"
+                    size="large"
+                    variant="contained"
+                    endIcon={<ArrowOutwardRoundedIcon />}
+                    sx={{
+                      background: "linear-gradient(135deg, #1769aa 0%, #0f9d94 100%)",
+                      boxShadow: "0 18px 34px rgba(23, 105, 170, 0.22)"
+                    }}
+                  >
                     Apri la LAN
+                  </Button>
+                  <Button component={RouterLink} to="/app" size="large" variant="outlined">
+                    Entra nell'app
                   </Button>
                 </Stack>
               </Stack>
@@ -124,13 +143,11 @@ export function LandingPage() {
             </Box>
           </CardContent>
         </Card>
-      </Container>
-
-      <Container id="come-funziona" maxWidth="xl" sx={{ mt: { xs: 4, md: 5 } }}>
         <Box
           sx={{
             display: "grid",
             gap: 2,
+            mt: { xs: 4, md: 5 },
             gridTemplateColumns: { xs: "1fr", md: "repeat(3, minmax(0, 1fr))" }
           }}
         >

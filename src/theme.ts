@@ -51,18 +51,6 @@ export const theme = createTheme({
     }
   },
   components: {
-    MuiAppBar: {
-      styleOverrides: {
-        root: {
-          background: "rgba(255,255,255,0.78)",
-          color: "#10273a",
-          backdropFilter: "blur(20px)",
-          boxShadow: "none",
-          border: `1px solid ${alpha("#1769aa", 0.08)}`,
-          overflow: "hidden"
-        }
-      }
-    },
     MuiButton: {
       defaultProps: {
         disableElevation: true

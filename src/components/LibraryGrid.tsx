@@ -12,7 +12,6 @@ import {
   CardActionArea,
   CardContent,
   CardMedia,
-  Chip,
   Stack,
   Typography
 } from "@mui/material";
@@ -265,22 +264,28 @@ export function LibraryGrid({
                 <Stack spacing={0.75}>
                   <Typography
                     variant="subtitle1"
-                    sx={{ lineHeight: 1.18, wordBreak: "break-word", pr: 4.5 }}
+                    sx={{
+                      pr: 4.5,
+                      minHeight: "2.7em",
+                      lineHeight: 1.35,
+                      overflow: "hidden",
+                      display: "-webkit-box",
+                      WebkitBoxOrient: "vertical",
+                      WebkitLineClamp: 2,
+                      wordBreak: "break-word"
+                    }}
                   >
                     {item.name}
                   </Typography>
 
-                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    <Chip label={config.label} size="small" />
-                    <Chip
-                      label={isFolder ? `${item.childrenCount ?? 0} elementi` : formatBytes(item.sizeBytes)}
-                      size="small"
-                      variant="outlined"
-                    />
-                  </Stack>
+                  <Typography color="text.secondary" variant="body2">
+                    {isFolder
+                      ? `${config.label} · ${item.childrenCount ?? 0} elementi`
+                      : `${config.label} · ${formatBytes(item.sizeBytes)}`}
+                  </Typography>
 
                   <Typography color="text.secondary" variant="body2">
-                    {isFolder ? "Cartella locale" : formatDate(item.createdAt)}
+                    {formatDate(item.createdAt)}
                   </Typography>
                 </Stack>
               </CardContent>

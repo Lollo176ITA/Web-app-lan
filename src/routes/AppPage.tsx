@@ -1,5 +1,4 @@
 import { startTransition, useEffect, useRef, useState } from "react";
-import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import CreateNewFolderRoundedIcon from "@mui/icons-material/CreateNewFolderRounded";
@@ -10,14 +9,12 @@ import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
 import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import {
   Alert,
-  AppBar,
   Avatar,
   Box,
   Button,
   Card,
   CardContent,
   CardHeader,
-  Chip,
   Container,
   Dialog,
   DialogActions,
@@ -33,13 +30,12 @@ import {
   Tab,
   Tabs,
   TextField,
-  Toolbar,
   Typography,
   useMediaQuery
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import QRCode from "qrcode";
-import { Link as RouterLink, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import type {
   ArchiveFormat,
   LibraryItem,
@@ -50,6 +46,7 @@ import type {
 import { FolderExplorer } from "../components/FolderExplorer";
 import { LibraryGrid } from "../components/LibraryGrid";
 import { MediaDetail } from "../components/MediaDetail";
+import { PageHeader } from "../components/PageHeader";
 import { UploadSurface } from "../components/UploadSurface";
 import {
   createArchive,
@@ -430,53 +427,23 @@ export function AppPage() {
   return (
     <Box sx={{ pb: 7 }}>
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
-        <AppBar
-          position="static"
-          color="transparent"
-          sx={{
-            borderRadius: { xs: 3, md: 4 },
-            px: { xs: 0.5, md: 1.5 }
-          }}
-        >
-          <Toolbar
-            sx={{
-              gap: 2,
-              justifyContent: "space-between",
-              alignItems: { xs: "flex-start", md: "center" },
-              flexDirection: { xs: "column", md: "row" },
-              minHeight: { xs: 76, md: 88 },
-              py: { xs: 1.5, md: 0 }
-            }}
-          >
-            <Stack direction="row" spacing={1.5} alignItems="center">
-              <Button component={RouterLink} to="/" variant="text" startIcon={<ArrowBackRoundedIcon />}>
-                Home
-              </Button>
-              <Stack spacing={0.25}>
-                <Typography variant="h4" sx={{ fontSize: "clamp(1.65rem, 2vw, 2.35rem)" }}>
-                  Routeroom LAN
-                </Typography>
-                <Typography color="text.secondary">
-                  Hub locale con cartelle, preview documenti e media condivisi
-                </Typography>
-              </Stack>
-            </Stack>
-
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              <Chip
-                icon={liveState === "live" ? <WifiRoundedIcon /> : <AutorenewRoundedIcon />}
-                color={liveState === "live" ? "secondary" : "default"}
-                label={
-                  liveState === "live"
-                    ? "Aggiornamento live attivo"
-                    : liveState === "fallback"
-                      ? "Fallback polling"
-                      : "Connessione eventi"
-                }
-              />
-            </Stack>
-          </Toolbar>
-        </AppBar>
+        <PageHeader
+          title="Routeroom"
+          subtitle="LAN media relay"
+          trailing={
+            <Avatar
+              sx={{
+                width: 40,
+                height: 40,
+                bgcolor:
+                  liveState === "live" ? alpha(theme.palette.secondary.main, 0.18) : alpha("#10273a", 0.08),
+                color: liveState === "live" ? "secondary.main" : "text.secondary"
+              }}
+            >
+              {liveState === "live" ? <WifiRoundedIcon /> : <AutorenewRoundedIcon />}
+            </Avatar>
+          }
+        />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
           <Box
@@ -612,11 +579,6 @@ export function AppPage() {
                 targetLabel={currentFolder?.name ?? "Radice LAN"}
                 uploading={uploading}
               />
-              <Alert severity={liveState === "fallback" ? "warning" : "info"} sx={{ borderRadius: 4 }}>
-                {liveState === "fallback"
-                  ? "SSE non disponibile: Routeroom aggiorna la libreria con polling lento."
-                  : "Nuove cartelle, upload ed eliminazioni si propagano in LAN senza refresh."}
-              </Alert>
             </Stack>
           </Box>
 
@@ -631,9 +593,6 @@ export function AppPage() {
                 >
                   <Box>
                     <Typography variant="h5">Libreria locale</Typography>
-                    <Typography color="text.secondary">
-                      Esplora le cartelle come in una vista a colonne, con card compatte su desktop e lista minimale su mobile, e apri subito le preview di testo, PDF e Word.
-                    </Typography>
                   </Box>
 
                   <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} flexWrap="wrap" useFlexGap>

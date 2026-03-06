@@ -300,17 +300,6 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
                 Scarica
               </Button>
             ) : null}
-            {shareUrl ? (
-              <Button
-                variant="outlined"
-                startIcon={<ContentCopyRoundedIcon />}
-                onClick={() => {
-                  void onCopyLink(window.location.origin + shareUrl);
-                }}
-              >
-                Copia link locale
-              </Button>
-            ) : null}
           </Stack>
         ) : null}
       </CardActions>

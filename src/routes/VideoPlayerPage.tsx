@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Box, CircularProgress, Container, Typography } from "@mui/material";
 import { useParams } from "react-router-dom";
 import type { LibraryItem } from "../../shared/types";
+import { PageHeader } from "../components/PageHeader";
 import { fetchItem } from "../lib/api";
 
 export function VideoPlayerPage() {
@@ -87,22 +88,36 @@ export function VideoPlayerPage() {
   }
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#000" }}>
-      <Box
-        component="video"
-        controls
-        autoPlay
-        playsInline
-        src={item.streamUrl}
-        aria-label={`Player video ${item.name}`}
-        sx={{
-          width: "100vw",
-          height: "100vh",
-          display: "block",
-          bgcolor: "#000",
-          objectFit: "contain"
-        }}
-      />
+    <Box sx={{ minHeight: "100vh", bgcolor: "#04090f", pb: 3 }}>
+      <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
+        <PageHeader title="Routeroom" subtitle="LAN media relay" />
+
+        <Box
+          sx={{
+            mt: 3,
+            borderRadius: 4,
+            overflow: "hidden",
+            border: "1px solid rgba(255,255,255,0.08)",
+            bgcolor: "#000"
+          }}
+        >
+          <Box
+            component="video"
+            controls
+            autoPlay
+            playsInline
+            src={item.streamUrl}
+            aria-label={`Player video ${item.name}`}
+            sx={{
+              width: "100%",
+              maxHeight: "calc(100vh - 140px)",
+              display: "block",
+              bgcolor: "#000",
+              objectFit: "contain"
+            }}
+          />
+        </Box>
+      </Container>
     </Box>
   );
 }
