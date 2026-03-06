@@ -31,6 +31,7 @@ interface FolderExplorerProps {
   onDownloadItem: (item: LibraryItem, format?: ArchiveFormat) => void;
   onOpenFolder: (folderId: string | null) => void;
   onSelectItem: (itemId: string) => void;
+  onShowQrCode: (item: LibraryItem) => void | Promise<void>;
 }
 
 const itemIcons = {
@@ -89,7 +90,8 @@ export function FolderExplorer({
   onDeleteItem,
   onDownloadItem,
   onOpenFolder,
-  onSelectItem
+  onSelectItem,
+  onShowQrCode
 }: FolderExplorerProps) {
   const folderPath = buildFolderPath(items, currentFolderId);
   const pathFolderIds = new Set(folderPath.map((folder) => folder.id));
@@ -242,6 +244,7 @@ export function FolderExplorer({
                           onCreateArchive={onCreateArchive}
                           onDelete={onDeleteItem}
                           onDownload={onDownloadItem}
+                          onShowQrCode={onShowQrCode}
                           triggerSx={{
                             color: "text.secondary"
                           }}

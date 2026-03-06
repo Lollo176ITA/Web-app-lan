@@ -86,11 +86,6 @@ export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfac
               Video, immagini, audio, documenti e archivi finiscono subito nella libreria condivisa del device host.
               {targetLabel ? ` Cartella corrente: ${targetLabel}.` : ""}
             </Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              <Chip icon={<FolderZipRoundedIcon />} label="Upload multiplo" />
-              <Chip label="Cartelle complete" variant="outlined" />
-              <Chip icon={<FlashOnRoundedIcon />} label="Aggiornamento live" variant="outlined" />
-            </Stack>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
               <Button component="label" variant="contained" size="large">
                 Seleziona file
@@ -124,9 +119,6 @@ export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfac
                   event.currentTarget.value = "";
                 }}
               />
-              <Button component="a" href="#libreria" variant="text" size="large">
-                Vai alla libreria
-              </Button>
             </Stack>
           </Stack>
         </Stack>

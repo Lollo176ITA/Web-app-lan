@@ -128,13 +128,6 @@ export const theme = createTheme({
         }
       }
     },
-    MuiToggleButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: 16
-        }
-      }
-    },
     MuiChip: {
       styleOverrides: {
         root: {

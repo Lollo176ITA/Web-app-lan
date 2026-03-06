@@ -7,7 +7,7 @@ export type LibraryKind =
   | "archive"
   | "other";
 
-export type LibraryLayoutMode = "minimal" | "compact" | "descriptive";
+export type LibraryLayoutMode = "minimal" | "compact";
 export type ArchiveFormat = "zip" | "7z" | "rar";
 
 export interface LibraryItem {

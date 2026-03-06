@@ -1,13 +1,12 @@
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import CreateNewFolderRoundedIcon from "@mui/icons-material/CreateNewFolderRounded";
-import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import LanRoundedIcon from "@mui/icons-material/LanRounded";
+import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
+import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
-import ViewAgendaRoundedIcon from "@mui/icons-material/ViewAgendaRounded";
-import ViewCompactRoundedIcon from "@mui/icons-material/ViewCompactRounded";
 import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import {
   Alert,
@@ -34,14 +33,13 @@ import {
   Tab,
   Tabs,
   TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Toolbar,
-  Typography
+  Typography,
+  useMediaQuery
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import QRCode from "qrcode";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import type {
   ArchiveFormat,
   LibraryItem,
@@ -103,13 +101,32 @@ function buildFolderPath(items: LibraryItem[], currentFolderId: string | null) {
   return path;
 }
 
+function buildPreviewShareUrl(lanUrl: string, itemId: string) {
+  const browserUrl = new URL(window.location.href);
+  const sessionUrl = new URL(lanUrl);
+  const shareUrl = new URL(browserUrl.href);
+
+  if (browserUrl.hostname === "localhost" || browserUrl.hostname === "127.0.0.1") {
+    shareUrl.protocol = sessionUrl.protocol;
+    shareUrl.hostname = sessionUrl.hostname;
+  }
+
+  shareUrl.pathname = "/app";
+  shareUrl.search = "";
+  shareUrl.searchParams.set("item", itemId);
+  shareUrl.hash = "";
+
+  return shareUrl.toString();
+}
+
 export function AppPage() {
+  const [searchParams] = useSearchParams();
+  const initialLinkedItemId = searchParams.get("item");
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [items, setItems] = useState<LibraryItem[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialLinkedItemId);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterValue>("all");
-  const [layoutMode, setLayoutMode] = useState<LibraryLayoutMode>("descriptive");
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
@@ -117,6 +134,43 @@ export function AppPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [qrItemTarget, setQrItemTarget] = useState<{ item: LibraryItem; url: string } | null>(null);
+  const [qrItemDataUrl, setQrItemDataUrl] = useState("");
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const layoutMode: LibraryLayoutMode = isMobile ? "minimal" : "compact";
+  const detailPanelRef = useRef<HTMLDivElement | null>(null);
+  const appliedDeepLinkRef = useRef<string | null>(null);
+
+  function applyLinkedSelection(nextItems: LibraryItem[]) {
+    const linkedItemId = searchParams.get("item");
+
+    if (!linkedItemId) {
+      appliedDeepLinkRef.current = null;
+      return;
+    }
+
+    const linkedItem = nextItems.find((item) => item.id === linkedItemId && item.kind !== "folder");
+
+    if (!linkedItem) {
+      return;
+    }
+
+    setFilter("all");
+    setCurrentFolderId(linkedItem.parentId ?? null);
+    setSelectedId(linkedItem.id);
+
+    if (appliedDeepLinkRef.current === linkedItemId) {
+      return;
+    }
+
+    appliedDeepLinkRef.current = linkedItemId;
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        detailPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+  }
 
   async function syncSnapshot() {
     const snapshot = await fetchSnapshot();
@@ -125,27 +179,12 @@ export function AppPage() {
       setSession(snapshot.session);
       setItems(snapshot.items);
       setLoading(false);
+      applyLinkedSelection(snapshot.items);
     });
   }
 
   useEffect(() => {
-    let active = true;
-
-    void fetchSnapshot().then((snapshot) => {
-      if (!active) {
-        return;
-      }
-
-      startTransition(() => {
-        setSession(snapshot.session);
-        setItems(snapshot.items);
-        setLoading(false);
-      });
-    });
-
-    return () => {
-      active = false;
-    };
+    void syncSnapshot();
   }, []);
 
   useEffect(() => {
@@ -162,6 +201,22 @@ export function AppPage() {
       }
     }).then(setQrCodeDataUrl);
   }, [session?.lanUrl]);
+
+  useEffect(() => {
+    if (!qrItemTarget) {
+      setQrItemDataUrl("");
+      return;
+    }
+
+    void QRCode.toDataURL(qrItemTarget.url, {
+      margin: 1,
+      width: 256,
+      color: {
+        dark: "#10273a",
+        light: "#0000"
+      }
+    }).then(setQrItemDataUrl);
+  }, [qrItemTarget]);
 
   useEffect(() => {
     let pollingId: number | undefined;
@@ -207,6 +262,14 @@ export function AppPage() {
       setCurrentFolderId(null);
     }
   }, [items, currentFolderId]);
+
+  useEffect(() => {
+    if (items.length === 0) {
+      return;
+    }
+
+    applyLinkedSelection(items);
+  }, [items, searchParams]);
 
   const currentFolder = currentFolderId
     ? (items.find((item) => item.id === currentFolderId && item.kind === "folder") ?? null)
@@ -330,6 +393,18 @@ export function AppPage() {
   async function copyText(value: string) {
     await navigator.clipboard.writeText(value);
     setSnackbar("Link copiato negli appunti.");
+  }
+
+  function handleShowQrCode(item: LibraryItem) {
+    if (!session?.lanUrl) {
+      setSnackbar("URL LAN non ancora disponibile.");
+      return;
+    }
+
+    setQrItemTarget({
+      item,
+      url: buildPreviewShareUrl(session.lanUrl, item.id)
+    });
   }
 
   return (
@@ -537,7 +612,7 @@ export function AppPage() {
                   <Box>
                     <Typography variant="h5">Libreria locale</Typography>
                     <Typography color="text.secondary">
-                      Esplora le cartelle come in una vista a colonne, scegli il layout delle card e apri subito le preview di testo, PDF e Word.
+                      Esplora le cartelle come in una vista a colonne, con card compatte su desktop e lista minimale su mobile, e apri subito le preview di testo, PDF e Word.
                     </Typography>
                   </Box>
 
@@ -568,13 +643,14 @@ export function AppPage() {
                   onDownloadItem={handleDownload}
                   onOpenFolder={setCurrentFolderId}
                   onSelectItem={setSelectedId}
+                  onShowQrCode={handleShowQrCode}
                 />
 
                 <Box
                   sx={{
                     display: "grid",
                     gap: 1.25,
-                    gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) auto" },
+                    gridTemplateColumns: "1fr",
                     alignItems: "center"
                   }}
                 >
@@ -634,30 +710,6 @@ export function AppPage() {
                     </Box>
                   </Box>
 
-                    <ToggleButtonGroup
-                      exclusive
-                      color="primary"
-                      size="small"
-                      value={layoutMode}
-                    onChange={(_event, value: LibraryLayoutMode | null) => {
-                      if (value) {
-                        setLayoutMode(value);
-                      }
-                    }}
-                    >
-                      <ToggleButton value="minimal">
-                        <ViewAgendaRoundedIcon sx={{ mr: 0.75 }} />
-                        Minimal
-                      </ToggleButton>
-                      <ToggleButton value="compact">
-                        <ViewCompactRoundedIcon sx={{ mr: 0.75 }} />
-                        Compatto
-                      </ToggleButton>
-                      <ToggleButton value="descriptive">
-                        <GridViewRoundedIcon sx={{ mr: 0.75 }} />
-                        Descrittivo
-                      </ToggleButton>
-                    </ToggleButtonGroup>
                 </Box>
               </Stack>
             </CardContent>
@@ -687,13 +739,95 @@ export function AppPage() {
                   onDownload={handleDownload}
                   onOpenFolder={setCurrentFolderId}
                   onSelect={setSelectedId}
+                  onShowQrCode={handleShowQrCode}
                 />
-                <MediaDetail item={selectedItem} onCopyLink={copyText} />
+                <Box ref={detailPanelRef}>
+                  <MediaDetail item={selectedItem} onCopyLink={copyText} />
+                </Box>
               </Box>
             </CardContent>
           </Card>
         </Stack>
       </Container>
+
+      <Dialog
+        open={Boolean(qrItemTarget)}
+        onClose={() => {
+          setQrItemTarget(null);
+        }}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>
+          {qrItemTarget?.item.kind === "video" ? "QR code player video" : "QR code anteprima"}
+        </DialogTitle>
+        <DialogContent>
+          {qrItemTarget ? (
+            <Stack spacing={2} sx={{ pt: 1, alignItems: "center" }}>
+              <Typography color="text.secondary" variant="body2" sx={{ alignSelf: "stretch" }}>
+                {qrItemTarget.item.kind === "video"
+                  ? "Inquadra questo codice dalla stessa LAN per aprire subito il player del video."
+                  : "Inquadra questo codice dalla stessa LAN per aprire direttamente l’anteprima del file."}
+              </Typography>
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: "background.paper",
+                  border: `1px solid ${alpha("#1769aa", 0.1)}`
+                }}
+              >
+                {qrItemDataUrl ? (
+                  <Box
+                    component="img"
+                    src={qrItemDataUrl}
+                    alt={`QR code ${qrItemTarget.item.name}`}
+                    sx={{ width: 224, height: 224, display: "block" }}
+                  />
+                ) : null}
+              </Box>
+              <Typography variant="subtitle1" sx={{ alignSelf: "stretch", wordBreak: "break-word" }}>
+                {qrItemTarget.item.name}
+              </Typography>
+              <Typography color="text.secondary" variant="body2" sx={{ alignSelf: "stretch", wordBreak: "break-word" }}>
+                {qrItemTarget.url}
+              </Typography>
+            </Stack>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setQrItemTarget(null);
+            }}
+          >
+            Chiudi
+          </Button>
+          <Button
+            startIcon={<ContentCopyRoundedIcon />}
+            onClick={() => {
+              if (qrItemTarget) {
+                void copyText(qrItemTarget.url);
+              }
+            }}
+          >
+            Copia link
+          </Button>
+          {qrItemTarget ? (
+            <Button
+              component="a"
+              href={qrItemTarget.url}
+              variant="contained"
+              startIcon={qrItemTarget.item.kind === "video" ? <QrCode2RoundedIcon /> : <OpenInNewRoundedIcon />}
+              onClick={() => {
+                setQrItemTarget(null);
+              }}
+            >
+              {qrItemTarget.item.kind === "video" ? "Apri player" : "Apri anteprima"}
+            </Button>
+          ) : null}
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={folderDialogOpen}

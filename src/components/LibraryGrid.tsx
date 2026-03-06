@@ -31,6 +31,7 @@ interface LibraryGridProps {
   onDownload: (item: LibraryItem, format?: ArchiveFormat) => void;
   onOpenFolder: (folderId: string) => void;
   onSelect: (itemId: string) => void;
+  onShowQrCode: (item: LibraryItem) => void | Promise<void>;
 }
 
 const kindConfig = {
@@ -58,22 +59,16 @@ function sortVisibleItems(items: LibraryItem[]) {
 }
 
 function getGridTemplate(layoutMode: LibraryLayoutMode) {
-  switch (layoutMode) {
-    case "minimal":
-      return {
-        xs: "1fr"
-      };
-    case "compact":
-      return {
-        xs: "repeat(2, minmax(0, 1fr))",
-        md: "repeat(3, minmax(0, 1fr))"
-      };
-    default:
-      return {
-        xs: "1fr",
-        lg: "repeat(2, minmax(0, 1fr))"
-      };
+  if (layoutMode === "minimal") {
+    return {
+      xs: "1fr"
+    };
   }
+
+  return {
+    xs: "repeat(2, minmax(0, 1fr))",
+    md: "repeat(3, minmax(0, 1fr))"
+  };
 }
 
 function getPreviewHeight(layoutMode: LibraryLayoutMode) {
@@ -93,7 +88,8 @@ export function LibraryGrid({
   onDelete,
   onDownload,
   onOpenFolder,
-  onSelect
+  onSelect,
+  onShowQrCode
 }: LibraryGridProps) {
   if (items.length === 0) {
     return (
@@ -144,6 +140,7 @@ export function LibraryGrid({
                 onCreateArchive={onCreateArchive}
                 onDelete={onDelete}
                 onDownload={onDownload}
+                onShowQrCode={onShowQrCode}
                 triggerSx={{
                   position: "absolute",
                   top: 8,
@@ -207,6 +204,7 @@ export function LibraryGrid({
               onCreateArchive={onCreateArchive}
               onDelete={onDelete}
               onDownload={onDownload}
+              onShowQrCode={onShowQrCode}
               triggerSx={{
                 position: "absolute",
                 top: 10,
@@ -259,21 +257,14 @@ export function LibraryGrid({
                     >
                       <Icon />
                     </Avatar>
-                    {layoutMode === "descriptive" ? (
-                      <Chip
-                        label={config.label}
-                        size="small"
-                        sx={{ bgcolor: alpha(config.accent, 0.14), color: config.accent }}
-                      />
-                    ) : null}
                   </Stack>
                 </Box>
               )}
 
               <CardContent>
-                <Stack spacing={layoutMode === "compact" ? 0.75 : 1.25}>
+                <Stack spacing={0.75}>
                   <Typography
-                    variant={layoutMode === "compact" ? "subtitle1" : "h6"}
+                    variant="subtitle1"
                     sx={{ lineHeight: 1.18, wordBreak: "break-word", pr: 4.5 }}
                   >
                     {item.name}
@@ -288,22 +279,9 @@ export function LibraryGrid({
                     />
                   </Stack>
 
-                  {layoutMode === "descriptive" ? (
-                    <>
-                      <Typography color="text.secondary" variant="body2">
-                        {isFolder ? "Cartella locale" : `Aggiunto ${formatDate(item.createdAt)}`}
-                      </Typography>
-                      <Typography color="text.secondary" variant="body2">
-                        {isFolder
-                          ? "Aprila per continuare l’esplorazione a colonne."
-                          : `${item.mimeType} · ${formatBytes(item.sizeBytes)}`}
-                      </Typography>
-                    </>
-                  ) : (
-                    <Typography color="text.secondary" variant="body2">
-                      {isFolder ? "Cartella locale" : formatDate(item.createdAt)}
-                    </Typography>
-                  )}
+                  <Typography color="text.secondary" variant="body2">
+                    {isFolder ? "Cartella locale" : formatDate(item.createdAt)}
+                  </Typography>
                 </Stack>
               </CardContent>
             </CardActionArea>

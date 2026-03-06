@@ -13,9 +13,20 @@ test("landing and library manager handle folder uploads, previews, layouts, and 
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByText("Hub locale con cartelle, preview documenti e media condivisi")).toBeVisible();
 
-  await page.locator('input[type="file"]').first().setInputFiles(path.join(fixturesDirectory, "sample-audio.wav"));
-  await expect(page.getByText("1 file caricati in radice LAN.")).toBeVisible();
+  await page.locator('input[type="file"]').first().setInputFiles([
+    path.join(fixturesDirectory, "sample-audio.wav"),
+    path.join(fixturesDirectory, "sample-video.webm")
+  ]);
+  await expect(page.getByText("2 file caricati in radice LAN.")).toBeVisible();
   await expect(page.getByText("sample-audio.wav").first()).toBeVisible();
+  await page.getByLabel("Azioni sample-video.webm").first().click();
+  await page.getByRole("menuitem", { name: "Mostra QR code" }).click();
+  await expect(page.getByRole("heading", { name: "QR code player video" })).toBeVisible();
+  const qrShareUrl = await page.locator("text=/http:\\/\\/.*\\/app\\?item=/").textContent();
+  const qrItemId = new URL(qrShareUrl ?? "").searchParams.get("item");
+  expect(qrItemId).toBeTruthy();
+  await page.goto(`/app?item=${qrItemId}`);
+  await expect(page.locator("video")).toBeVisible();
 
   await page.getByRole("button", { name: "Nuova cartella" }).click();
   await page.getByLabel("Nome cartella").fill("Salotto demo");
@@ -25,38 +36,23 @@ test("landing and library manager handle folder uploads, previews, layouts, and 
   await page.getByRole("button", { name: /Salotto demo/i }).first().click();
 
   await page.locator('input[webkitdirectory]').setInputFiles(path.join(fixturesDirectory, "sample-bundle"));
-
   await expect(page.getByText("3 file caricati in Salotto demo.")).toBeVisible();
-  await expect(page.getByRole("button", { name: /Cartella sample-bundle/i }).first()).toBeVisible();
+  await page.locator('input[type="file"]').first().setInputFiles([
+    path.join(fixturesDirectory, "sample-guide.pdf"),
+    path.join(fixturesDirectory, "sample-brief.docx")
+  ]);
+  await expect(page.getByText("2 file caricati in Salotto demo.")).toBeVisible();
+  await page.locator('input[type="file"]').first().setInputFiles(path.join(fixturesDirectory, "sample-note.txt"));
+  await expect(page.getByText("1 file caricati in Salotto demo.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Radice" })).toHaveClass(/MuiButton-outlined/);
   await expect(page.getByRole("button", { name: "Salotto demo", exact: true })).toHaveClass(/MuiButton-contained/);
 
-  await page.getByLabel("Azioni sample-bundle").first().click();
-  await expect(page.getByRole("menuitem", { name: /Scarica cartella/i })).toBeVisible();
-  const folderDownload = page.waitForEvent("download");
-  await page.getByRole("menuitem", { name: /Scarica cartella/i }).click();
-  expect((await folderDownload).suggestedFilename()).toContain("sample-bundle.zip");
-
-  await page.getByLabel("Azioni sample-bundle").first().click();
-  await expect(page.getByRole("menuitem", { name: /Crea archivio RAR/i })).toBeDisabled();
-  await page.getByRole("menuitem", { name: /Crea archivio ZIP/i }).click();
-  await expect(page.getByText("Archivio creato: sample-bundle.zip.")).toBeVisible();
-  await expect(page.getByText("sample-bundle.zip").first()).toBeVisible();
-
   await page.getByRole("tab", { name: "Documenti" }).click();
-  await expect(page.getByRole("button", { name: /Cartella sample-bundle/i })).toHaveCount(0);
+  await expect(page.getByText("sample-guide.pdf").first()).toBeVisible();
   await page.getByRole("tab", { name: "Tutti" }).click();
-  await page.getByRole("button", { name: /Descrittivo/i }).click();
-  await expect(page.getByRole("button", { name: /Descrittivo/i })).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: /Minimal/i }).click();
-  await expect(page.getByRole("button", { name: /Minimal/i })).toHaveAttribute("aria-pressed", "true");
-
-  await page.getByRole("button", { name: /sample-bundle/i }).first().click();
-  await page.getByRole("button", { name: /Guide/i }).first().click();
-  await expect(page.getByRole("button", { name: "Radice" })).toHaveClass(/MuiButton-outlined/);
-  await expect(page.getByRole("button", { name: "Salotto demo", exact: true })).toHaveClass(/MuiButton-outlined/);
-  await expect(page.getByRole("button", { name: "sample-bundle", exact: true })).toHaveClass(/MuiButton-outlined/);
-  await expect(page.getByRole("button", { name: "Guide", exact: true })).toHaveClass(/MuiButton-contained/);
+  await expect(page.getByRole("button", { name: /Minimal/i })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Compatto/i })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Descrittivo/i })).toHaveCount(0);
 
   await page.getByText("sample-audio.wav").first().click();
   await expect(page.locator("audio")).toBeVisible();
@@ -71,8 +67,6 @@ test("landing and library manager handle folder uploads, previews, layouts, and 
   await page.getByRole("menuitem", { name: "Elimina" }).click();
   await expect.poll(async () => page.getByLabel("Azioni sample-note.txt").count()).toBe(0);
 
-  await page.getByRole("button", { name: /sample-bundle/i }).first().click();
-  await page.getByRole("button", { name: /Docs/i }).first().click();
   await page.getByText("sample-brief.docx").first().click();
   await expect(page.getByText("Brief Routeroom")).toBeVisible();
 });
@@ -90,7 +84,7 @@ test("library updates propagate to a second client through SSE", async ({ browse
   await pageA.getByRole("button", { name: /Secondo client/i }).first().click();
 
   await expect.poll(async () => pageB.getByText("Secondo client").count()).toBeGreaterThan(0);
-  await pageB.getByRole("button", { name: /Cartella Secondo client/i }).first().click();
+  await pageB.getByRole("button", { name: /Secondo client.*elementi/i }).first().click();
 
   const beforeCount = await pageB.getByText("sample-note.txt").count();
   await pageA.locator('input[type="file"]').first().setInputFiles(path.join(fixturesDirectory, "sample-note.txt"));
@@ -111,6 +105,6 @@ test.describe("mobile layout", () => {
     await expect(page.getByRole("button", { name: "Carica cartella" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Nuova cartella" })).toBeVisible();
     await expect(page.getByLabel("Filtro libreria")).toBeVisible();
-    await expect(page.getByRole("button", { name: /Minimal/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Minimal/i })).toHaveCount(0);
   });
 });
