@@ -22,36 +22,36 @@ export function PageHeader({ title, subtitle, trailing }: PageHeaderProps) {
     <Paper
       elevation={0}
       sx={{
-        px: { xs: 1.5, md: 2 },
-        py: { xs: 1.25, md: 1.5 },
+        px: { xs: 1, md: 2 },
+        py: { xs: 1, md: 1.5 },
         borderRadius: { xs: 3, md: 4 },
         bgcolor: "rgba(255,255,255,0.78)",
         backdropFilter: "blur(20px)"
       }}
     >
       <Stack
-        direction={{ xs: "column", md: "row" }}
-        spacing={{ xs: 1.5, md: 2 }}
-        alignItems={{ xs: "stretch", md: "center" }}
+        direction="row"
+        spacing={{ xs: 1, md: 2 }}
+        alignItems="center"
         justifyContent="space-between"
       >
-        <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+        <Stack direction="row" spacing={{ xs: 0.9, md: 1.25 }} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
           <Avatar
             sx={{
-              width: 40,
-              height: 40,
+              width: { xs: 36, md: 40 },
+              height: { xs: 36, md: 40 },
               bgcolor: alpha("#1769aa", 0.12),
               color: "primary.main"
             }}
           >
-            <LanRoundedIcon />
+            <LanRoundedIcon sx={{ fontSize: { xs: 20, md: 24 } }} />
           </Avatar>
           <Box sx={{ minWidth: 0, flex: 1 }}>
             {subtitle ? (
               <Typography
                 variant="overline"
                 sx={{
-                  display: "block",
+                  display: { xs: "none", sm: "block" },
                   color: "secondary.main",
                   lineHeight: 1.1
                 }}
@@ -62,7 +62,7 @@ export function PageHeader({ title, subtitle, trailing }: PageHeaderProps) {
             <Typography
               variant="h4"
               sx={{
-                fontSize: "clamp(1.4rem, 2vw, 2.2rem)",
+                fontSize: { xs: "1.15rem", sm: "1.3rem", md: "clamp(1.4rem, 2vw, 2.2rem)" },
                 lineHeight: 1.1,
                 whiteSpace: "nowrap",
                 overflow: "hidden",
@@ -75,12 +75,12 @@ export function PageHeader({ title, subtitle, trailing }: PageHeaderProps) {
         </Stack>
 
         <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={1}
-          alignItems={{ xs: "stretch", md: "center" }}
-          justifyContent="space-between"
+          direction="row"
+          spacing={{ xs: 0.5, sm: 1 }}
+          alignItems="center"
+          sx={{ flexShrink: 0 }}
         >
-          <Stack direction="row" spacing={0.75} sx={{ flexWrap: "wrap" }}>
+          <Stack direction="row" spacing={{ xs: 0.25, sm: 0.75 }} sx={{ flexWrap: "nowrap" }}>
             {navItems.map((item) => {
               const isActive = item.matches(location.pathname);
 
@@ -92,8 +92,10 @@ export function PageHeader({ title, subtitle, trailing }: PageHeaderProps) {
                   color="inherit"
                   variant={isActive ? "contained" : "text"}
                   sx={{
-                    minHeight: 40,
-                    px: 1.75,
+                    minWidth: 0,
+                    minHeight: { xs: 34, sm: 40 },
+                    px: { xs: 1, sm: 1.75 },
+                    fontSize: { xs: "0.8rem", sm: "0.875rem" },
                     bgcolor: isActive ? alpha("#1769aa", 0.12) : "transparent",
                     color: isActive ? "primary.main" : "text.secondary",
                     "&:hover": {

@@ -12,6 +12,7 @@ import {
   Avatar,
   Box,
   Button,
+  ButtonBase,
   Card,
   CardContent,
   CardHeader,
@@ -133,6 +134,45 @@ function buildVideoPlayerUrl(lanUrl: string, itemId: string) {
   return shareUrl.toString();
 }
 
+function formatLibraryCount(count: number) {
+  return `${count} ${count === 1 ? "elemento" : "elementi"}`;
+}
+
+function fallbackCopyText(value: string) {
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "absolute";
+  textarea.style.opacity = "0";
+  textarea.style.pointerEvents = "none";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  const copied = typeof document.execCommand === "function" && document.execCommand("copy");
+  document.body.removeChild(textarea);
+
+  if (!copied) {
+    throw new Error("Clipboard fallback unavailable");
+  }
+}
+
+function splitLanUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return {
+      protocol: `${parsed.protocol}//`,
+      remainder: `${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}`
+    };
+  } catch {
+    return {
+      protocol: "",
+      remainder: value
+    };
+  }
+}
+
 export function AppPage() {
   const [searchParams] = useSearchParams();
   const initialLinkedItemId = searchParams.get("item");
@@ -155,6 +195,7 @@ export function AppPage() {
   const layoutMode: LibraryLayoutMode = isMobile ? "minimal" : "compact";
   const detailPanelRef = useRef<HTMLDivElement | null>(null);
   const appliedDeepLinkRef = useRef<string | null>(null);
+  const lanUrlParts = session ? splitLanUrl(session.lanUrl) : null;
 
   function applyLinkedSelection(nextItems: LibraryItem[]) {
     const linkedItemId = searchParams.get("item");
@@ -404,9 +445,23 @@ export function AppPage() {
     );
   }
 
-  async function copyText(value: string) {
-    await navigator.clipboard.writeText(value);
-    setSnackbar("Link copiato negli appunti.");
+  async function copyText(value: string, successMessage = "Link copiato negli appunti.") {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        fallbackCopyText(value);
+      }
+
+      setSnackbar(successMessage);
+    } catch {
+      try {
+        fallbackCopyText(value);
+        setSnackbar(successMessage);
+      } catch {
+        setSnackbar("Copia non disponibile su questo browser.");
+      }
+    }
   }
 
   function handleShowQrCode(item: LibraryItem) {
@@ -456,11 +511,6 @@ export function AppPage() {
           >
             <Card>
               <CardHeader
-                avatar={
-                  <Avatar sx={{ bgcolor: "secondary.main" }}>
-                    <LanRoundedIcon />
-                  </Avatar>
-                }
                 title="Sessione host"
                 subheader="Condividi questo indirizzo nella stessa rete"
               />
@@ -486,31 +536,10 @@ export function AppPage() {
                           <Typography variant="body2" color="text.secondary">
                             URL LAN
                           </Typography>
-                          <Typography variant="h5" sx={{ mt: 0.75, wordBreak: "break-word" }}>
+                          <Typography variant="h6" sx={{ mt: 0.75, wordBreak: "break-word" }}>
                             {session.lanUrl}
                           </Typography>
                         </Box>
-
-                        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
-                          <Button
-                            variant="contained"
-                            startIcon={<ContentCopyRoundedIcon />}
-                            onClick={() => {
-                              void copyText(session.lanUrl);
-                            }}
-                          >
-                            Copia URL
-                          </Button>
-                          <Button
-                            variant="outlined"
-                            startIcon={<LanRoundedIcon />}
-                            onClick={() => {
-                              void copyText(session.hostName);
-                            }}
-                          >
-                            Copia host
-                          </Button>
-                        </Stack>
                       </Stack>
 
                       {qrCodeDataUrl ? (
@@ -536,35 +565,37 @@ export function AppPage() {
                     <Box
                       sx={{
                         display: "grid",
-                        gap: 1.5,
-                        gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" }
+                        gap: 1.5
                       }}
                     >
                       <Card variant="outlined">
-                        <CardContent>
-                          <Stack direction="row" spacing={1.5} alignItems="center">
-                            <Avatar sx={{ bgcolor: alpha("#1769aa", 0.14), color: "primary.main" }}>
-                              <StorageRoundedIcon />
-                            </Avatar>
-                            <Box>
-                              <Typography color="text.secondary" variant="body2">
-                                Libreria persistente
+                        <CardContent sx={{ p: 2.25 }}>
+                          <Stack
+                            direction={{ xs: "column", sm: "row" }}
+                            spacing={2}
+                            alignItems={{ xs: "flex-start", sm: "center" }}
+                          >
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography
+                                variant="h6"
+                                sx={{
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  alignItems: "baseline",
+                                  gap: 1
+                                }}
+                              >
+                                <Box component="span">{formatBytes(session.totalBytes)} in {formatLibraryCount(session.itemCount)}</Box>
                               </Typography>
-                              <Typography variant="h4">{session.itemCount}</Typography>
-                              <Typography color="text.secondary">elementi e cartelle</Typography>
+                              <Typography
+                                color="text.secondary"
+                                variant="body2"
+                                sx={{ mt: 1, wordBreak: "break-word" }}
+                              >
+                                {session.storagePath}
+                              </Typography>
                             </Box>
                           </Stack>
-                        </CardContent>
-                      </Card>
-                      <Card variant="outlined">
-                        <CardContent>
-                          <Typography color="text.secondary" variant="body2">
-                            Totale salvato
-                          </Typography>
-                          <Typography variant="h4">{formatBytes(session.totalBytes)}</Typography>
-                          <Typography color="text.secondary" sx={{ wordBreak: "break-word" }}>
-                            {session.storagePath}
-                          </Typography>
                         </CardContent>
                       </Card>
                     </Box>
