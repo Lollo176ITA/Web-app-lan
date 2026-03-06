@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1040" role="img" aria-labelledby="hero-title hero-desc">
+  <title id="hero-title">Routeroom hero</title>
+  <desc id="hero-desc">Laptop, tablet e smartphone collegati a un hub LAN locale.</desc>
+  <defs>
+    <linearGradient id="heroBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b2841"/>
+      <stop offset="52%" stop-color="#1769aa"/>
+      <stop offset="100%" stop-color="#0f9d94"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.78)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0.16)"/>
+    </linearGradient>
+  </defs>
+  <rect width="1440" height="1040" rx="56" fill="#07131d"/>
+  <rect x="36" y="36" width="1368" height="968" rx="44" fill="url(#heroBg)"/>
+  <circle cx="1128" cy="206" r="118" fill="rgba(255,255,255,0.12)"/>
+  <circle cx="320" cy="780" r="162" fill="rgba(255,255,255,0.08)"/>
+  <g transform="translate(590 160)">
+    <rect x="0" y="220" width="248" height="134" rx="34" fill="#f4fbff"/>
+    <circle cx="124" cy="287" r="26" fill="#1769aa"/>
+    <path d="M124 220c85 0 154-69 154-154" fill="none" stroke="#ffffff" stroke-opacity=".72" stroke-width="14"/>
+    <path d="M124 220c-85 0-154-69-154-154" fill="none" stroke="#ffffff" stroke-opacity=".72" stroke-width="14"/>
+    <path d="M124 220c0 85-69 154-154 154" fill="none" stroke="#ffffff" stroke-opacity=".56" stroke-width="14"/>
+    <path d="M124 220c0 85 69 154 154 154" fill="none" stroke="#ffffff" stroke-opacity=".56" stroke-width="14"/>
+  </g>
+  <g transform="translate(134 286)">
+    <rect width="522" height="322" rx="32" fill="#08131e"/>
+    <rect x="28" y="28" width="466" height="266" rx="24" fill="#f6fbff"/>
+    <rect x="60" y="66" width="188" height="30" rx="15" fill="#1769aa" opacity=".9"/>
+    <rect x="60" y="118" width="250" height="18" rx="9" fill="#8fbadb"/>
+    <rect x="60" y="158" width="330" height="18" rx="9" fill="#c9deee"/>
+    <rect x="60" y="212" width="392" height="52" rx="18" fill="#0f9d94"/>
+    <circle cx="418" cy="118" r="34" fill="#d9eef2"/>
+    <polygon points="410,103 410,133 438,118" fill="#1769aa"/>
+  </g>
+  <g transform="translate(874 494)">
+    <rect width="308" height="224" rx="34" fill="#f8fcff"/>
+    <rect x="24" y="24" width="260" height="176" rx="24" fill="#dceff6"/>
+    <rect x="48" y="52" width="160" height="22" rx="11" fill="#1769aa"/>
+    <rect x="48" y="90" width="188" height="18" rx="9" fill="#84b6d9"/>
+    <rect x="48" y="124" width="96" height="42" rx="14" fill="#0f9d94"/>
+  </g>
+  <g transform="translate(864 264)">
+    <rect width="186" height="360" rx="34" fill="#08131e"/>
+    <rect x="12" y="22" width="162" height="316" rx="26" fill="#f7fcff"/>
+    <rect x="32" y="58" width="98" height="16" rx="8" fill="#1769aa"/>
+    <rect x="32" y="90" width="122" height="14" rx="7" fill="#9bc5e3"/>
+    <rect x="32" y="126" width="112" height="112" rx="26" fill="#0f9d94"/>
+    <circle cx="88" cy="180" r="28" fill="#f7fcff" opacity=".92"/>
+    <polygon points="82,165 82,195 106,180" fill="#0f9d94"/>
+    <rect x="32" y="266" width="118" height="14" rx="7" fill="#b6d4e9"/>
+    <rect x="32" y="292" width="84" height="14" rx="7" fill="#d8e9f4"/>
+  </g>
+</svg>

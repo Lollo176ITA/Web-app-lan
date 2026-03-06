@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-label="Routeroom graphic">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1769aa"/>
+      <stop offset="100%" stop-color="#0f9d94"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" rx="48" fill="#08131e"/>
+  <rect x="44" y="44" width="1512" height="812" rx="36" fill="url(#bg)"/>
+  <circle cx="390" cy="330" r="150" fill="rgba(255,255,255,0.16)"/>
+  <circle cx="1190" cy="580" r="188" fill="rgba(255,255,255,0.12)"/>
+  <text x="130" y="220" font-size="96" font-family="Arial, sans-serif" font-weight="700" fill="white">Routeroom</text>
+  <text x="130" y="302" font-size="42" font-family="Arial, sans-serif" fill="white">Condivisione locale senza passare da Internet</text>
+  <rect x="130" y="394" width="520" height="186" rx="32" fill="rgba(8,19,30,0.26)"/>
+  <text x="176" y="470" font-size="34" font-family="Arial, sans-serif" font-weight="700" fill="white">URL LAN pronto</text>
+  <text x="176" y="524" font-size="28" font-family="Arial, sans-serif" fill="white">http://192.168.1.45:8787</text>
+  <text x="176" y="568" font-size="28" font-family="Arial, sans-serif" fill="white">Upload, stream e download locali</text>
+</svg>

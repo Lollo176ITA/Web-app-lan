@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 880" role="img" aria-labelledby="devices-title devices-desc">
+  <title id="devices-title">Routeroom devices</title>
+  <desc id="devices-desc">Desktop, tablet e smartphone con la stessa libreria media Routeroom.</desc>
+  <defs>
+    <linearGradient id="devicesBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e6f1f7"/>
+      <stop offset="100%" stop-color="#f2fbfb"/>
+    </linearGradient>
+  </defs>
+  <rect width="1440" height="880" rx="48" fill="url(#devicesBg)"/>
+  <g transform="translate(80 164)">
+    <rect width="700" height="420" rx="34" fill="#0b2031"/>
+    <rect x="30" y="30" width="640" height="360" rx="24" fill="#fbfdff"/>
+    <rect x="66" y="66" width="202" height="26" rx="13" fill="#1769aa"/>
+    <rect x="66" y="112" width="250" height="18" rx="9" fill="#9fc6e2"/>
+    <rect x="66" y="164" width="176" height="170" rx="26" fill="#e8f5fa"/>
+    <rect x="270" y="164" width="176" height="170" rx="26" fill="#eff8fb"/>
+    <rect x="474" y="164" width="140" height="170" rx="26" fill="#ebf8f4"/>
+    <rect x="86" y="356" width="176" height="18" rx="9" fill="#91bfdd"/>
+    <rect x="290" y="356" width="128" height="18" rx="9" fill="#91bfdd"/>
+    <rect x="494" y="356" width="92" height="18" rx="9" fill="#91bfdd"/>
+    <rect x="220" y="420" width="260" height="18" rx="9" fill="#09131e" opacity=".16"/>
+  </g>
+  <g transform="translate(850 214)">
+    <rect width="340" height="248" rx="34" fill="#ffffff"/>
+    <rect x="22" y="22" width="296" height="204" rx="24" fill="#eef8fb"/>
+    <rect x="46" y="44" width="120" height="18" rx="9" fill="#1769aa"/>
+    <rect x="46" y="82" width="148" height="14" rx="7" fill="#a0c8e3"/>
+    <rect x="46" y="120" width="118" height="84" rx="18" fill="#0f9d94"/>
+    <rect x="182" y="120" width="98" height="84" rx="18" fill="#daeef7"/>
+  </g>
+  <g transform="translate(988 470)">
+    <rect width="176" height="312" rx="34" fill="#0b2031"/>
+    <rect x="12" y="18" width="152" height="276" rx="24" fill="#ffffff"/>
+    <rect x="28" y="42" width="88" height="12" rx="6" fill="#1769aa"/>
+    <rect x="28" y="70" width="98" height="10" rx="5" fill="#a6cae4"/>
+    <rect x="28" y="96" width="116" height="94" rx="20" fill="#e7f4fa"/>
+    <rect x="28" y="206" width="94" height="10" rx="5" fill="#92bfdd"/>
+    <rect x="28" y="228" width="68" height="10" rx="5" fill="#cfe4f1"/>
+  </g>
+</svg>

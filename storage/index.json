@@ -1,0 +1,74 @@
+[
+  {
+    "id": "QgVBTcK-r6",
+    "name": "sample-note.txt",
+    "storedName": "QgVBTcK-r6--sample-note.txt",
+    "mimeType": "text/plain",
+    "kind": "document",
+    "sizeBytes": 68,
+    "createdAt": "2026-03-06T09:19:52.639Z",
+    "downloadUrl": "/api/items/QgVBTcK-r6/download"
+  },
+  {
+    "id": "iS244kIiqp",
+    "name": "sample-note.txt",
+    "storedName": "iS244kIiqp--sample-note.txt",
+    "mimeType": "text/plain",
+    "kind": "document",
+    "sizeBytes": 68,
+    "createdAt": "2026-03-06T09:19:52.184Z",
+    "downloadUrl": "/api/items/iS244kIiqp/download"
+  },
+  {
+    "id": "1sVrD2Usg0",
+    "name": "sample-video.webm",
+    "storedName": "1sVrD2Usg0--sample-video.webm",
+    "mimeType": "video/webm",
+    "kind": "video",
+    "sizeBytes": 15800,
+    "createdAt": "2026-03-06T09:19:47.423Z",
+    "downloadUrl": "/api/items/1sVrD2Usg0/download",
+    "streamUrl": "/api/items/1sVrD2Usg0/stream"
+  },
+  {
+    "id": "1-d1gIvpr8",
+    "name": "sample-photo.svg",
+    "storedName": "1-d1gIvpr8--sample-photo.svg",
+    "mimeType": "image/svg+xml",
+    "kind": "image",
+    "sizeBytes": 1328,
+    "createdAt": "2026-03-06T09:19:47.423Z",
+    "downloadUrl": "/api/items/1-d1gIvpr8/download"
+  },
+  {
+    "id": "u2GzcuV",
+    "name": "sample-audio.wav",
+    "storedName": "u2GzcuV--G--sample-audio.wav",
+    "mimeType": "audio/wav",
+    "kind": "audio",
+    "sizeBytes": 97064,
+    "createdAt": "2026-03-06T09:19:47.423Z",
+    "downloadUrl": "/api/items/u2GzcuV/download",
+    "streamUrl": "/api/items/u2GzcuV/stream"
+  },
+  {
+    "id": "Om-DwBeqTz",
+    "name": "sample-note.txt",
+    "storedName": "Om-DwBeqTz--sample-note.txt",
+    "mimeType": "text/plain",
+    "kind": "document",
+    "sizeBytes": 68,
+    "createdAt": "2026-03-06T09:19:47.423Z",
+    "downloadUrl": "/api/items/Om-DwBeqTz/download"
+  },
+  {
+    "id": "mLTNxk7Nx",
+    "name": "sample-note.txt",
+    "storedName": "mLTNxk7Nx---sample-note.txt",
+    "mimeType": "text/plain",
+    "kind": "document",
+    "sizeBytes": 68,
+    "createdAt": "2026-03-06T09:18:55.797Z",
+    "downloadUrl": "/api/items/mLTNxk7Nx/download"
+  }
+]
