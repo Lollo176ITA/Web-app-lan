@@ -88,6 +88,6 @@ test.describe("mobile layout", () => {
     await expect(page.getByRole("heading", { name: "Routeroom LAN" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Seleziona file" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Vai alla libreria" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Tutti" })).toBeVisible();
+    await expect(page.getByLabel("Filtro libreria")).toBeVisible();
   });
 });

@@ -1,25 +1,36 @@
 import { startTransition, useEffect, useState } from "react";
+import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import LanRoundedIcon from "@mui/icons-material/LanRounded";
 import OfflineBoltRoundedIcon from "@mui/icons-material/OfflineBoltRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
-import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
 import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import {
   Alert,
+  AppBar,
+  Avatar,
   Box,
   Button,
+  Card,
+  CardContent,
+  CardHeader,
   Chip,
   Container,
   Divider,
-  Paper,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   Snackbar,
   Stack,
-  ToggleButton,
-  ToggleButtonGroup,
+  Tab,
+  Tabs,
+  Toolbar,
   Typography
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import QRCode from "qrcode";
 import { Link as RouterLink } from "react-router-dom";
 import type { LibraryItem, LibraryKind, SessionInfo } from "../../shared/types";
@@ -90,7 +101,7 @@ export function AppPage() {
 
     void QRCode.toDataURL(session.lanUrl, {
       margin: 1,
-      width: 208,
+      width: 192,
       color: {
         dark: "#10273a",
         light: "#0000"
@@ -175,95 +186,90 @@ export function AppPage() {
   }
 
   return (
-    <Box sx={{ pb: 6 }}>
-      <Container maxWidth="xl" sx={{ pt: { xs: 2.5, md: 4 } }}>
-        <Stack spacing={2.5}>
-          <Paper
-            elevation={0}
+    <Box sx={{ pb: 7 }}>
+      <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
+        <AppBar
+          position="static"
+          color="transparent"
+          sx={{
+            borderRadius: { xs: 3, md: 4 },
+            px: { xs: 0.5, md: 1.5 }
+          }}
+        >
+          <Toolbar
             sx={{
-              p: { xs: 2, md: 2.5 },
-              borderRadius: 6,
-              bgcolor: "rgba(255,255,255,0.86)"
+              gap: 2,
+              justifyContent: "space-between",
+              alignItems: { xs: "flex-start", md: "center" },
+              flexDirection: { xs: "column", md: "row" },
+              minHeight: { xs: 76, md: 88 },
+              py: { xs: 1.5, md: 0 }
             }}
           >
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between" alignItems={{ xs: "flex-start", md: "center" }}>
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Button component={RouterLink} to="/" variant="text" startIcon={<ArrowBackRoundedIcon />}>
-                  Home
-                </Button>
-                <Divider orientation="vertical" flexItem sx={{ display: { xs: "none", md: "block" } }} />
-                <Stack spacing={0.25}>
-                  <Typography variant="h4" sx={{ fontSize: "clamp(1.7rem, 2vw, 2.35rem)" }}>
-                    Routeroom LAN
-                  </Typography>
-                  <Typography color="text.secondary">
-                    Hub locale per file, video e media condivisi
-                  </Typography>
-                </Stack>
-              </Stack>
-
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                <Chip
-                  icon={liveState === "live" ? <WifiRoundedIcon /> : <AutorenewRoundedIcon />}
-                  color={liveState === "live" ? "secondary" : "default"}
-                  label={
-                    liveState === "live"
-                      ? "Aggiornamento live attivo"
-                      : liveState === "fallback"
-                        ? "Fallback polling"
-                        : "Connessione eventi"
-                  }
-                />
-                <Chip icon={<OfflineBoltRoundedIcon />} label="Zero Internet a runtime" />
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Button component={RouterLink} to="/" variant="text" startIcon={<ArrowBackRoundedIcon />}>
+                Home
+              </Button>
+              <Stack spacing={0.25}>
+                <Typography variant="h4" sx={{ fontSize: "clamp(1.65rem, 2vw, 2.35rem)" }}>
+                  Routeroom LAN
+                </Typography>
+                <Typography color="text.secondary">Hub locale per file, video e media condivisi</Typography>
               </Stack>
             </Stack>
-          </Paper>
 
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Chip
+                icon={liveState === "live" ? <WifiRoundedIcon /> : <AutorenewRoundedIcon />}
+                color={liveState === "live" ? "secondary" : "default"}
+                label={
+                  liveState === "live"
+                    ? "Aggiornamento live attivo"
+                    : liveState === "fallback"
+                      ? "Fallback polling"
+                      : "Connessione eventi"
+                }
+              />
+              <Chip icon={<OfflineBoltRoundedIcon />} label="Zero Internet a runtime" variant="outlined" />
+            </Stack>
+          </Toolbar>
+        </AppBar>
+
+        <Stack spacing={3} sx={{ mt: 3 }}>
           <Box
             sx={{
               display: "grid",
-              gap: 2,
-              gridTemplateColumns: { xs: "1fr", xl: "0.78fr 1.22fr" }
+              gap: 2.5,
+              alignItems: "start",
+              gridTemplateColumns: { xs: "1fr", xl: "0.84fr 1.16fr" }
             }}
           >
-            <Paper sx={{ p: { xs: 2.25, md: 3 }, borderRadius: 6, bgcolor: "rgba(255,255,255,0.86)" }}>
-              <Stack spacing={2.5}>
-                <Stack direction="row" spacing={1.25} alignItems="center">
-                  <Box
-                    sx={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 4,
-                      display: "grid",
-                      placeItems: "center",
-                      bgcolor: "secondary.main",
-                      color: "common.white"
-                    }}
-                  >
+            <Card>
+              <CardHeader
+                avatar={
+                  <Avatar sx={{ bgcolor: "secondary.main" }}>
                     <LanRoundedIcon />
-                  </Box>
-                  <Box>
-                    <Typography variant="h5">Sessione host</Typography>
-                    <Typography color="text.secondary">Condividi questo indirizzo nella stessa rete</Typography>
-                  </Box>
-                </Stack>
-
+                  </Avatar>
+                }
+                title="Sessione host"
+                subheader="Condividi questo indirizzo nella stessa rete"
+              />
+              <CardContent sx={{ pt: 0 }}>
                 {loading || !session ? (
                   <Typography color="text.secondary">Caricamento informazioni host...</Typography>
                 ) : (
-                  <Stack spacing={2}>
-                    <Paper
-                      variant="outlined"
+                  <Stack spacing={2.25}>
+                    <Box
                       sx={{
-                        p: 2,
-                        borderRadius: 5,
-                        bgcolor: "rgba(23, 105, 170, 0.04)"
+                        p: 2.25,
+                        borderRadius: 4,
+                        bgcolor: alpha("#1769aa", 0.05)
                       }}
                     >
                       <Typography variant="body2" color="text.secondary">
                         URL LAN
                       </Typography>
-                      <Typography variant="h5" sx={{ mt: 0.5, wordBreak: "break-all" }}>
+                      <Typography variant="h5" sx={{ mt: 0.75, wordBreak: "break-word" }}>
                         {session.lanUrl}
                       </Typography>
                       <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} sx={{ mt: 2 }}>
@@ -286,104 +292,162 @@ export function AppPage() {
                           Copia host
                         </Button>
                       </Stack>
-                    </Paper>
+                    </Box>
 
-                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                      <Paper sx={{ p: 2, borderRadius: 5, flex: 1 }}>
-                        <Typography color="text.secondary" variant="body2">
-                          Libreria persistente
-                        </Typography>
-                        <Typography variant="h4">{session.itemCount}</Typography>
-                        <Typography color="text.secondary">elementi disponibili</Typography>
-                      </Paper>
-                      <Paper sx={{ p: 2, borderRadius: 5, flex: 1 }}>
-                        <Typography color="text.secondary" variant="body2">
-                          Totale salvato
-                        </Typography>
-                        <Typography variant="h4">{formatBytes(session.totalBytes)}</Typography>
-                        <Typography color="text.secondary">su {session.storagePath}</Typography>
-                      </Paper>
-                    </Stack>
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gap: 1.5,
+                        gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" }
+                      }}
+                    >
+                      <Card variant="outlined">
+                        <CardContent>
+                          <Stack direction="row" spacing={1.5} alignItems="center">
+                            <Avatar sx={{ bgcolor: alpha("#1769aa", 0.14), color: "primary.main" }}>
+                              <StorageRoundedIcon />
+                            </Avatar>
+                            <Box>
+                              <Typography color="text.secondary" variant="body2">
+                                Libreria persistente
+                              </Typography>
+                              <Typography variant="h4">{session.itemCount}</Typography>
+                              <Typography color="text.secondary">elementi disponibili</Typography>
+                            </Box>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                      <Card variant="outlined">
+                        <CardContent>
+                          <Typography color="text.secondary" variant="body2">
+                            Totale salvato
+                          </Typography>
+                          <Typography variant="h4">{formatBytes(session.totalBytes)}</Typography>
+                          <Typography color="text.secondary" sx={{ wordBreak: "break-word" }}>
+                            {session.storagePath}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Box>
 
                     {qrCodeDataUrl ? (
-                      <Paper
-                        variant="outlined"
-                        sx={{
-                          p: 2,
-                          borderRadius: 5,
-                          alignSelf: "flex-start",
-                          bgcolor: "rgba(15, 157, 148, 0.05)"
-                        }}
-                      >
-                        <Box component="img" src={qrCodeDataUrl} alt="QR code URL LAN" sx={{ width: 160, height: 160, display: "block" }} />
-                      </Paper>
+                      <Card variant="outlined" sx={{ alignSelf: "flex-start" }}>
+                        <CardContent sx={{ p: 2 }}>
+                          <Box component="img" src={qrCodeDataUrl} alt="QR code URL LAN" sx={{ width: 164, height: 164, display: "block" }} />
+                        </CardContent>
+                      </Card>
                     ) : null}
                   </Stack>
                 )}
-              </Stack>
-            </Paper>
+              </CardContent>
+            </Card>
 
-            <Paper sx={{ p: { xs: 2.25, md: 3 }, borderRadius: 6, bgcolor: "rgba(255,255,255,0.86)" }}>
-              <Stack spacing={2.5}>
-                <UploadSurface onUpload={handleUpload} uploading={uploading} />
-                <Alert severity={liveState === "fallback" ? "warning" : "info"} sx={{ borderRadius: 4 }}>
-                  {liveState === "fallback"
-                    ? "SSE non disponibile: Routeroom aggiorna la libreria con polling lento."
-                    : "Quando un altro device carica un file, la libreria si aggiorna senza refresh."}
-                </Alert>
-              </Stack>
-            </Paper>
+            <Stack spacing={2.5}>
+              <UploadSurface onUpload={handleUpload} uploading={uploading} />
+              <Alert severity={liveState === "fallback" ? "warning" : "info"} sx={{ borderRadius: 4 }}>
+                {liveState === "fallback"
+                  ? "SSE non disponibile: Routeroom aggiorna la libreria con polling lento."
+                  : "Quando un altro device carica un file, la libreria si aggiorna senza refresh."}
+              </Alert>
+            </Stack>
           </Box>
 
-          <Paper id="libreria" sx={{ p: { xs: 2.25, md: 3 }, borderRadius: 6, bgcolor: "rgba(255,255,255,0.86)" }}>
-            <Stack spacing={2.5}>
-              <Stack direction={{ xs: "column", lg: "row" }} justifyContent="space-between" spacing={2}>
-                <Box>
-                  <Typography variant="h3">Libreria locale</Typography>
-                  <Typography color="text.secondary">
-                    Filtra i contenuti e apri subito il player o il download locale.
-                  </Typography>
-                </Box>
-                <ToggleButtonGroup
-                  color="primary"
-                  exclusive
-                  value={filter}
-                  onChange={(_event, nextValue: FilterValue | null) => {
-                    if (nextValue) {
-                      setFilter(nextValue);
-                    }
-                  }}
-                  sx={{ flexWrap: "wrap", gap: 1, justifyContent: "flex-start" }}
+          <Card id="libreria">
+            <CardContent sx={{ pb: 0 }}>
+              <Stack spacing={2.5}>
+                <Stack
+                  direction={{ xs: "column", md: "row" }}
+                  spacing={1.5}
+                  alignItems={{ xs: "flex-start", md: "center" }}
+                  justifyContent="space-between"
                 >
-                  {filters.map((entry) => (
-                    <ToggleButton
-                      key={entry.value}
-                      value={entry.value}
-                      sx={{
-                        borderRadius: "999px !important",
-                        border: "1px solid rgba(16, 39, 58, 0.12) !important",
-                        px: 2
+                  <Box>
+                    <Typography variant="h5">Libreria locale</Typography>
+                    <Typography color="text.secondary">
+                      Filtra i contenuti e apri subito il player o il download locale.
+                    </Typography>
+                  </Box>
+                  <Chip
+                    color="primary"
+                    label={filteredItems.length === 1 ? "1 elemento visibile" : `${filteredItems.length} elementi visibili`}
+                    sx={{ alignSelf: { xs: "flex-start", md: "center" } }}
+                  />
+                </Stack>
+
+                <Box
+                  sx={{
+                    p: 0.75,
+                    borderRadius: 4,
+                    bgcolor: alpha("#1769aa", 0.05),
+                    border: `1px solid ${alpha("#1769aa", 0.08)}`
+                  }}
+                >
+                  <FormControl fullWidth size="small" sx={{ display: { xs: "flex", sm: "none" } }}>
+                    <InputLabel id="library-filter-label">Filtro libreria</InputLabel>
+                    <Select
+                      labelId="library-filter-label"
+                      value={filter}
+                      label="Filtro libreria"
+                      onChange={(event) => {
+                        setFilter(event.target.value as FilterValue);
                       }}
                     >
-                      {entry.label}
-                    </ToggleButton>
-                  ))}
-                </ToggleButtonGroup>
-              </Stack>
+                      {filters.map((entry) => (
+                        <MenuItem key={entry.value} value={entry.value}>
+                          {entry.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
 
+                  <Box sx={{ display: { xs: "none", sm: "block" } }}>
+                    <Tabs
+                      value={filter}
+                      onChange={(_event, nextValue: FilterValue) => {
+                        setFilter(nextValue);
+                      }}
+                      variant="scrollable"
+                      scrollButtons={false}
+                      sx={{
+                        minHeight: 0,
+                        "& .MuiTabs-flexContainer": {
+                          gap: 0.5
+                        },
+                        "& .MuiTab-root": {
+                          color: "text.secondary"
+                        },
+                        "& .MuiTab-root.Mui-selected": {
+                          bgcolor: "background.paper",
+                          color: "primary.main",
+                          boxShadow: "0 8px 18px rgba(16, 39, 58, 0.08)"
+                        }
+                      }}
+                    >
+                      {filters.map((entry) => (
+                        <Tab key={entry.value} label={entry.label} value={entry.value} />
+                      ))}
+                    </Tabs>
+                  </Box>
+                </Box>
+              </Stack>
+            </CardContent>
+
+            <Divider sx={{ mt: 2.5 }} />
+
+            <CardContent>
               <Box
                 sx={{
                   display: "grid",
-                  gap: 2,
+                  gap: 2.5,
                   alignItems: "start",
-                  gridTemplateColumns: { xs: "1fr", xl: "0.95fr 1.05fr" }
+                  gridTemplateColumns: { xs: "1fr", xl: "minmax(0, 0.92fr) minmax(0, 1.08fr)" }
                 }}
               >
                 <LibraryGrid items={filteredItems} selectedId={selectedId} onSelect={setSelectedId} />
                 <MediaDetail item={selectedItem} onCopyLink={copyText} />
               </Box>
-            </Stack>
-          </Paper>
+            </CardContent>
+          </Card>
         </Stack>
       </Container>
 

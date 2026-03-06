@@ -23,7 +23,7 @@ export const theme = createTheme({
     }
   },
   shape: {
-    borderRadius: 24
+    borderRadius: 18
   },
   typography: {
     fontFamily: '"Roboto Flex", "Segoe UI", sans-serif',
@@ -51,13 +51,25 @@ export const theme = createTheme({
     }
   },
   components: {
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          background: "rgba(255,255,255,0.78)",
+          color: "#10273a",
+          backdropFilter: "blur(20px)",
+          boxShadow: "none",
+          border: `1px solid ${alpha("#1769aa", 0.08)}`,
+          overflow: "hidden"
+        }
+      }
+    },
     MuiButton: {
       defaultProps: {
         disableElevation: true
       },
       styleOverrides: {
         root: {
-          borderRadius: 999,
+          borderRadius: 20,
           paddingInline: 22,
           minHeight: 48
         }
@@ -70,10 +82,63 @@ export const theme = createTheme({
         }
       }
     },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: 20,
+          background: "rgba(255,255,255,0.88)",
+          border: `1px solid ${alpha("#1769aa", 0.08)}`,
+          boxShadow: "0 18px 50px rgba(16, 39, 58, 0.06)"
+        }
+      }
+    },
+    MuiCardContent: {
+      styleOverrides: {
+        root: {
+          padding: 24,
+          "&:last-child": {
+            paddingBottom: 24
+          }
+        }
+      }
+    },
+    MuiTab: {
+      styleOverrides: {
+        root: {
+          minHeight: 44,
+          textTransform: "none",
+          fontWeight: 600,
+          borderRadius: 16,
+          marginRight: 8,
+          minWidth: 0,
+          paddingInline: 16
+        }
+      }
+    },
+    MuiTabs: {
+      styleOverrides: {
+        root: {
+          minHeight: 46
+        },
+        scroller: {
+          overflow: "auto !important"
+        },
+        indicator: {
+          height: 0
+        }
+      }
+    },
+    MuiToggleButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 16
+        }
+      }
+    },
     MuiChip: {
       styleOverrides: {
         root: {
-          borderRadius: 999
+          borderRadius: 16
         }
       }
     }

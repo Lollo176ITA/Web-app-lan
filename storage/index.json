@@ -7,7 +7,8 @@
     "kind": "document",
     "sizeBytes": 68,
     "createdAt": "2026-03-06T09:19:52.639Z",
-    "downloadUrl": "/api/items/QgVBTcK-r6/download"
+    "downloadUrl": "/api/items/QgVBTcK-r6/download",
+    "contentUrl": "/api/items/QgVBTcK-r6/content"
   },
   {
     "id": "iS244kIiqp",
@@ -17,7 +18,8 @@
     "kind": "document",
     "sizeBytes": 68,
     "createdAt": "2026-03-06T09:19:52.184Z",
-    "downloadUrl": "/api/items/iS244kIiqp/download"
+    "downloadUrl": "/api/items/iS244kIiqp/download",
+    "contentUrl": "/api/items/iS244kIiqp/content"
   },
   {
     "id": "1sVrD2Usg0",
@@ -28,7 +30,8 @@
     "sizeBytes": 15800,
     "createdAt": "2026-03-06T09:19:47.423Z",
     "downloadUrl": "/api/items/1sVrD2Usg0/download",
-    "streamUrl": "/api/items/1sVrD2Usg0/stream"
+    "streamUrl": "/api/items/1sVrD2Usg0/stream",
+    "contentUrl": "/api/items/1sVrD2Usg0/content"
   },
   {
     "id": "1-d1gIvpr8",
@@ -38,7 +41,8 @@
     "kind": "image",
     "sizeBytes": 1328,
     "createdAt": "2026-03-06T09:19:47.423Z",
-    "downloadUrl": "/api/items/1-d1gIvpr8/download"
+    "downloadUrl": "/api/items/1-d1gIvpr8/download",
+    "contentUrl": "/api/items/1-d1gIvpr8/content"
   },
   {
     "id": "u2GzcuV",
@@ -49,7 +53,8 @@
     "sizeBytes": 97064,
     "createdAt": "2026-03-06T09:19:47.423Z",
     "downloadUrl": "/api/items/u2GzcuV/download",
-    "streamUrl": "/api/items/u2GzcuV/stream"
+    "streamUrl": "/api/items/u2GzcuV/stream",
+    "contentUrl": "/api/items/u2GzcuV/content"
   },
   {
     "id": "Om-DwBeqTz",
@@ -59,7 +64,8 @@
     "kind": "document",
     "sizeBytes": 68,
     "createdAt": "2026-03-06T09:19:47.423Z",
-    "downloadUrl": "/api/items/Om-DwBeqTz/download"
+    "downloadUrl": "/api/items/Om-DwBeqTz/download",
+    "contentUrl": "/api/items/Om-DwBeqTz/content"
   },
   {
     "id": "mLTNxk7Nx",
@@ -69,6 +75,7 @@
     "kind": "document",
     "sizeBytes": 68,
     "createdAt": "2026-03-06T09:18:55.797Z",
-    "downloadUrl": "/api/items/mLTNxk7Nx/download"
+    "downloadUrl": "/api/items/mLTNxk7Nx/download",
+    "contentUrl": "/api/items/mLTNxk7Nx/content"
   }
 ]

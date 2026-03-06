@@ -8,7 +8,7 @@
     "dev": "concurrently \"tsx watch server/index.ts\" \"vite\"",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build --outDir dist/client",
-    "build:server": "tsc -p tsconfig.server.json",
+    "build:server": "rm -rf dist/server dist/shared && tsc -p tsconfig.server.json",
     "start": "node dist/server/index.js",
     "test": "npm run fixtures && vitest run",
     "test:watch": "vitest",
