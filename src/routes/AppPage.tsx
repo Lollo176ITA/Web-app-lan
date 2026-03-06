@@ -1,5 +1,4 @@
 import { startTransition, useEffect, useState } from "react";
-import ArticleRoundedIcon from "@mui/icons-material/ArticleRounded";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
@@ -7,6 +6,7 @@ import CreateNewFolderRoundedIcon from "@mui/icons-material/CreateNewFolderRound
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import LanRoundedIcon from "@mui/icons-material/LanRounded";
 import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
+import ViewAgendaRoundedIcon from "@mui/icons-material/ViewAgendaRounded";
 import ViewCompactRoundedIcon from "@mui/icons-material/ViewCompactRounded";
 import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import {
@@ -94,7 +94,7 @@ export function AppPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterValue>("all");
-  const [layoutMode, setLayoutMode] = useState<LibraryLayoutMode>("intermediate");
+  const [layoutMode, setLayoutMode] = useState<LibraryLayoutMode>("descriptive");
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
@@ -202,7 +202,7 @@ export function AppPage() {
   );
 
   const filteredItems = currentFolderItems.filter(
-    (item) => item.kind === "folder" || filter === "all" || item.kind === filter
+    (item) => filter === "all" || item.kind === filter
   );
 
   useEffect(() => {
@@ -565,30 +565,30 @@ export function AppPage() {
                     </Box>
                   </Box>
 
-                  <ToggleButtonGroup
-                    exclusive
-                    color="primary"
-                    size="small"
-                    value={layoutMode}
+                    <ToggleButtonGroup
+                      exclusive
+                      color="primary"
+                      size="small"
+                      value={layoutMode}
                     onChange={(_event, value: LibraryLayoutMode | null) => {
                       if (value) {
                         setLayoutMode(value);
                       }
                     }}
-                  >
-                    <ToggleButton value="compact">
-                      <ViewCompactRoundedIcon sx={{ mr: 0.75 }} />
-                      Compatto
-                    </ToggleButton>
-                    <ToggleButton value="intermediate">
-                      <GridViewRoundedIcon sx={{ mr: 0.75 }} />
-                      Intermedio
-                    </ToggleButton>
-                    <ToggleButton value="descriptive">
-                      <ArticleRoundedIcon sx={{ mr: 0.75 }} />
-                      Descrittivo
-                    </ToggleButton>
-                  </ToggleButtonGroup>
+                    >
+                      <ToggleButton value="minimal">
+                        <ViewAgendaRoundedIcon sx={{ mr: 0.75 }} />
+                        Minimal
+                      </ToggleButton>
+                      <ToggleButton value="compact">
+                        <ViewCompactRoundedIcon sx={{ mr: 0.75 }} />
+                        Compatto
+                      </ToggleButton>
+                      <ToggleButton value="descriptive">
+                        <GridViewRoundedIcon sx={{ mr: 0.75 }} />
+                        Descrittivo
+                      </ToggleButton>
+                    </ToggleButtonGroup>
                 </Box>
               </Stack>
             </CardContent>

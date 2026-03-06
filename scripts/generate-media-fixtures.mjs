@@ -7,6 +7,7 @@ import { Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const rootDirectory = path.resolve(currentDirectory, "..");
 const fixturesDirectory = path.join(rootDirectory, "tests", "fixtures");
+const bundleDirectory = path.join(fixturesDirectory, "sample-bundle");
 
 function createWaveFile({ seconds = 1.1, sampleRate = 44_100, frequency = 440 }) {
   const sampleCount = Math.floor(seconds * sampleRate);
@@ -209,6 +210,9 @@ async function createDocxFixture(destination) {
 }
 
 await fs.mkdir(fixturesDirectory, { recursive: true });
+await fs.rm(bundleDirectory, { recursive: true, force: true });
+await fs.mkdir(path.join(bundleDirectory, "Guide"), { recursive: true });
+await fs.mkdir(path.join(bundleDirectory, "Docs"), { recursive: true });
 
 await fs.writeFile(
   path.join(fixturesDirectory, "sample-note.txt"),
@@ -248,3 +252,7 @@ await fs.writeFile(path.join(fixturesDirectory, "sample-audio.wav"), createWaveF
 await createPdfFixture(path.join(fixturesDirectory, "sample-guide.pdf"));
 await createDocxFixture(path.join(fixturesDirectory, "sample-brief.docx"));
 await createVideoFixture(path.join(fixturesDirectory, "sample-video.webm"));
+
+await fs.copyFile(path.join(fixturesDirectory, "sample-note.txt"), path.join(bundleDirectory, "Guide", "sample-note.txt"));
+await fs.copyFile(path.join(fixturesDirectory, "sample-guide.pdf"), path.join(bundleDirectory, "Guide", "sample-guide.pdf"));
+await fs.copyFile(path.join(fixturesDirectory, "sample-brief.docx"), path.join(bundleDirectory, "Docs", "sample-brief.docx"));

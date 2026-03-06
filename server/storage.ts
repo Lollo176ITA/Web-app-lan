@@ -179,7 +179,6 @@ export class LibraryStore {
 
   async registerUploads(files: Express.Multer.File[], parentId: string | null = null) {
     this.assertParentFolder(parentId);
-
     const createdAt = new Date().toISOString();
     const newItems = files.map((file) => {
       const id = file.filename.split("--")[0];
@@ -199,6 +198,43 @@ export class LibraryStore {
     });
 
     this.items = sortItems([...newItems, ...this.items]);
+    await this.persist();
+
+    return newItems.map((item) => this.hydrateItem(item));
+  }
+
+  async registerUploadsWithPaths(
+    files: Express.Multer.File[],
+    relativePaths: string[],
+    parentId: string | null = null
+  ) {
+    this.assertParentFolder(parentId);
+
+    const createdAt = new Date().toISOString();
+    const createdFolders: StoredLibraryItem[] = [];
+    const newItems = files.map((file, index) => {
+      const relativePath = relativePaths[index] || file.originalname;
+      const normalizedRelativePath = relativePath.replace(/\\/g, "/");
+      const pathSegments = normalizedRelativePath.split("/").filter(Boolean);
+      const fileName = pathSegments.at(-1) ?? file.originalname;
+      const targetParentId = this.ensureFolderChain(pathSegments.slice(0, -1), parentId, createdAt, createdFolders);
+      const id = file.filename.split("--")[0];
+      const mimeType = normalizeMimeType(file.mimetype, file.originalname);
+      const kind = classifyMimeType(mimeType);
+
+      return {
+        id,
+        name: fileName,
+        storedName: file.filename,
+        mimeType,
+        kind,
+        sizeBytes: file.size,
+        createdAt,
+        parentId: targetParentId
+      } satisfies StoredLibraryItem;
+    });
+
+    this.items = sortItems([...createdFolders, ...newItems, ...this.items]);
     await this.persist();
 
     return newItems.map((item) => this.hydrateItem(item));
@@ -297,6 +333,56 @@ export class LibraryStore {
     if (!parent || parent.kind !== "folder") {
       throw new Error("Invalid parent folder");
     }
+  }
+
+  private ensureFolderChain(
+    folderNames: string[],
+    startingParentId: string | null,
+    createdAt: string,
+    createdFolders: StoredLibraryItem[]
+  ) {
+    let currentParentId = startingParentId;
+
+    for (const rawName of folderNames) {
+      const folderName = rawName.trim();
+
+      if (!folderName) {
+        continue;
+      }
+
+      const existingFolder = this.items.find(
+        (item) =>
+          item.kind === "folder" &&
+          item.parentId === currentParentId &&
+          item.name === folderName
+      ) ?? createdFolders.find(
+        (item) =>
+          item.kind === "folder" &&
+          item.parentId === currentParentId &&
+          item.name === folderName
+      );
+
+      if (existingFolder) {
+        currentParentId = existingFolder.id;
+        continue;
+      }
+
+      const folder = {
+        id: nanoid(10),
+        name: folderName,
+        storedName: "",
+        mimeType: FOLDER_MIME_TYPE,
+        kind: "folder",
+        sizeBytes: 0,
+        createdAt,
+        parentId: currentParentId
+      } satisfies StoredLibraryItem;
+
+      createdFolders.push(folder);
+      currentParentId = folder.id;
+    }
+
+    return currentParentId;
   }
 
   private seedDemoContent() {

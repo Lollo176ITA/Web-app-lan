@@ -32,7 +32,10 @@ export async function fetchSnapshot() {
 
 export async function uploadFiles(files: File[], parentId?: string | null) {
   const body = new FormData();
-  files.forEach((file) => body.append("files", file));
+  files.forEach((file) => {
+    body.append("files", file);
+    body.append("relativePaths", file.webkitRelativePath || file.name);
+  });
   if (parentId) {
     body.append("parentId", parentId);
   }

@@ -7,7 +7,7 @@ export type LibraryKind =
   | "archive"
   | "other";
 
-export type LibraryLayoutMode = "compact" | "intermediate" | "descriptive";
+export type LibraryLayoutMode = "minimal" | "compact" | "descriptive";
 
 export interface LibraryItem {
   id: string;

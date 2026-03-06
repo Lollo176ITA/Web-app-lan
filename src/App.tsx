@@ -1,13 +1,33 @@
+import { lazy, Suspense } from "react";
+import { Box, CircularProgress } from "@mui/material";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { AppPage } from "./routes/AppPage";
-import { LandingPage } from "./routes/LandingPage";
+
+const LandingPage = lazy(async () => import("./routes/LandingPage").then((module) => ({ default: module.LandingPage })));
+const AppPage = lazy(async () => import("./routes/AppPage").then((module) => ({ default: module.AppPage })));
+
+function RouteFallback() {
+  return (
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        bgcolor: "background.default"
+      }}
+    >
+      <CircularProgress />
+    </Box>
+  );
+}
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/app" element={<AppPage />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/app" element={<AppPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }

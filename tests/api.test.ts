@@ -36,9 +36,13 @@ describe("Routeroom API", () => {
     close();
   });
 
-  it("creates folders, uploads into them, and restores the tree on restart", async () => {
+  it("preserves nested folder structure during directory uploads and restores it on restart", async () => {
     const storageRoot = await createTemporaryStorage();
     const { app, close } = await createApp({ storageRoot });
+    const [textBuffer, docxBuffer] = await Promise.all([
+      fs.readFile(path.join(fixturesDirectory, "sample-note.txt")),
+      fs.readFile(path.join(fixturesDirectory, "sample-brief.docx"))
+    ]);
 
     const folderResponse = await request(app)
       .post("/api/folders")
@@ -48,9 +52,15 @@ describe("Routeroom API", () => {
     await request(app)
       .post("/api/items")
       .field("parentId", folderResponse.body.item.id)
-      .attach("files", Buffer.from("hello routeroom"), {
-        filename: "notes.txt",
+      .field("relativePaths", "sample-bundle/Guide/sample-note.txt")
+      .field("relativePaths", "sample-bundle/Docs/sample-brief.docx")
+      .attach("files", textBuffer, {
+        filename: "sample-note.txt",
         contentType: "text/plain"
+      })
+      .attach("files", docxBuffer, {
+        filename: "sample-brief.docx",
+        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
       })
       .expect(201);
 
@@ -59,9 +69,12 @@ describe("Routeroom API", () => {
     const reloaded = await createApp({ storageRoot });
     const itemsResponse = await request(reloaded.app).get("/api/items").expect(200);
 
-    expect(itemsResponse.body).toHaveLength(2);
     expect(itemsResponse.body.some((item: { kind: string; name: string }) => item.kind === "folder" && item.name === "Salotto")).toBe(true);
-    expect(itemsResponse.body.some((item: { parentId: string; kind: string }) => item.parentId === folderResponse.body.item.id && item.kind === "document")).toBe(true);
+    expect(itemsResponse.body.some((item: { kind: string; name: string }) => item.kind === "folder" && item.name === "sample-bundle")).toBe(true);
+    expect(itemsResponse.body.some((item: { kind: string; name: string }) => item.kind === "folder" && item.name === "Guide")).toBe(true);
+    expect(itemsResponse.body.some((item: { kind: string; name: string }) => item.kind === "folder" && item.name === "Docs")).toBe(true);
+    expect(itemsResponse.body.some((item: { kind: string; name: string }) => item.kind === "document" && item.name === "sample-note.txt")).toBe(true);
+    expect(itemsResponse.body.some((item: { kind: string; name: string }) => item.kind === "document" && item.name === "sample-brief.docx")).toBe(true);
     reloaded.close();
   });
 

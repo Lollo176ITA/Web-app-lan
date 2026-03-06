@@ -58,34 +58,29 @@ function sortVisibleItems(items: LibraryItem[]) {
 
 function getGridTemplate(layoutMode: LibraryLayoutMode) {
   switch (layoutMode) {
+    case "minimal":
+      return {
+        xs: "1fr"
+      };
     case "compact":
       return {
-        xs: "1fr",
-        sm: "repeat(2, minmax(0, 1fr))",
-        lg: "repeat(3, minmax(0, 1fr))"
-      };
-    case "descriptive":
-      return {
-        xs: "1fr",
-        xl: "1fr"
+        xs: "repeat(2, minmax(0, 1fr))",
+        md: "repeat(3, minmax(0, 1fr))"
       };
     default:
       return {
         xs: "1fr",
-        sm: "repeat(2, minmax(0, 1fr))"
+        lg: "repeat(2, minmax(0, 1fr))"
       };
   }
 }
 
 function getPreviewHeight(layoutMode: LibraryLayoutMode) {
-  switch (layoutMode) {
-    case "compact":
-      return 116;
-    case "descriptive":
-      return 220;
-    default:
-      return 188;
+  if (layoutMode === "compact") {
+    return 112;
   }
+
+  return 172;
 }
 
 export function LibraryGrid({
@@ -126,7 +121,74 @@ export function LibraryGrid({
         const Icon = config.icon;
         const isSelected = item.id === selectedId;
         const isFolder = item.kind === "folder";
-        const isDescriptive = layoutMode === "descriptive";
+
+        if (layoutMode === "minimal") {
+          return (
+            <Card
+              key={item.id}
+              elevation={0}
+              sx={{
+                position: "relative",
+                overflow: "hidden",
+                borderColor: isSelected ? alpha(config.accent, 0.36) : "rgba(16, 39, 58, 0.08)",
+                boxShadow: isSelected ? `0 12px 28px ${alpha(config.accent, 0.14)}` : "0 8px 22px rgba(16, 39, 58, 0.04)"
+              }}
+            >
+              <Tooltip title={`Elimina ${item.name}`}>
+                <IconButton
+                  aria-label={`Elimina ${item.name}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDelete(item);
+                  }}
+                  sx={{
+                    position: "absolute",
+                    top: 8,
+                    right: 8,
+                    zIndex: 2,
+                    bgcolor: "rgba(255,255,255,0.92)"
+                  }}
+                >
+                  <CloseRoundedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+
+              <CardActionArea
+                onClick={() => {
+                  if (isFolder) {
+                    onOpenFolder(item.id);
+                    return;
+                  }
+
+                  onSelect(item.id);
+                }}
+              >
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ px: 2, py: 1.5, pr: 6 }}>
+                  <Avatar
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      bgcolor: alpha(config.accent, 0.12),
+                      color: config.accent
+                    }}
+                  >
+                    <Icon fontSize="small" />
+                  </Avatar>
+                  <Stack spacing={0.2} sx={{ minWidth: 0 }}>
+                    <Typography noWrap fontWeight={600}>
+                      {item.name}
+                    </Typography>
+                    <Typography noWrap variant="body2" color="text.secondary">
+                      {isFolder
+                        ? `${item.childrenCount ?? 0} elementi`
+                        : formatBytes(item.sizeBytes)}
+                    </Typography>
+                  </Stack>
+                </Stack>
+              </CardActionArea>
+            </Card>
+          );
+        }
 
         return (
           <Card
@@ -167,12 +229,7 @@ export function LibraryGrid({
 
                 onSelect(item.id);
               }}
-              sx={{
-                height: "100%",
-                alignItems: "stretch",
-                display: "flex",
-                flexDirection: isDescriptive ? { xs: "column", md: "row" } : "column"
-              }}
+              sx={{ height: "100%", alignItems: "stretch" }}
             >
               {item.kind === "image" ? (
                 <CardMedia
@@ -180,45 +237,45 @@ export function LibraryGrid({
                   src={item.contentUrl ?? item.downloadUrl}
                   alt={item.name}
                   sx={{
-                    height: isDescriptive ? { xs: previewHeight, md: "100%" } : previewHeight,
-                    width: isDescriptive ? { xs: "100%", md: 260 } : "100%",
+                    height: layoutMode === "compact" ? previewHeight : 188,
                     objectFit: "cover"
                   }}
                 />
               ) : (
                 <Box
                   sx={{
-                    height: isDescriptive ? { xs: previewHeight, md: "100%" } : previewHeight,
-                    width: isDescriptive ? { xs: "100%", md: 260 } : "100%",
-                    px: 2.5,
+                    height: layoutMode === "compact" ? previewHeight : 188,
+                    px: 2,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     bgcolor: alpha(config.accent, 0.08)
                   }}
                 >
-                  <Stack spacing={1.5} alignItems="center">
+                  <Stack spacing={1} alignItems="center">
                     <Avatar
                       sx={{
-                        width: layoutMode === "compact" ? 52 : 64,
-                        height: layoutMode === "compact" ? 52 : 64,
+                        width: layoutMode === "compact" ? 48 : 60,
+                        height: layoutMode === "compact" ? 48 : 60,
                         bgcolor: alpha(config.accent, 0.14),
                         color: config.accent
                       }}
                     >
                       <Icon />
                     </Avatar>
-                    <Chip
-                      label={config.label}
-                      size="small"
-                      sx={{ bgcolor: alpha(config.accent, 0.14), color: config.accent }}
-                    />
+                    {layoutMode === "descriptive" ? (
+                      <Chip
+                        label={config.label}
+                        size="small"
+                        sx={{ bgcolor: alpha(config.accent, 0.14), color: config.accent }}
+                      />
+                    ) : null}
                   </Stack>
                 </Box>
               )}
 
-              <CardContent sx={{ width: "100%" }}>
-                <Stack spacing={layoutMode === "compact" ? 1 : 1.25}>
+              <CardContent>
+                <Stack spacing={layoutMode === "compact" ? 0.75 : 1.25}>
                   <Typography
                     variant={layoutMode === "compact" ? "subtitle1" : "h6"}
                     sx={{ lineHeight: 1.18, wordBreak: "break-word", pr: 4.5 }}
@@ -228,24 +285,29 @@ export function LibraryGrid({
 
                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                     <Chip label={config.label} size="small" />
-                    {isFolder ? (
-                      <Chip label={`${item.childrenCount ?? 0} elementi`} size="small" variant="outlined" />
-                    ) : (
-                      <Chip label={formatBytes(item.sizeBytes)} size="small" variant="outlined" />
-                    )}
+                    <Chip
+                      label={isFolder ? `${item.childrenCount ?? 0} elementi` : formatBytes(item.sizeBytes)}
+                      size="small"
+                      variant="outlined"
+                    />
                   </Stack>
 
-                  <Typography color="text.secondary" variant="body2">
-                    {isFolder ? "Cartella locale" : `Aggiunto ${formatDate(item.createdAt)}`}
-                  </Typography>
-
                   {layoutMode === "descriptive" ? (
+                    <>
+                      <Typography color="text.secondary" variant="body2">
+                        {isFolder ? "Cartella locale" : `Aggiunto ${formatDate(item.createdAt)}`}
+                      </Typography>
+                      <Typography color="text.secondary" variant="body2">
+                        {isFolder
+                          ? "Aprila per continuare l’esplorazione a colonne."
+                          : `${item.mimeType} · ${formatBytes(item.sizeBytes)}`}
+                      </Typography>
+                    </>
+                  ) : (
                     <Typography color="text.secondary" variant="body2">
-                      {isFolder
-                        ? "Aprila per navigare i contenuti, come in una vista a colonne."
-                        : `${item.mimeType} · ${formatBytes(item.sizeBytes)}`}
+                      {isFolder ? "Cartella locale" : formatDate(item.createdAt)}
                     </Typography>
-                  ) : null}
+                  )}
                 </Stack>
               </CardContent>
             </CardActionArea>

@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 import FlashOnRoundedIcon from "@mui/icons-material/FlashOnRounded";
 import FolderZipRoundedIcon from "@mui/icons-material/FolderZipRounded";
@@ -23,7 +23,13 @@ interface UploadSurfaceProps {
 
 export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfaceProps) {
   const inputId = useId();
+  const directoryInputRef = useRef<HTMLInputElement | null>(null);
   const [isActive, setIsActive] = useState(false);
+
+  useEffect(() => {
+    directoryInputRef.current?.setAttribute("webkitdirectory", "");
+    directoryInputRef.current?.setAttribute("directory", "");
+  }, []);
 
   async function handleFiles(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) {
@@ -82,6 +88,7 @@ export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfac
             </Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               <Chip icon={<FolderZipRoundedIcon />} label="Upload multiplo" />
+              <Chip label="Cartelle complete" variant="outlined" />
               <Chip icon={<FlashOnRoundedIcon />} label="Aggiornamento live" variant="outlined" />
             </Stack>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
@@ -98,6 +105,25 @@ export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfac
                   }}
                 />
               </Button>
+              <Button
+                variant="outlined"
+                size="large"
+                onClick={() => {
+                  directoryInputRef.current?.click();
+                }}
+              >
+                Carica cartella
+              </Button>
+              <input
+                ref={directoryInputRef}
+                hidden
+                multiple
+                type="file"
+                onChange={(event) => {
+                  void handleFiles(event.target.files);
+                  event.currentTarget.value = "";
+                }}
+              />
               <Button component="a" href="#libreria" variant="text" size="large">
                 Vai alla libreria
               </Button>

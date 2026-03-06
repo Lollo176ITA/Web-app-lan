@@ -53,6 +53,14 @@ function normalizeParentId(value: unknown) {
   return trimmed ? trimmed : null;
 }
 
+function normalizeStringArray(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => (typeof entry === "string" ? [entry] : []));
+  }
+
+  return typeof value === "string" ? [value] : [];
+}
+
 function buildPreviewText(text: string, source: "text" | "word"): ItemPreview {
   const compacted = text.replace(/\r\n/g, "\n").trim();
   const limited = compacted.slice(0, 8000);
@@ -209,13 +217,17 @@ export async function createApp(options: CreateAppOptions = {}) {
     try {
       const files = (request.files as Express.Multer.File[] | undefined) ?? [];
       const parentId = normalizeParentId(request.body.parentId);
+      const relativePaths = normalizeStringArray(request.body.relativePaths);
 
       if (files.length === 0) {
         response.status(400).json({ message: "Nessun file ricevuto." });
         return;
       }
 
-      const items = await store.registerUploads(files, parentId);
+      const items =
+        relativePaths.length === files.length
+          ? await store.registerUploadsWithPaths(files, relativePaths, parentId)
+          : await store.registerUploads(files, parentId);
       broadcastLibraryUpdated(items.map((item) => item.id));
       response.status(201).json({ items });
     } catch (error) {
