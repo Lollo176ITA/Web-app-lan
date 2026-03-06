@@ -13,6 +13,12 @@ type StoredLibraryItem = Omit<
   "childrenCount" | "contentUrl" | "downloadUrl" | "streamUrl"
 >;
 
+export interface FolderArchiveEntry {
+  kind: "folder" | "file";
+  relativePath: string;
+  sourcePath?: string;
+}
+
 function sanitizeFilename(input: string) {
   const normalized = input
     .normalize("NFKD")
@@ -150,6 +156,50 @@ export class LibraryStore {
     return item ? this.hydrateItem(item) : undefined;
   }
 
+  getFolderArchiveEntries(folderId: string) {
+    const folder = this.findItemRecord(folderId);
+
+    if (!folder || folder.kind !== "folder") {
+      return null;
+    }
+
+    const entries: FolderArchiveEntry[] = [
+      {
+        kind: "folder",
+        relativePath: folder.name
+      }
+    ];
+
+    const visit = (parentId: string, prefix: string) => {
+      const children = [...this.items]
+        .filter((item) => item.parentId === parentId)
+        .sort((left, right) => left.name.localeCompare(right.name, "it", { sensitivity: "base" }));
+
+      for (const child of children) {
+        const relativePath = path.posix.join(prefix, child.name);
+
+        if (child.kind === "folder") {
+          entries.push({
+            kind: "folder",
+            relativePath
+          });
+          visit(child.id, relativePath);
+          continue;
+        }
+
+        entries.push({
+          kind: "file",
+          relativePath,
+          sourcePath: this.resolveItemPath(child)
+        });
+      }
+    };
+
+    visit(folder.id, folder.name);
+
+    return entries;
+  }
+
   getSummary() {
     return this.items.reduce(
       (summary, item) => ({
@@ -264,6 +314,38 @@ export class LibraryStore {
     await this.persist();
 
     return this.hydrateItem(folder);
+  }
+
+  async registerGeneratedFile(
+    sourcePath: string,
+    originalName: string,
+    mimeType: string,
+    parentId: string | null = null
+  ) {
+    this.assertParentFolder(parentId);
+
+    const id = nanoid(10);
+    const storedName = this.buildStoredName(id, originalName);
+    const destinationPath = path.join(this.libraryDir, storedName);
+    await fs.copyFile(sourcePath, destinationPath);
+    const fileStats = await fs.stat(destinationPath);
+    const normalizedMimeType = normalizeMimeType(mimeType, originalName);
+
+    const item = {
+      id,
+      name: originalName,
+      storedName,
+      mimeType: normalizedMimeType,
+      kind: classifyMimeType(normalizedMimeType),
+      sizeBytes: fileStats.size,
+      createdAt: new Date().toISOString(),
+      parentId
+    } satisfies StoredLibraryItem;
+
+    this.items = sortItems([item, ...this.items]);
+    await this.persist();
+
+    return this.hydrateItem(item);
   }
 
   async deleteItem(id: string) {

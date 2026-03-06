@@ -18,12 +18,17 @@ import {
   Typography
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import type { LibraryItem } from "../../shared/types";
+import type { ArchiveFormat, LibraryItem } from "../../shared/types";
+import { ItemActionsMenu } from "./ItemActionsMenu";
 
 interface FolderExplorerProps {
+  availableArchiveFormats: ArchiveFormat[];
   currentFolderId: string | null;
   items: LibraryItem[];
   selectedId: string | null;
+  onCreateArchive: (item: LibraryItem, format: ArchiveFormat) => void | Promise<void>;
+  onDeleteItem: (item: LibraryItem) => void | Promise<void>;
+  onDownloadItem: (item: LibraryItem, format?: ArchiveFormat) => void;
   onOpenFolder: (folderId: string | null) => void;
   onSelectItem: (itemId: string) => void;
 }
@@ -76,13 +81,18 @@ function buildFolderPath(items: LibraryItem[], currentFolderId: string | null) {
 }
 
 export function FolderExplorer({
+  availableArchiveFormats,
   currentFolderId,
   items,
   selectedId,
+  onCreateArchive,
+  onDeleteItem,
+  onDownloadItem,
   onOpenFolder,
   onSelectItem
 }: FolderExplorerProps) {
   const folderPath = buildFolderPath(items, currentFolderId);
+  const pathFolderIds = new Set(folderPath.map((folder) => folder.id));
   const columns = [
     {
       id: "root",
@@ -101,7 +111,7 @@ export function FolderExplorer({
       <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap alignItems="center">
         <Button
           startIcon={<HomeRoundedIcon />}
-          variant={currentFolderId === null ? "contained" : "text"}
+          variant={currentFolderId === null ? "contained" : folderPath.length > 0 ? "outlined" : "text"}
           onClick={() => {
             onOpenFolder(null);
           }}
@@ -112,7 +122,7 @@ export function FolderExplorer({
           <Button
             key={folder.id}
             startIcon={<ChevronRightRoundedIcon />}
-            variant={folder.id === currentFolderId ? "contained" : "text"}
+            variant={folder.id === currentFolderId ? "contained" : "outlined"}
             onClick={() => {
               onOpenFolder(folder.id);
             }}
@@ -157,8 +167,10 @@ export function FolderExplorer({
                 {column.items.map((item) => {
                   const Icon = itemIcons[item.kind];
                   const accent = itemAccents[item.kind];
-                  const isActive =
-                    item.kind === "folder" ? item.id === currentFolderId : item.id === selectedId;
+                  const isCurrentFolder = item.kind === "folder" && item.id === currentFolderId;
+                  const isPathFolder = item.kind === "folder" && pathFolderIds.has(item.id);
+                  const isSelectedFile = item.kind !== "folder" && item.id === selectedId;
+                  const isActive = isCurrentFolder || isSelectedFile;
 
                   return (
                     <ListItemButton
@@ -175,7 +187,22 @@ export function FolderExplorer({
                       sx={{
                         gap: 1.25,
                         alignItems: "center",
-                        borderLeft: isActive ? `3px solid ${accent}` : "3px solid transparent"
+                        borderLeft:
+                          isCurrentFolder || isSelectedFile || isPathFolder
+                            ? `3px solid ${accent}`
+                            : "3px solid transparent",
+                        bgcolor: isCurrentFolder
+                          ? alpha(accent, 0.14)
+                          : isPathFolder
+                            ? alpha(accent, 0.08)
+                            : undefined,
+                        "&:hover": {
+                          bgcolor: isCurrentFolder
+                            ? alpha(accent, 0.18)
+                            : isPathFolder
+                              ? alpha(accent, 0.12)
+                              : undefined
+                        }
                       }}
                     >
                       <Avatar
@@ -197,11 +224,30 @@ export function FolderExplorer({
                         }
                         primaryTypographyProps={{
                           noWrap: true,
-                          fontWeight: item.kind === "folder" ? 700 : 500
+                          fontWeight:
+                            item.kind === "folder"
+                              ? isCurrentFolder
+                                ? 800
+                                : isPathFolder
+                                  ? 700
+                                  : 650
+                              : 500
                         }}
                         secondaryTypographyProps={{ noWrap: true }}
                       />
-                      {item.kind === "folder" ? <ChevronRightRoundedIcon color="disabled" /> : null}
+                      <Stack direction="row" spacing={0.25} alignItems="center">
+                        <ItemActionsMenu
+                          availableArchiveFormats={availableArchiveFormats}
+                          item={item}
+                          onCreateArchive={onCreateArchive}
+                          onDelete={onDeleteItem}
+                          onDownload={onDownloadItem}
+                          triggerSx={{
+                            color: "text.secondary"
+                          }}
+                        />
+                        {item.kind === "folder" ? <ChevronRightRoundedIcon color="disabled" /> : null}
+                      </Stack>
                     </ListItemButton>
                   );
                 })}

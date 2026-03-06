@@ -1,5 +1,5 @@
 import { createReadStream, existsSync } from "node:fs";
-import { readFile, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import express from "express";
@@ -11,11 +11,19 @@ import { EventHub } from "./events.js";
 import { getSessionUrls } from "./network.js";
 import { LibraryStore } from "./storage.js";
 import type {
+  ArchiveFormat,
+  CreateArchiveRequest,
+  CreateArchiveResponse,
   CreateFolderRequest,
   DeleteItemResponse,
   ItemPreview,
   SessionInfo
 } from "../shared/types.js";
+import {
+  createFolderArchive,
+  detectAvailableArchiveFormats,
+  getArchiveMimeType
+} from "./archive.js";
 
 interface CreateAppOptions {
   port?: number;
@@ -25,6 +33,7 @@ interface CreateAppOptions {
 }
 
 const wordExtractor = new WordExtractor();
+const previewCharacterLimit = 2800;
 
 function parseRangeHeader(rangeHeader: string, fileSize: number) {
   const matches = /bytes=(\d*)-(\d*)/.exec(rangeHeader);
@@ -61,9 +70,13 @@ function normalizeStringArray(value: unknown) {
   return typeof value === "string" ? [value] : [];
 }
 
+function normalizeArchiveFormat(value: unknown): ArchiveFormat | null {
+  return value === "zip" || value === "7z" || value === "rar" ? value : null;
+}
+
 function buildPreviewText(text: string, source: "text" | "word"): ItemPreview {
   const compacted = text.replace(/\r\n/g, "\n").trim();
-  const limited = compacted.slice(0, 8000);
+  const limited = compacted.slice(0, previewCharacterLimit).trimEnd();
 
   return {
     mode: "text",
@@ -125,6 +138,11 @@ export async function createApp(options: CreateAppOptions = {}) {
   const urls = getSessionUrls(port);
   const store = new LibraryStore(storageRoot);
   const events = new EventHub();
+  const availableArchiveFormats = await detectAvailableArchiveFormats();
+  const defaultFolderDownloadFormat =
+    availableArchiveFormats.find((format) => format === "zip") ??
+    availableArchiveFormats[0] ??
+    null;
 
   await store.init({ seedDemo: options.seedDemo });
 
@@ -161,6 +179,31 @@ export async function createApp(options: CreateAppOptions = {}) {
     }
   }
 
+  function ensureSupportedArchiveFormat(
+    format: ArchiveFormat | null,
+    response: express.Response
+  ): ArchiveFormat | null {
+    if (!format) {
+      response.status(400).json({ message: "Formato archivio non valido." });
+      return null;
+    }
+
+    if (!availableArchiveFormats.includes(format)) {
+      response.status(400).json({ message: `Formato ${format} non disponibile su questo host.` });
+      return null;
+    }
+
+    return format;
+  }
+
+  async function createTemporaryArchive(folderId: string, folderName: string, format: ArchiveFormat) {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), `routeroom-archive-${format}-`));
+    const safeFilename = folderName.replace(/[\\/]+/g, "-") || "cartella";
+    const archivePath = path.join(tempDir, `${safeFilename}.${format}`);
+    await createFolderArchive(store, folderId, format, archivePath);
+    return { archivePath, tempDir };
+  }
+
   function broadcastLibraryUpdated(changedIds: string[] = []) {
     events.broadcast("library-updated", {
       itemCount: store.getSummary().itemCount,
@@ -181,6 +224,7 @@ export async function createApp(options: CreateAppOptions = {}) {
       hostName: os.hostname(),
       lanUrl: urls.lanUrl,
       storagePath: store.rootDir,
+      availableArchiveFormats,
       ...summary
     };
 
@@ -260,14 +304,96 @@ export async function createApp(options: CreateAppOptions = {}) {
     }
   });
 
-  app.get("/api/items/:id/download", async (request, response) => {
-    const resolved = await resolveExistingFile(request.params.id, response);
+  app.get("/api/items/:id/download", async (request, response, next) => {
+    try {
+      const item = store.findItem(request.params.id);
 
-    if (!resolved) {
-      return;
+      if (!item) {
+        response.status(404).json({ message: "Elemento non trovato." });
+        return;
+      }
+
+      if (item.kind === "folder") {
+        const format = ensureSupportedArchiveFormat(
+          normalizeArchiveFormat(request.query.format) ?? defaultFolderDownloadFormat,
+          response
+        );
+
+        if (!format) {
+          return;
+        }
+
+        const { archivePath, tempDir } = await createTemporaryArchive(item.id, item.name, format);
+        let cleaned = false;
+        const cleanup = async () => {
+          if (cleaned) {
+            return;
+          }
+
+          cleaned = true;
+          await rm(tempDir, { recursive: true, force: true });
+        };
+
+        response.on("finish", () => {
+          void cleanup();
+        });
+        response.on("close", () => {
+          void cleanup();
+        });
+
+        response.download(archivePath, `${item.name}.${format}`);
+        return;
+      }
+
+      const resolved = await resolveExistingFile(request.params.id, response);
+
+      if (!resolved) {
+        return;
+      }
+
+      response.download(resolved.filePath, resolved.item.name);
+    } catch (error) {
+      next(error);
     }
+  });
 
-    response.download(resolved.filePath, resolved.item.name);
+  app.post("/api/items/:id/archive", async (request, response, next) => {
+    try {
+      const item = store.findItem(request.params.id);
+
+      if (!item || item.kind !== "folder") {
+        response.status(404).json({ message: "Cartella non trovata." });
+        return;
+      }
+
+      const payload = request.body as CreateArchiveRequest | undefined;
+      const format = ensureSupportedArchiveFormat(normalizeArchiveFormat(payload?.format), response);
+
+      if (!format) {
+        return;
+      }
+
+      const { archivePath, tempDir } = await createTemporaryArchive(item.id, item.name, format);
+
+      try {
+        const archiveItem = await store.registerGeneratedFile(
+          archivePath,
+          `${item.name}.${format}`,
+          getArchiveMimeType(format),
+          item.parentId
+        );
+        broadcastLibraryUpdated([archiveItem.id]);
+
+        const result: CreateArchiveResponse = {
+          item: archiveItem
+        };
+        response.status(201).json(result);
+      } finally {
+        await rm(tempDir, { recursive: true, force: true });
+      }
+    } catch (error) {
+      next(error);
+    }
   });
 
   app.get("/api/items/:id/content", async (request, response) => {

@@ -32,6 +32,7 @@ describe("Routeroom API", () => {
     expect(response.body.appName).toBe("Routeroom");
     expect(response.body.storagePath).toBe(storageRoot);
     expect(response.body.lanUrl).toContain("http://");
+    expect(response.body.availableArchiveFormats).toContain("zip");
     expect(response.body.itemCount).toBe(0);
     close();
   });
@@ -118,6 +119,82 @@ describe("Routeroom API", () => {
     expect(docxPreview.body.text).toContain("Brief Routeroom");
     expect(pdfPreview.body.mode).toBe("pdf");
     expect(pdfPreview.body.url).toContain(`/api/items/${pdfId}/content`);
+    close();
+  });
+
+  it("truncates long text previews earlier when documents are very large", async () => {
+    const storageRoot = await createTemporaryStorage();
+    const { app, close } = await createApp({ storageRoot });
+    const longText = Array.from({ length: 900 }, (_, index) => `Riga ${index} Routeroom LAN`).join("\n");
+
+    const uploadResponse = await request(app)
+      .post("/api/items")
+      .attach("files", Buffer.from(longText, "utf8"), {
+        filename: "very-long.txt",
+        contentType: "text/plain"
+      })
+      .expect(201);
+
+    const [{ id }] = uploadResponse.body.items as Array<{ id: string }>;
+    const previewResponse = await request(app).get(`/api/items/${id}/preview`).expect(200);
+
+    expect(previewResponse.body.mode).toBe("text");
+    expect(previewResponse.body.truncated).toBe(true);
+    expect(previewResponse.body.text.length).toBeLessThanOrEqual(2800);
+    close();
+  });
+
+  it("downloads folders as archives and creates archive items in supported formats", async () => {
+    const storageRoot = await createTemporaryStorage();
+    const { app, close } = await createApp({ storageRoot });
+
+    const folderResponse = await request(app)
+      .post("/api/folders")
+      .send({ name: "Pacchetto" })
+      .expect(201);
+
+    await request(app)
+      .post("/api/items")
+      .field("parentId", folderResponse.body.item.id)
+      .attach("files", Buffer.from("ciao routeroom"), {
+        filename: "note.txt",
+        contentType: "text/plain"
+      })
+      .expect(201);
+
+    const sessionResponse = await request(app).get("/api/session").expect(200);
+
+    const downloadResponse = await request(app)
+      .get(`/api/items/${folderResponse.body.item.id}/download?format=zip`)
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+        response.on("end", () => callback(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+
+    expect(downloadResponse.headers["content-disposition"]).toContain("Pacchetto.zip");
+    expect(downloadResponse.body.length).toBeGreaterThan(0);
+
+    const zipArchiveResponse = await request(app)
+      .post(`/api/items/${folderResponse.body.item.id}/archive`)
+      .send({ format: "zip" })
+      .expect(201);
+
+    expect(zipArchiveResponse.body.item.kind).toBe("archive");
+    expect(zipArchiveResponse.body.item.name).toBe("Pacchetto.zip");
+
+    if ((sessionResponse.body.availableArchiveFormats as string[]).includes("7z")) {
+      const sevenZipResponse = await request(app)
+        .post(`/api/items/${folderResponse.body.item.id}/archive`)
+        .send({ format: "7z" })
+        .expect(201);
+
+      expect(sevenZipResponse.body.item.kind).toBe("archive");
+      expect(sevenZipResponse.body.item.name).toBe("Pacchetto.7z");
+    }
+
     close();
   });
 

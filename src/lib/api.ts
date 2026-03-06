@@ -1,4 +1,6 @@
 import type {
+  ArchiveFormat,
+  CreateArchiveResponse,
   CreateFolderResponse,
   DeleteItemResponse,
   ItemPreview,
@@ -43,6 +45,16 @@ export async function uploadFiles(files: File[], parentId?: string | null) {
   return readJson<UploadResponse>("/api/items", {
     method: "POST",
     body
+  });
+}
+
+export function createArchive(itemId: string, format: ArchiveFormat) {
+  return readJson<CreateArchiveResponse>(`/api/items/${itemId}/archive`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ format })
   });
 }
 

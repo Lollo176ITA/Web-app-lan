@@ -96,31 +96,27 @@ function DocumentPreview({
 
   if (preview.mode === "text") {
     return (
-      <Stack spacing={1.25} sx={{ width: "100%" }}>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          <Chip label={preview.source === "word" ? "Anteprima Word" : "Anteprima testo"} />
-          {preview.truncated ? <Chip label="Troncata" variant="outlined" /> : null}
-        </Stack>
-        <Box
-          component="pre"
-          sx={{
-            m: 0,
-            width: "100%",
-            minHeight: 320,
-            overflow: "auto",
-            p: 2,
-            borderRadius: 3,
-            bgcolor: "rgba(255,255,255,0.7)",
-            fontFamily: '"Roboto Mono", "SFMono-Regular", monospace',
-            fontSize: "0.92rem",
-            lineHeight: 1.55,
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word"
-          }}
-        >
-          {preview.text}
-        </Box>
-      </Stack>
+      <Box
+        component="pre"
+        sx={{
+          m: 0,
+          width: "100%",
+          minHeight: 220,
+          maxHeight: 360,
+          overflow: "auto",
+          p: 2,
+          borderRadius: 1.5,
+          border: "1px solid rgba(16, 39, 58, 0.12)",
+          bgcolor: "background.paper",
+          fontFamily: '"Roboto Mono", "SFMono-Regular", monospace',
+          fontSize: "0.92rem",
+          lineHeight: 1.55,
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word"
+        }}
+      >
+        {preview.text}
+      </Box>
     );
   }
 
@@ -213,20 +209,21 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
         subheader={
           item.kind === "folder"
             ? `${item.childrenCount ?? 0} elementi`
-            : `${item.mimeType} · ${formatBytes(item.sizeBytes)}`
+            : `${item.mimeType} · ${formatBytes(item.sizeBytes)} · ${formatDate(item.createdAt)}`
         }
       />
       <Divider />
       <CardContent sx={{ pt: 3 }}>
-        <Stack spacing={2.5}>
+        <Stack spacing={2}>
           <Box
             sx={{
               overflow: "hidden",
-              borderRadius: 4,
+              borderRadius: 2,
+              border: "1px solid rgba(16, 39, 58, 0.12)",
               minHeight: 280,
               display: "grid",
               placeItems: "center",
-              p: item.kind === "document" ? 2 : 0,
+              p: item.kind === "document" ? 1.5 : 0,
               bgcolor: alpha(accent, 0.08)
             }}
           >
@@ -250,7 +247,6 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
 
             {item.kind === "audio" ? (
               <Stack spacing={2.25} alignItems="center" sx={{ width: "100%", px: 3 }}>
-                <Chip icon={<LanRoundedIcon />} label="Streaming audio locale" color="secondary" />
                 <Box component="audio" controls src={item.streamUrl} sx={{ width: "100%" }} />
               </Stack>
             ) : null}
@@ -286,30 +282,11 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
             ) : null}
           </Box>
 
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            <Chip label={item.kind} />
-            {item.kind === "folder" ? (
-              <Chip label={`${item.childrenCount ?? 0} elementi`} variant="outlined" />
-            ) : (
-              <>
-                <Chip label={item.mimeType} variant="outlined" />
-                <Chip label={formatBytes(item.sizeBytes)} variant="outlined" />
-              </>
-            )}
-          </Stack>
 
-          <Typography color="text.secondary">
-            {item.kind === "folder"
-              ? `Creata ${formatDate(item.createdAt)}`
-              : `Creato ${formatDate(item.createdAt)} · Stored name: ${item.storedName}`}
-          </Typography>
         </Stack>
       </CardContent>
       <Divider />
       <CardActions sx={{ px: 3, py: 2, flexWrap: "wrap", rowGap: 1 }}>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-          <Chip icon={<LanRoundedIcon />} label="Solo host locale" color="secondary" variant="outlined" />
-        </Stack>
         <Box sx={{ flex: 1 }} />
         {item.kind !== "folder" ? (
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>

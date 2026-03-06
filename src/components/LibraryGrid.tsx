@@ -1,6 +1,5 @@
 import ArchiveRoundedIcon from "@mui/icons-material/ArchiveRounded";
 import AudiotrackRoundedIcon from "@mui/icons-material/AudiotrackRounded";
-import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
@@ -14,20 +13,22 @@ import {
   CardContent,
   CardMedia,
   Chip,
-  IconButton,
   Stack,
-  Tooltip,
   Typography
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import type { LibraryItem, LibraryLayoutMode } from "../../shared/types";
+import type { ArchiveFormat, LibraryItem, LibraryLayoutMode } from "../../shared/types";
 import { formatBytes, formatDate } from "../lib/format";
+import { ItemActionsMenu } from "./ItemActionsMenu";
 
 interface LibraryGridProps {
+  availableArchiveFormats: ArchiveFormat[];
   items: LibraryItem[];
   layoutMode: LibraryLayoutMode;
   selectedId: string | null;
+  onCreateArchive: (item: LibraryItem, format: ArchiveFormat) => void | Promise<void>;
   onDelete: (item: LibraryItem) => void;
+  onDownload: (item: LibraryItem, format?: ArchiveFormat) => void;
   onOpenFolder: (folderId: string) => void;
   onSelect: (itemId: string) => void;
 }
@@ -84,10 +85,13 @@ function getPreviewHeight(layoutMode: LibraryLayoutMode) {
 }
 
 export function LibraryGrid({
+  availableArchiveFormats,
   items,
   layoutMode,
   selectedId,
+  onCreateArchive,
   onDelete,
+  onDownload,
   onOpenFolder,
   onSelect
 }: LibraryGridProps) {
@@ -134,24 +138,20 @@ export function LibraryGrid({
                 boxShadow: isSelected ? `0 12px 28px ${alpha(config.accent, 0.14)}` : "0 8px 22px rgba(16, 39, 58, 0.04)"
               }}
             >
-              <Tooltip title={`Elimina ${item.name}`}>
-                <IconButton
-                  aria-label={`Elimina ${item.name}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onDelete(item);
-                  }}
-                  sx={{
-                    position: "absolute",
-                    top: 8,
-                    right: 8,
-                    zIndex: 2,
-                    bgcolor: "rgba(255,255,255,0.92)"
-                  }}
-                >
-                  <CloseRoundedIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
+              <ItemActionsMenu
+                availableArchiveFormats={availableArchiveFormats}
+                item={item}
+                onCreateArchive={onCreateArchive}
+                onDelete={onDelete}
+                onDownload={onDownload}
+                triggerSx={{
+                  position: "absolute",
+                  top: 8,
+                  right: 8,
+                  zIndex: 2,
+                  bgcolor: "rgba(255,255,255,0.92)"
+                }}
+              />
 
               <CardActionArea
                 onClick={() => {
@@ -201,24 +201,20 @@ export function LibraryGrid({
               boxShadow: isSelected ? `0 16px 36px ${alpha(config.accent, 0.16)}` : "0 10px 28px rgba(16, 39, 58, 0.05)"
             }}
           >
-            <Tooltip title={`Elimina ${item.name}`}>
-              <IconButton
-                aria-label={`Elimina ${item.name}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onDelete(item);
-                }}
-                sx={{
-                  position: "absolute",
-                  top: 10,
-                  right: 10,
-                  zIndex: 2,
-                  bgcolor: "rgba(255,255,255,0.92)"
-                }}
-              >
-                <CloseRoundedIcon />
-              </IconButton>
-            </Tooltip>
+            <ItemActionsMenu
+              availableArchiveFormats={availableArchiveFormats}
+              item={item}
+              onCreateArchive={onCreateArchive}
+              onDelete={onDelete}
+              onDownload={onDownload}
+              triggerSx={{
+                position: "absolute",
+                top: 10,
+                right: 10,
+                zIndex: 2,
+                bgcolor: "rgba(255,255,255,0.92)"
+              }}
+            />
 
             <CardActionArea
               onClick={() => {

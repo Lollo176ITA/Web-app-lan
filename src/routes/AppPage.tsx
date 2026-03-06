@@ -43,6 +43,7 @@ import { alpha } from "@mui/material/styles";
 import QRCode from "qrcode";
 import { Link as RouterLink } from "react-router-dom";
 import type {
+  ArchiveFormat,
   LibraryItem,
   LibraryKind,
   LibraryLayoutMode,
@@ -53,6 +54,7 @@ import { LibraryGrid } from "../components/LibraryGrid";
 import { MediaDetail } from "../components/MediaDetail";
 import { UploadSurface } from "../components/UploadSurface";
 import {
+  createArchive,
   createFolder,
   deleteItem,
   fetchSnapshot,
@@ -86,6 +88,19 @@ function sortFolderContents(items: LibraryItem[]) {
 
     return right.createdAt.localeCompare(left.createdAt);
   });
+}
+
+function buildFolderPath(items: LibraryItem[], currentFolderId: string | null) {
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const path: LibraryItem[] = [];
+  let cursor = currentFolderId ? byId.get(currentFolderId) : undefined;
+
+  while (cursor && cursor.kind === "folder") {
+    path.unshift(cursor);
+    cursor = cursor.parentId ? byId.get(cursor.parentId) : undefined;
+  }
+
+  return path;
 }
 
 export function AppPage() {
@@ -196,27 +211,36 @@ export function AppPage() {
   const currentFolder = currentFolderId
     ? (items.find((item) => item.id === currentFolderId && item.kind === "folder") ?? null)
     : null;
+  const folderPath = buildFolderPath(items, currentFolderId);
 
   const currentFolderItems = sortFolderContents(
     items.filter((item) => item.parentId === currentFolderId)
   );
+  const availableArchiveFormats = session?.availableArchiveFormats ?? [];
+  const explorerVisibleItems = sortFolderContents([
+    ...items.filter((item) => item.parentId === null),
+    ...folderPath.flatMap((folder) => items.filter((item) => item.parentId === folder.id))
+  ]);
 
   const filteredItems = currentFolderItems.filter(
     (item) => filter === "all" || item.kind === filter
   );
 
   useEffect(() => {
-    const selectableItems = filteredItems.filter((item) => item.kind !== "folder");
+    const selectableItems = explorerVisibleItems.filter((item) => item.kind !== "folder");
 
     if (selectableItems.length === 0) {
       setSelectedId(null);
       return;
     }
 
-    if (!selectedId || !selectableItems.some((item) => item.id === selectedId)) {
-      setSelectedId(selectableItems[0].id);
+    if (selectedId && selectableItems.some((item) => item.id === selectedId)) {
+      return;
     }
-  }, [filteredItems, selectedId]);
+
+    const preferredCurrentItem = filteredItems.find((item) => item.kind !== "folder");
+    setSelectedId(preferredCurrentItem?.id ?? selectableItems[0].id);
+  }, [explorerVisibleItems, filteredItems, selectedId]);
 
   const selectedItem =
     items.find((item) => item.id === selectedId) ?? currentFolder ?? null;
@@ -264,6 +288,43 @@ export function AppPage() {
 
     await syncSnapshot();
     setSnackbar(`${item.name} eliminato dalla libreria.`);
+  }
+
+  async function handleCreateArchive(item: LibraryItem, format: ArchiveFormat) {
+    if (item.kind !== "folder") {
+      return;
+    }
+
+    const response = await createArchive(item.id, format);
+    await syncSnapshot();
+    setSelectedId(response.item.id);
+    setSnackbar(`Archivio creato: ${response.item.name}.`);
+  }
+
+  function handleDownload(item: LibraryItem, format?: ArchiveFormat) {
+    const downloadUrl =
+      item.kind === "folder"
+        ? format
+          ? `/api/items/${item.id}/download?format=${encodeURIComponent(format)}`
+          : null
+        : item.downloadUrl ?? null;
+
+    if (!downloadUrl) {
+      return;
+    }
+
+    const anchor = document.createElement("a");
+    anchor.href = downloadUrl;
+    anchor.rel = "noreferrer";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+
+    setSnackbar(
+      item.kind === "folder"
+        ? `Scaricamento cartella avviato: ${item.name}.`
+        : `Scaricamento file avviato: ${item.name}.`
+    );
   }
 
   async function copyText(value: string) {
@@ -494,9 +555,17 @@ export function AppPage() {
                 </Stack>
 
                 <FolderExplorer
+                  availableArchiveFormats={availableArchiveFormats}
                   currentFolderId={currentFolderId}
                   items={items}
                   selectedId={selectedId}
+                  onCreateArchive={(item, format) => {
+                    void handleCreateArchive(item, format);
+                  }}
+                  onDeleteItem={(item) => {
+                    void handleDelete(item);
+                  }}
+                  onDownloadItem={handleDownload}
                   onOpenFolder={setCurrentFolderId}
                   onSelectItem={setSelectedId}
                 />
@@ -605,12 +674,17 @@ export function AppPage() {
                 }}
               >
                 <LibraryGrid
+                  availableArchiveFormats={availableArchiveFormats}
                   items={filteredItems}
                   layoutMode={layoutMode}
                   selectedId={selectedId}
+                  onCreateArchive={(item, format) => {
+                    void handleCreateArchive(item, format);
+                  }}
                   onDelete={(item) => {
                     void handleDelete(item);
                   }}
+                  onDownload={handleDownload}
                   onOpenFolder={setCurrentFolderId}
                   onSelect={setSelectedId}
                 />

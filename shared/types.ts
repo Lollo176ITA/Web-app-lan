@@ -8,6 +8,7 @@ export type LibraryKind =
   | "other";
 
 export type LibraryLayoutMode = "minimal" | "compact" | "descriptive";
+export type ArchiveFormat = "zip" | "7z" | "rar";
 
 export interface LibraryItem {
   id: string;
@@ -31,6 +32,14 @@ export interface CreateFolderRequest {
 }
 
 export interface CreateFolderResponse {
+  item: LibraryItem;
+}
+
+export interface CreateArchiveRequest {
+  format: ArchiveFormat;
+}
+
+export interface CreateArchiveResponse {
   item: LibraryItem;
 }
 
@@ -65,6 +74,7 @@ export interface SessionInfo {
   storagePath: string;
   itemCount: number;
   totalBytes: number;
+  availableArchiveFormats: ArchiveFormat[];
 }
 
 export interface UploadResponse {
