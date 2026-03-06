@@ -230,7 +230,6 @@ export function AppPage() {
                       : "Connessione eventi"
                 }
               />
-              <Chip icon={<OfflineBoltRoundedIcon />} label="Zero Internet a runtime" variant="outlined" />
             </Stack>
           </Toolbar>
         </AppBar>

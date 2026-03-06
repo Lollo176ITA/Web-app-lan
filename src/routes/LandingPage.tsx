@@ -117,11 +117,6 @@ export function LandingPage() {
                     Come funziona
                   </Button>
                 </Stack>
-                <Stack direction="row" spacing={1.25} flexWrap="wrap" useFlexGap>
-                  <Chip icon={<FlashOnRoundedIcon />} label="Upload locale multi-file" />
-                  <Chip icon={<PlayCircleOutlineRoundedIcon />} label="Streaming video diretto" />
-                  <Chip icon={<DevicesRoundedIcon />} label="Desktop + mobile" />
-                </Stack>
               </Stack>
 
               <Card variant="outlined" sx={{ overflow: "hidden", bgcolor: "#08131e" }}>
@@ -159,66 +154,6 @@ export function LandingPage() {
             </Card>
           ))}
         </Box>
-      </Container>
-
-      <Container maxWidth="xl" sx={{ mt: { xs: 4, md: 5 } }}>
-        <Card>
-          <CardContent sx={{ p: { xs: 2.5, md: 4 } }}>
-            <Box
-              sx={{
-                display: "grid",
-                gap: 4,
-                alignItems: "center",
-                gridTemplateColumns: { xs: "1fr", lg: "0.8fr 1.2fr" }
-              }}
-            >
-              <Stack spacing={2.5}>
-                <Typography variant="h2">Un’unica stanza locale per tutto il tuo media sharing</Typography>
-                <Typography color="text.secondary">
-                  I device vedono lo stesso catalogo LAN, con filtri per tipo file, preview immediate e download diretti dall’host.
-                </Typography>
-                <Card variant="outlined" sx={{ overflow: "hidden", maxWidth: 560 }}>
-                  <CardMedia
-                    component="img"
-                    src="/visuals/routeroom-devices.svg"
-                    alt="Tre dispositivi con Routeroom aperto"
-                  />
-                </Card>
-              </Stack>
-
-              <Box
-                sx={{
-                  display: "grid",
-                  gap: 2,
-                  gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" }
-                }}
-              >
-                {proofPanels.map((panel) => (
-                  <Card key={panel.title} variant="outlined" sx={{ overflow: "hidden" }}>
-                    <CardMedia
-                      component="img"
-                      src={panel.image}
-                      alt={panel.title}
-                      sx={{
-                        width: "100%",
-                        aspectRatio: panel.image.includes("mobile") ? "10 / 16" : "16 / 10",
-                        objectFit: "cover"
-                      }}
-                    />
-                    <CardContent>
-                      <Stack spacing={0.75}>
-                        <Typography variant="h6">{panel.title}</Typography>
-                        <Typography color="text.secondary" variant="body2">
-                          {panel.body}
-                        </Typography>
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                ))}
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
       </Container>
     </Box>
   );
