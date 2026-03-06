@@ -1,5 +1,9 @@
+import { useEffect, useState } from "react";
+import CircularProgress from "@mui/material/CircularProgress";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
+import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
+import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
 import LanRoundedIcon from "@mui/icons-material/LanRounded";
 import MovieRoundedIcon from "@mui/icons-material/MovieRounded";
@@ -19,7 +23,8 @@ import {
   Typography
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import type { LibraryItem } from "../../shared/types";
+import type { ItemPreview, LibraryItem } from "../../shared/types";
+import { fetchItemPreview } from "../lib/api";
 import { formatBytes, formatDate } from "../lib/format";
 
 interface MediaDetailProps {
@@ -28,15 +33,17 @@ interface MediaDetailProps {
 }
 
 const detailIcons = {
+  folder: FolderRoundedIcon,
   video: MovieRoundedIcon,
   image: ImageRoundedIcon,
   audio: MusicNoteRoundedIcon,
-  document: SourceRoundedIcon,
+  document: DescriptionRoundedIcon,
   archive: SourceRoundedIcon,
   other: SourceRoundedIcon
 } as const;
 
 const detailAccent = {
+  folder: "#1769aa",
   video: "#1769aa",
   image: "#0f9d94",
   audio: "#4553c7",
@@ -45,7 +52,134 @@ const detailAccent = {
   other: "#5a7184"
 } as const;
 
+function DocumentPreview({
+  item,
+  preview,
+  loading
+}: {
+  item: LibraryItem;
+  loading: boolean;
+  preview: ItemPreview | null;
+}) {
+  if (loading) {
+    return (
+      <Stack spacing={1.5} alignItems="center">
+        <CircularProgress />
+        <Typography color="text.secondary">Preparazione anteprima documento...</Typography>
+      </Stack>
+    );
+  }
+
+  if (!preview) {
+    return (
+      <Typography color="text.secondary">
+        Nessuna anteprima disponibile per questo documento.
+      </Typography>
+    );
+  }
+
+  if (preview.mode === "pdf") {
+    return (
+      <Box
+        component="iframe"
+        title={`Anteprima ${item.name}`}
+        src={preview.url}
+        sx={{
+          width: "100%",
+          height: 520,
+          border: 0,
+          bgcolor: "background.paper"
+        }}
+      />
+    );
+  }
+
+  if (preview.mode === "text") {
+    return (
+      <Stack spacing={1.25} sx={{ width: "100%" }}>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Chip label={preview.source === "word" ? "Anteprima Word" : "Anteprima testo"} />
+          {preview.truncated ? <Chip label="Troncata" variant="outlined" /> : null}
+        </Stack>
+        <Box
+          component="pre"
+          sx={{
+            m: 0,
+            width: "100%",
+            minHeight: 320,
+            overflow: "auto",
+            p: 2,
+            borderRadius: 3,
+            bgcolor: "rgba(255,255,255,0.7)",
+            fontFamily: '"Roboto Mono", "SFMono-Regular", monospace',
+            fontSize: "0.92rem",
+            lineHeight: 1.55,
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word"
+          }}
+        >
+          {preview.text}
+        </Box>
+      </Stack>
+    );
+  }
+
+  return (
+    <Typography color="text.secondary">
+      {preview.mode === "none"
+        ? preview.notice
+        : `Questa cartella contiene ${preview.childCount} elementi.`}
+    </Typography>
+  );
+}
+
 export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
+  const [preview, setPreview] = useState<ItemPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!item || !["document", "folder"].includes(item.kind)) {
+      setPreview(null);
+      setPreviewLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    setPreviewLoading(true);
+    void fetchItemPreview(item.id)
+      .then((result) => {
+        if (!active) {
+          return;
+        }
+
+        setPreview(result);
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        setPreview({
+          mode: "none",
+          notice: "Anteprima non disponibile per questo formato."
+        });
+      })
+      .finally(() => {
+        if (!active) {
+          return;
+        }
+
+        setPreviewLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [item]);
+
   if (!item) {
     return (
       <Card variant="outlined">
@@ -54,7 +188,7 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
             Seleziona un contenuto
           </Typography>
           <Typography color="text.secondary">
-            Vedrai qui il player locale, le azioni rapide e i dettagli del file scelto.
+            Vedrai qui il player locale, le azioni rapide, la preview documenti e i dettagli della cartella o del file scelto.
           </Typography>
         </CardContent>
       </Card>
@@ -63,6 +197,7 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
 
   const Icon = detailIcons[item.kind];
   const accent = detailAccent[item.kind];
+  const shareUrl = item.downloadUrl ?? item.contentUrl ?? "";
 
   return (
     <Card>
@@ -75,7 +210,11 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
         titleTypographyProps={{ variant: "h4", sx: { fontSize: "clamp(1.45rem, 2vw, 2rem)" } }}
         subheaderTypographyProps={{ color: "text.secondary" }}
         title={item.name}
-        subheader={`${item.mimeType} · ${formatBytes(item.sizeBytes)}`}
+        subheader={
+          item.kind === "folder"
+            ? `${item.childrenCount ?? 0} elementi`
+            : `${item.mimeType} · ${formatBytes(item.sizeBytes)}`
+        }
       />
       <Divider />
       <CardContent sx={{ pt: 3 }}>
@@ -87,6 +226,7 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
               minHeight: 280,
               display: "grid",
               placeItems: "center",
+              p: item.kind === "document" ? 2 : 0,
               bgcolor: alpha(accent, 0.08)
             }}
           >
@@ -98,6 +238,7 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
                 sx={{ width: "100%", maxHeight: 420, display: "block", bgcolor: "#08131e" }}
               />
             ) : null}
+
             {item.kind === "image" ? (
               <Box
                 component="img"
@@ -106,13 +247,33 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
                 sx={{ width: "100%", maxHeight: 420, objectFit: "contain", display: "block" }}
               />
             ) : null}
+
             {item.kind === "audio" ? (
               <Stack spacing={2.25} alignItems="center" sx={{ width: "100%", px: 3 }}>
                 <Chip icon={<LanRoundedIcon />} label="Streaming audio locale" color="secondary" />
                 <Box component="audio" controls src={item.streamUrl} sx={{ width: "100%" }} />
               </Stack>
             ) : null}
-            {!["video", "image", "audio"].includes(item.kind) ? (
+
+            {item.kind === "folder" ? (
+              <Stack spacing={1.5} alignItems="center" sx={{ px: 3 }}>
+                <Avatar sx={{ width: 72, height: 72, bgcolor: alpha(accent, 0.14), color: accent }}>
+                  <FolderRoundedIcon sx={{ fontSize: 36 }} />
+                </Avatar>
+                <Typography variant="h6">Cartella attiva</Typography>
+                <Typography color="text.secondary" textAlign="center" sx={{ maxWidth: 360 }}>
+                  {preview?.mode === "folder"
+                    ? `Questa cartella contiene ${preview.childCount} elementi.`
+                    : "Usa l’esploratore a colonne per entrare e muoverti tra le sottocartelle."}
+                </Typography>
+              </Stack>
+            ) : null}
+
+            {item.kind === "document" ? (
+              <DocumentPreview item={item} preview={preview} loading={previewLoading} />
+            ) : null}
+
+            {!["video", "image", "audio", "document", "folder"].includes(item.kind) ? (
               <Stack spacing={1.5} alignItems="center" sx={{ px: 3 }}>
                 <Avatar sx={{ width: 64, height: 64, bgcolor: alpha(accent, 0.14), color: accent }}>
                   <Icon />
@@ -127,12 +288,20 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
 
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             <Chip label={item.kind} />
-            <Chip label={item.mimeType} variant="outlined" />
-            <Chip label={formatBytes(item.sizeBytes)} variant="outlined" />
+            {item.kind === "folder" ? (
+              <Chip label={`${item.childrenCount ?? 0} elementi`} variant="outlined" />
+            ) : (
+              <>
+                <Chip label={item.mimeType} variant="outlined" />
+                <Chip label={formatBytes(item.sizeBytes)} variant="outlined" />
+              </>
+            )}
           </Stack>
 
           <Typography color="text.secondary">
-            Creato {formatDate(item.createdAt)} · Stored name: {item.storedName}
+            {item.kind === "folder"
+              ? `Creata ${formatDate(item.createdAt)}`
+              : `Creato ${formatDate(item.createdAt)} · Stored name: ${item.storedName}`}
           </Typography>
         </Stack>
       </CardContent>
@@ -142,25 +311,31 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
           <Chip icon={<LanRoundedIcon />} label="Solo host locale" color="secondary" variant="outlined" />
         </Stack>
         <Box sx={{ flex: 1 }} />
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-          <Button
-            component="a"
-            href={item.downloadUrl}
-            variant="contained"
-            startIcon={<DownloadRoundedIcon />}
-          >
-            Scarica
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<ContentCopyRoundedIcon />}
-            onClick={() => {
-              void onCopyLink(window.location.origin + item.downloadUrl);
-            }}
-          >
-            Copia link locale
-          </Button>
-        </Stack>
+        {item.kind !== "folder" ? (
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+            {item.downloadUrl ? (
+              <Button
+                component="a"
+                href={item.downloadUrl}
+                variant="contained"
+                startIcon={<DownloadRoundedIcon />}
+              >
+                Scarica
+              </Button>
+            ) : null}
+            {shareUrl ? (
+              <Button
+                variant="outlined"
+                startIcon={<ContentCopyRoundedIcon />}
+                onClick={() => {
+                  void onCopyLink(window.location.origin + shareUrl);
+                }}
+              >
+                Copia link locale
+              </Button>
+            ) : null}
+          </Stack>
+        ) : null}
       </CardActions>
     </Card>
   );

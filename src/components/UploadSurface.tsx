@@ -17,10 +17,11 @@ import { alpha } from "@mui/material/styles";
 
 interface UploadSurfaceProps {
   onUpload: (files: File[]) => Promise<void>;
+  targetLabel?: string;
   uploading: boolean;
 }
 
-export function UploadSurface({ onUpload, uploading }: UploadSurfaceProps) {
+export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfaceProps) {
   const inputId = useId();
   const [isActive, setIsActive] = useState(false);
 
@@ -77,6 +78,7 @@ export function UploadSurface({ onUpload, uploading }: UploadSurfaceProps) {
             <Typography variant="h5">Trascina qui i tuoi file LAN</Typography>
             <Typography color="text.secondary">
               Video, immagini, audio, documenti e archivi finiscono subito nella libreria condivisa del device host.
+              {targetLabel ? ` Cartella corrente: ${targetLabel}.` : ""}
             </Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               <Chip icon={<FolderZipRoundedIcon />} label="Upload multiplo" />

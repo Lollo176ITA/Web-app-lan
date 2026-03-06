@@ -1,20 +1,30 @@
 import { createReadStream, existsSync } from "node:fs";
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import express from "express";
+import mammoth from "mammoth";
 import multer from "multer";
+import WordExtractor from "word-extractor";
 import { nanoid } from "nanoid";
 import { EventHub } from "./events.js";
 import { getSessionUrls } from "./network.js";
 import { LibraryStore } from "./storage.js";
-import type { SessionInfo } from "../shared/types.js";
+import type {
+  CreateFolderRequest,
+  DeleteItemResponse,
+  ItemPreview,
+  SessionInfo
+} from "../shared/types.js";
 
 interface CreateAppOptions {
   port?: number;
+  seedDemo?: boolean;
   storageRoot?: string;
   staticDir?: string;
 }
+
+const wordExtractor = new WordExtractor();
 
 function parseRangeHeader(rangeHeader: string, fileSize: number) {
   const matches = /bytes=(\d*)-(\d*)/.exec(rangeHeader);
@@ -34,6 +44,73 @@ function parseRangeHeader(rangeHeader: string, fileSize: number) {
   return { start, end };
 }
 
+function normalizeParentId(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function buildPreviewText(text: string, source: "text" | "word"): ItemPreview {
+  const compacted = text.replace(/\r\n/g, "\n").trim();
+  const limited = compacted.slice(0, 8000);
+
+  return {
+    mode: "text",
+    source,
+    text: limited,
+    truncated: compacted.length > limited.length
+  };
+}
+
+async function createItemPreview(
+  item: NonNullable<ReturnType<LibraryStore["findItem"]>>,
+  filePath: string
+): Promise<ItemPreview> {
+  if (item.kind === "folder") {
+    return {
+      mode: "folder",
+      childCount: item.childrenCount ?? 0
+    };
+  }
+
+  if (item.mimeType.includes("pdf")) {
+    return {
+      mode: "pdf",
+      url: item.contentUrl ?? item.downloadUrl ?? ""
+    };
+  }
+
+  const extension = path.extname(item.name).toLowerCase();
+
+  if (
+    item.mimeType.startsWith("text/") ||
+    item.mimeType.includes("json") ||
+    extension === ".md" ||
+    extension === ".txt"
+  ) {
+    const text = await readFile(filePath, "utf8");
+    return buildPreviewText(text, "text");
+  }
+
+  if (extension === ".docx") {
+    const extracted = await mammoth.extractRawText({ path: filePath });
+    return buildPreviewText(extracted.value, "word");
+  }
+
+  if (extension === ".doc") {
+    const extracted = await wordExtractor.extract(filePath);
+    return buildPreviewText(extracted.getBody(), "word");
+  }
+
+  return {
+    mode: "none",
+    notice: "Anteprima non disponibile per questo formato."
+  };
+}
+
 export async function createApp(options: CreateAppOptions = {}) {
   const port = options.port ?? 8787;
   const storageRoot = options.storageRoot ?? path.resolve(process.cwd(), "storage");
@@ -41,7 +118,7 @@ export async function createApp(options: CreateAppOptions = {}) {
   const store = new LibraryStore(storageRoot);
   const events = new EventHub();
 
-  await store.init();
+  await store.init({ seedDemo: options.seedDemo });
 
   const upload = multer({
     storage: multer.diskStorage({
@@ -60,7 +137,7 @@ export async function createApp(options: CreateAppOptions = {}) {
   async function resolveExistingFile(itemId: string, response: express.Response) {
     const item = store.findItem(itemId);
 
-    if (!item) {
+    if (!item || item.kind === "folder") {
       response.status(404).json({ message: "File non trovato." });
       return null;
     }
@@ -74,6 +151,13 @@ export async function createApp(options: CreateAppOptions = {}) {
       response.status(404).json({ message: "File non disponibile sul disco host." });
       return null;
     }
+  }
+
+  function broadcastLibraryUpdated(changedIds: string[] = []) {
+    events.broadcast("library-updated", {
+      itemCount: store.getSummary().itemCount,
+      latestIds: changedIds
+    });
   }
 
   app.use(express.json());
@@ -99,22 +183,66 @@ export async function createApp(options: CreateAppOptions = {}) {
     response.json(store.getItems());
   });
 
+  app.post("/api/folders", async (request, response, next) => {
+    try {
+      const payload = request.body as CreateFolderRequest;
+
+      if (!payload || typeof payload.name !== "string") {
+        response.status(400).json({ message: "Nome cartella mancante." });
+        return;
+      }
+
+      const folder = await store.createFolder(payload.name, normalizeParentId(payload.parentId));
+      broadcastLibraryUpdated([folder.id]);
+      response.status(201).json({ item: folder });
+    } catch (error) {
+      if (error instanceof Error && error.message === "Invalid parent folder") {
+        response.status(400).json({ message: "Cartella padre non valida." });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
   app.post("/api/items", upload.array("files"), async (request, response, next) => {
     try {
       const files = (request.files as Express.Multer.File[] | undefined) ?? [];
+      const parentId = normalizeParentId(request.body.parentId);
 
       if (files.length === 0) {
         response.status(400).json({ message: "Nessun file ricevuto." });
         return;
       }
 
-      const items = await store.registerUploads(files);
-      events.broadcast("library-updated", {
-        itemCount: store.getSummary().itemCount,
-        latestIds: items.map((item) => item.id)
-      });
-
+      const items = await store.registerUploads(files, parentId);
+      broadcastLibraryUpdated(items.map((item) => item.id));
       response.status(201).json({ items });
+    } catch (error) {
+      if (error instanceof Error && error.message === "Invalid parent folder") {
+        response.status(400).json({ message: "Cartella padre non valida." });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
+  app.delete("/api/items/:id", async (request, response, next) => {
+    try {
+      const deletedIds = await store.deleteItem(request.params.id);
+
+      if (!deletedIds) {
+        response.status(404).json({ message: "Elemento non trovato." });
+        return;
+      }
+
+      broadcastLibraryUpdated(deletedIds);
+
+      const payload: DeleteItemResponse = {
+        deletedIds
+      };
+      response.json(payload);
     } catch (error) {
       next(error);
     }
@@ -143,6 +271,40 @@ export async function createApp(options: CreateAppOptions = {}) {
       "Content-Type": resolved.item.mimeType
     });
     createReadStream(resolved.filePath).pipe(response);
+  });
+
+  app.get("/api/items/:id/preview", async (request, response, next) => {
+    try {
+      const item = store.findItem(request.params.id);
+
+      if (!item) {
+        response.status(404).json({ message: "Elemento non trovato." });
+        return;
+      }
+
+      if (item.kind === "folder") {
+        response.json({
+          mode: "folder",
+          childCount: item.childrenCount ?? 0
+        } satisfies ItemPreview);
+        return;
+      }
+
+      const resolved = await resolveExistingFile(request.params.id, response);
+
+      if (!resolved) {
+        return;
+      }
+
+      const preview = await createItemPreview(resolved.item, resolved.filePath);
+      response.json(preview);
+    } catch (error) {
+      console.error(error);
+      response.status(200).json({
+        mode: "none",
+        notice: "Anteprima non disponibile per questo formato."
+      } satisfies ItemPreview);
+    }
   });
 
   app.get("/api/items/:id/stream", async (request, response) => {

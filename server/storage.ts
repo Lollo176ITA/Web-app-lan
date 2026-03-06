@@ -1,10 +1,17 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { lookup as lookupMimeType } from "mime-types";
+import { nanoid } from "nanoid";
 import type { LibraryItem, LibraryKind } from "../shared/types.js";
 
 const MANIFEST_FILENAME = "index.json";
+const FOLDER_MIME_TYPE = "application/vnd.routeroom.folder";
 const STREAMABLE_KINDS = new Set<LibraryKind>(["video", "audio"]);
+
+type StoredLibraryItem = Omit<
+  LibraryItem,
+  "childrenCount" | "contentUrl" | "downloadUrl" | "streamUrl"
+>;
 
 function sanitizeFilename(input: string) {
   const normalized = input
@@ -49,7 +56,8 @@ export function classifyMimeType(mimeType: string): LibraryKind {
     mimeType.includes("json") ||
     mimeType.includes("word") ||
     mimeType.includes("sheet") ||
-    mimeType.includes("presentation")
+    mimeType.includes("presentation") ||
+    mimeType.includes("rtf")
   ) {
     return "document";
   }
@@ -58,6 +66,14 @@ export function classifyMimeType(mimeType: string): LibraryKind {
 }
 
 function toItemUrls(id: string, kind: LibraryKind) {
+  if (kind === "folder") {
+    return {
+      downloadUrl: undefined,
+      contentUrl: undefined,
+      streamUrl: undefined
+    };
+  }
+
   return {
     downloadUrl: `/api/items/${id}/download`,
     contentUrl: `/api/items/${id}/content`,
@@ -65,7 +81,7 @@ function toItemUrls(id: string, kind: LibraryKind) {
   };
 }
 
-function sortItems(items: LibraryItem[]) {
+function sortItems(items: StoredLibraryItem[]) {
   return [...items].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
@@ -73,7 +89,7 @@ export class LibraryStore {
   readonly rootDir: string;
   readonly libraryDir: string;
   readonly manifestPath: string;
-  private items: LibraryItem[] = [];
+  private items: StoredLibraryItem[] = [];
 
   constructor(rootDir: string) {
     this.rootDir = path.resolve(rootDir);
@@ -81,20 +97,28 @@ export class LibraryStore {
     this.manifestPath = path.join(this.rootDir, MANIFEST_FILENAME);
   }
 
-  async init() {
+  async init(options: { seedDemo?: boolean } = {}) {
     await fs.mkdir(this.libraryDir, { recursive: true });
 
     try {
       const manifest = await fs.readFile(this.manifestPath, "utf8");
-      const rawItems = JSON.parse(manifest) as LibraryItem[];
-      const existingItems: LibraryItem[] = [];
+      const rawItems = JSON.parse(manifest) as StoredLibraryItem[];
+      const existingItems: StoredLibraryItem[] = [];
 
       for (const item of rawItems) {
+        if (item.kind === "folder") {
+          existingItems.push({
+            ...item,
+            parentId: item.parentId ?? null
+          });
+          continue;
+        }
+
         try {
           await fs.access(this.resolveItemPath(item));
           existingItems.push({
             ...item,
-            ...toItemUrls(item.id, item.kind)
+            parentId: item.parentId ?? null
           });
         } catch {
           continue;
@@ -106,6 +130,10 @@ export class LibraryStore {
       this.items = [];
     }
 
+    if (options.seedDemo && this.items.length === 0) {
+      this.seedDemoContent();
+    }
+
     await this.persist();
   }
 
@@ -114,11 +142,12 @@ export class LibraryStore {
   }
 
   getItems() {
-    return sortItems(this.items);
+    return sortItems(this.items).map((item) => this.hydrateItem(item));
   }
 
   findItem(id: string) {
-    return this.items.find((item) => item.id === id);
+    const item = this.findItemRecord(id);
+    return item ? this.hydrateItem(item) : undefined;
   }
 
   getSummary() {
@@ -131,7 +160,11 @@ export class LibraryStore {
     );
   }
 
-  resolveItemPath(item: Pick<LibraryItem, "storedName">) {
+  resolveItemPath(item: Pick<StoredLibraryItem, "storedName">) {
+    if (!item.storedName) {
+      throw new Error("Folders do not resolve to a file path");
+    }
+
     const resolvedPath = path.resolve(this.libraryDir, item.storedName);
     const normalizedRoot = this.libraryDir.endsWith(path.sep)
       ? this.libraryDir
@@ -144,7 +177,9 @@ export class LibraryStore {
     return resolvedPath;
   }
 
-  async registerUploads(files: Express.Multer.File[]) {
+  async registerUploads(files: Express.Multer.File[], parentId: string | null = null) {
+    this.assertParentFolder(parentId);
+
     const createdAt = new Date().toISOString();
     const newItems = files.map((file) => {
       const id = file.filename.split("--")[0];
@@ -159,14 +194,136 @@ export class LibraryStore {
         kind,
         sizeBytes: file.size,
         createdAt,
-        ...toItemUrls(id, kind)
-      } satisfies LibraryItem;
+        parentId
+      } satisfies StoredLibraryItem;
     });
 
     this.items = sortItems([...newItems, ...this.items]);
     await this.persist();
 
-    return newItems;
+    return newItems.map((item) => this.hydrateItem(item));
+  }
+
+  async createFolder(name: string, parentId: string | null = null) {
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
+      throw new Error("Folder name required");
+    }
+
+    this.assertParentFolder(parentId);
+
+    const folder = {
+      id: nanoid(10),
+      name: trimmedName,
+      storedName: "",
+      mimeType: FOLDER_MIME_TYPE,
+      kind: "folder",
+      sizeBytes: 0,
+      createdAt: new Date().toISOString(),
+      parentId
+    } satisfies StoredLibraryItem;
+
+    this.items = sortItems([folder, ...this.items]);
+    await this.persist();
+
+    return this.hydrateItem(folder);
+  }
+
+  async deleteItem(id: string) {
+    const target = this.findItemRecord(id);
+
+    if (!target) {
+      return null;
+    }
+
+    const idsToDelete = new Set<string>([id]);
+
+    if (target.kind === "folder") {
+      let pending = true;
+
+      while (pending) {
+        pending = false;
+
+        for (const item of this.items) {
+          if (item.parentId && idsToDelete.has(item.parentId) && !idsToDelete.has(item.id)) {
+            idsToDelete.add(item.id);
+            pending = true;
+          }
+        }
+      }
+    }
+
+    for (const item of this.items) {
+      if (!idsToDelete.has(item.id) || item.kind === "folder") {
+        continue;
+      }
+
+      try {
+        await fs.rm(this.resolveItemPath(item), { force: true });
+      } catch {
+        continue;
+      }
+    }
+
+    this.items = this.items.filter((item) => !idsToDelete.has(item.id));
+    await this.persist();
+
+    return [...idsToDelete];
+  }
+
+  private findItemRecord(id: string) {
+    return this.items.find((item) => item.id === id);
+  }
+
+  private hydrateItem(item: StoredLibraryItem): LibraryItem {
+    return {
+      ...item,
+      childrenCount:
+        item.kind === "folder"
+          ? this.items.filter((candidate) => candidate.parentId === item.id).length
+          : undefined,
+      ...toItemUrls(item.id, item.kind)
+    };
+  }
+
+  private assertParentFolder(parentId: string | null) {
+    if (!parentId) {
+      return;
+    }
+
+    const parent = this.findItemRecord(parentId);
+
+    if (!parent || parent.kind !== "folder") {
+      throw new Error("Invalid parent folder");
+    }
+  }
+
+  private seedDemoContent() {
+    const rootFolderId = nanoid(10);
+
+    this.items = sortItems([
+      {
+        id: nanoid(10),
+        name: "Manuali",
+        storedName: "",
+        mimeType: FOLDER_MIME_TYPE,
+        kind: "folder",
+        sizeBytes: 0,
+        createdAt: new Date().toISOString(),
+        parentId: rootFolderId
+      },
+      {
+        id: rootFolderId,
+        name: "Esempio Routeroom",
+        storedName: "",
+        mimeType: FOLDER_MIME_TYPE,
+        kind: "folder",
+        sizeBytes: 0,
+        createdAt: new Date().toISOString(),
+        parentId: null
+      }
+    ]);
   }
 
   private async persist() {

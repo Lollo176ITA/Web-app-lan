@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
+import { Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const rootDirectory = path.resolve(currentDirectory, "..");
@@ -127,11 +128,95 @@ async function createVideoFixture(destination) {
   }
 }
 
+async function createPdfFixture(destination) {
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+
+  try {
+    await page.setContent(`
+      <html>
+        <body style="font-family: Arial, sans-serif; padding: 56px; color: #10273a;">
+          <h1 style="margin: 0 0 16px;">Guida Routeroom</h1>
+          <p style="font-size: 16px; line-height: 1.6;">
+            Routeroom usa la rete locale per condividere file, cartelle e preview documenti.
+          </p>
+          <ul style="font-size: 16px; line-height: 1.7;">
+            <li>Upload in cartella corrente</li>
+            <li>Esplorazione a colonne stile Finder</li>
+            <li>Preview per TXT, PDF e Word</li>
+          </ul>
+        </body>
+      </html>
+    `);
+
+    await page.pdf({
+      path: destination,
+      format: "A4",
+      margin: {
+        top: "24px",
+        right: "24px",
+        bottom: "24px",
+        left: "24px"
+      }
+    });
+  } finally {
+    await browser.close();
+  }
+}
+
+async function createDocxFixture(destination) {
+  const document = new Document({
+    sections: [
+      {
+        properties: {},
+        children: [
+          new Paragraph({
+            heading: HeadingLevel.HEADING_1,
+            children: [new TextRun("Brief Routeroom")]
+          }),
+          new Paragraph({
+            children: [
+              new TextRun(
+                "Routeroom mantiene file e cartelle nella stessa LAN e offre anteprime locali per i documenti principali."
+              )
+            ]
+          }),
+          new Paragraph({
+            bullet: {
+              level: 0
+            },
+            children: [new TextRun("Vista a colonne per navigare nelle cartelle")]
+          }),
+          new Paragraph({
+            bullet: {
+              level: 0
+            },
+            children: [new TextRun("Tre modalita di layout per le card della libreria")]
+          }),
+          new Paragraph({
+            bullet: {
+              level: 0
+            },
+            children: [new TextRun("Cancellazione diretta con conferma visuale nella UI")]
+          })
+        ]
+      }
+    ]
+  });
+
+  const buffer = await Packer.toBuffer(document);
+  await fs.writeFile(destination, buffer);
+}
+
 await fs.mkdir(fixturesDirectory, { recursive: true });
 
 await fs.writeFile(
   path.join(fixturesDirectory, "sample-note.txt"),
-  "Routeroom tiene i file nella stessa LAN e li condivide senza cloud.\n",
+  [
+    "Routeroom tiene i file nella stessa LAN e li condivide senza cloud.",
+    "Le cartelle aiutano a organizzare documenti, media e archivi per stanza o progetto.",
+    "La preview locale mostra testo e documenti senza passare da servizi esterni."
+  ].join("\n"),
   "utf8"
 );
 
@@ -160,4 +245,6 @@ await fs.writeFile(
 );
 
 await fs.writeFile(path.join(fixturesDirectory, "sample-audio.wav"), createWaveFile({}));
+await createPdfFixture(path.join(fixturesDirectory, "sample-guide.pdf"));
+await createDocxFixture(path.join(fixturesDirectory, "sample-brief.docx"));
 await createVideoFixture(path.join(fixturesDirectory, "sample-video.webm"));

@@ -9,6 +9,7 @@ const storageRoot = process.env.STORAGE_ROOT;
 
 const { app, urls } = await createApp({
   port,
+  seedDemo: true,
   staticDir,
   storageRoot
 });

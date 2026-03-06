@@ -1,1 +1,0 @@
-Routeroom tiene i file nella stessa LAN e li condivide senza cloud.

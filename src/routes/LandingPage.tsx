@@ -81,9 +81,6 @@ export function LandingPage() {
               </Avatar>
               <Typography variant="h6">Routeroom</Typography>
             </Stack>
-            <Button component={RouterLink} to="/app" variant="outlined">
-              Apri la LAN
-            </Button>
           </Toolbar>
         </AppBar>
 
@@ -112,9 +109,6 @@ export function LandingPage() {
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
                   <Button component={RouterLink} to="/app" size="large" variant="contained" endIcon={<ArrowOutwardRoundedIcon />}>
                     Apri la LAN
-                  </Button>
-                  <Button href="#come-funziona" size="large" variant="text">
-                    Come funziona
                   </Button>
                 </Stack>
               </Stack>

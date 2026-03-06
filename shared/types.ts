@@ -1,10 +1,13 @@
 export type LibraryKind =
+  | "folder"
   | "video"
   | "image"
   | "audio"
   | "document"
   | "archive"
   | "other";
+
+export type LibraryLayoutMode = "compact" | "intermediate" | "descriptive";
 
 export interface LibraryItem {
   id: string;
@@ -14,11 +17,46 @@ export interface LibraryItem {
   kind: LibraryKind;
   sizeBytes: number;
   createdAt: string;
+  parentId: string | null;
+  childrenCount?: number;
   durationSeconds?: number;
-  downloadUrl: string;
+  downloadUrl?: string;
   contentUrl?: string;
   streamUrl?: string;
 }
+
+export interface CreateFolderRequest {
+  name: string;
+  parentId?: string | null;
+}
+
+export interface CreateFolderResponse {
+  item: LibraryItem;
+}
+
+export interface DeleteItemResponse {
+  deletedIds: string[];
+}
+
+export type ItemPreview =
+  | {
+      mode: "text";
+      text: string;
+      truncated: boolean;
+      source: "text" | "word";
+    }
+  | {
+      mode: "pdf";
+      url: string;
+    }
+  | {
+      mode: "folder";
+      childCount: number;
+    }
+  | {
+      mode: "none";
+      notice: string;
+    };
 
 export interface SessionInfo {
   appName: string;

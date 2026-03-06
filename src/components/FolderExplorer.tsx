@@ -1,0 +1,215 @@
+import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
+import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
+import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
+import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
+import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
+import MovieRoundedIcon from "@mui/icons-material/MovieRounded";
+import MusicNoteRoundedIcon from "@mui/icons-material/MusicNoteRounded";
+import {
+  Avatar,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  List,
+  ListItemButton,
+  ListItemText,
+  Stack,
+  Typography
+} from "@mui/material";
+import { alpha } from "@mui/material/styles";
+import type { LibraryItem } from "../../shared/types";
+
+interface FolderExplorerProps {
+  currentFolderId: string | null;
+  items: LibraryItem[];
+  selectedId: string | null;
+  onOpenFolder: (folderId: string | null) => void;
+  onSelectItem: (itemId: string) => void;
+}
+
+const itemIcons = {
+  folder: FolderRoundedIcon,
+  video: MovieRoundedIcon,
+  image: ImageRoundedIcon,
+  audio: MusicNoteRoundedIcon,
+  document: DescriptionRoundedIcon,
+  archive: DescriptionRoundedIcon,
+  other: DescriptionRoundedIcon
+} as const;
+
+const itemAccents = {
+  folder: "#1769aa",
+  video: "#1769aa",
+  image: "#0f9d94",
+  audio: "#4553c7",
+  document: "#c47917",
+  archive: "#8b4fcf",
+  other: "#5a7184"
+} as const;
+
+function sortExplorerItems(items: LibraryItem[]) {
+  return [...items].sort((left, right) => {
+    if (left.kind === "folder" && right.kind !== "folder") {
+      return -1;
+    }
+
+    if (left.kind !== "folder" && right.kind === "folder") {
+      return 1;
+    }
+
+    return left.name.localeCompare(right.name, "it", { sensitivity: "base" });
+  });
+}
+
+function buildFolderPath(items: LibraryItem[], currentFolderId: string | null) {
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const path: LibraryItem[] = [];
+  let cursor = currentFolderId ? byId.get(currentFolderId) : undefined;
+
+  while (cursor && cursor.kind === "folder") {
+    path.unshift(cursor);
+    cursor = cursor.parentId ? byId.get(cursor.parentId) : undefined;
+  }
+
+  return path;
+}
+
+export function FolderExplorer({
+  currentFolderId,
+  items,
+  selectedId,
+  onOpenFolder,
+  onSelectItem
+}: FolderExplorerProps) {
+  const folderPath = buildFolderPath(items, currentFolderId);
+  const columns = [
+    {
+      id: "root",
+      title: "LAN",
+      items: sortExplorerItems(items.filter((item) => item.parentId === null))
+    },
+    ...folderPath.map((folder) => ({
+      id: folder.id,
+      title: folder.name,
+      items: sortExplorerItems(items.filter((item) => item.parentId === folder.id))
+    }))
+  ];
+
+  return (
+    <Stack spacing={1.5}>
+      <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap alignItems="center">
+        <Button
+          startIcon={<HomeRoundedIcon />}
+          variant={currentFolderId === null ? "contained" : "text"}
+          onClick={() => {
+            onOpenFolder(null);
+          }}
+        >
+          Radice
+        </Button>
+        {folderPath.map((folder) => (
+          <Button
+            key={folder.id}
+            startIcon={<ChevronRightRoundedIcon />}
+            variant={folder.id === currentFolderId ? "contained" : "text"}
+            onClick={() => {
+              onOpenFolder(folder.id);
+            }}
+          >
+            {folder.name}
+          </Button>
+        ))}
+      </Stack>
+
+      <Box
+        sx={{
+          display: "grid",
+          gap: 1.5,
+          gridAutoColumns: { xs: "minmax(260px, 80vw)", md: "minmax(220px, 1fr)" },
+          gridAutoFlow: "column",
+          overflowX: "auto",
+          pb: 0.5
+        }}
+      >
+        {columns.map((column) => (
+          <Card key={column.id} variant="outlined" sx={{ minHeight: 260 }}>
+            <CardContent sx={{ p: 0 }}>
+              <Box
+                sx={{
+                  px: 2,
+                  py: 1.5,
+                  borderBottom: `1px solid ${alpha("#1769aa", 0.08)}`
+                }}
+              >
+                <Typography variant="subtitle1">{column.title}</Typography>
+              </Box>
+
+              <List disablePadding dense>
+                {column.items.length === 0 ? (
+                  <Box sx={{ px: 2, py: 3 }}>
+                    <Typography color="text.secondary" variant="body2">
+                      Nessun elemento in questa colonna.
+                    </Typography>
+                  </Box>
+                ) : null}
+
+                {column.items.map((item) => {
+                  const Icon = itemIcons[item.kind];
+                  const accent = itemAccents[item.kind];
+                  const isActive =
+                    item.kind === "folder" ? item.id === currentFolderId : item.id === selectedId;
+
+                  return (
+                    <ListItemButton
+                      key={item.id}
+                      selected={isActive}
+                      onClick={() => {
+                        if (item.kind === "folder") {
+                          onOpenFolder(item.id);
+                          return;
+                        }
+
+                        onSelectItem(item.id);
+                      }}
+                      sx={{
+                        gap: 1.25,
+                        alignItems: "center",
+                        borderLeft: isActive ? `3px solid ${accent}` : "3px solid transparent"
+                      }}
+                    >
+                      <Avatar
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          bgcolor: alpha(accent, 0.12),
+                          color: accent
+                        }}
+                      >
+                        <Icon fontSize="small" />
+                      </Avatar>
+                      <ListItemText
+                        primary={item.name}
+                        secondary={
+                          item.kind === "folder"
+                            ? `${item.childrenCount ?? 0} elementi`
+                            : item.mimeType
+                        }
+                        primaryTypographyProps={{
+                          noWrap: true,
+                          fontWeight: item.kind === "folder" ? 700 : 500
+                        }}
+                        secondaryTypographyProps={{ noWrap: true }}
+                      />
+                      {item.kind === "folder" ? <ChevronRightRoundedIcon color="disabled" /> : null}
+                    </ListItemButton>
+                  );
+                })}
+              </List>
+            </CardContent>
+          </Card>
+        ))}
+      </Box>
+    </Stack>
+  );
+}
