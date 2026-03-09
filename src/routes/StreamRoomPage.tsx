@@ -16,7 +16,9 @@ import {
   Chip,
   Container,
   FormControl,
+  IconButton,
   InputLabel,
+  InputAdornment,
   MenuItem,
   Select,
   Snackbar,
@@ -572,7 +574,7 @@ export function StreamRoomPage() {
                     )}
                   </Box>
 
-                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} alignItems={{ xs: "stretch", sm: "flex-end" }}>
+                  <Stack>
                     <TextField
                       fullWidth
                       multiline
@@ -589,17 +591,25 @@ export function StreamRoomPage() {
                           void handleSendMessage();
                         }
                       }}
-                    />
-                    <Button
-                      variant="contained"
-                      startIcon={<SendRoundedIcon />}
-                      disabled={sendingMessage || messageText.trim().length === 0}
-                      onClick={() => {
-                        void handleSendMessage();
+                      slotProps={{
+                        input: {
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                color="primary"
+                                aria-label="Invia messaggio"
+                                disabled={sendingMessage || messageText.trim().length === 0}
+                                onClick={() => {
+                                  void handleSendMessage();
+                                }}
+                              >
+                                <SendRoundedIcon />
+                              </IconButton>
+                            </InputAdornment>
+                          )
+                        }
                       }}
-                    >
-                      Invia
-                    </Button>
+                    />
                   </Stack>
                 </Stack>
               </CardContent>

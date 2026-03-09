@@ -15,6 +15,8 @@ import {
   CardContent,
   Chip,
   Container,
+  IconButton,
+  InputAdornment,
   Snackbar,
   Stack,
   TextField,
@@ -506,13 +508,13 @@ export function ChatPage() {
                     )}
                   </Box>
 
-                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} alignItems={{ xs: "stretch", sm: "flex-end" }}>
+                  <Stack>
                     <TextField
                       fullWidth
                       multiline
-                      minRows={2}
+                      minRows={1}
                       maxRows={5}
-                      label={isDirectChat ? "Scrivi un messaggio privato" : "Scrivi un messaggio globale"}
+                      label={"Scrivi un messaggio"}
                       value={messageText}
                       onChange={(event) => {
                         setMessageText(event.target.value);
@@ -523,26 +525,30 @@ export function ChatPage() {
                           void handleSendMessage();
                         }
                       }}
+                      slotProps={{
+                        input: {
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                color="primary"
+                                aria-label="Invia messaggio"
+                                disabled={sending || messageText.trim().length === 0 || (isDirectChat && !selectedParticipant)}
+                                onClick={() => {
+                                  void handleSendMessage();
+                                }}
+                              >
+                                <SendRoundedIcon />
+                              </IconButton>
+                            </InputAdornment>
+                          )
+                        }
+                      }}
                       sx={{
                         "& .MuiOutlinedInput-root": {
                           borderRadius: 2
                         }
                       }}
                     />
-                    <Button
-                      variant="contained"
-                      startIcon={<SendRoundedIcon />}
-                      disabled={sending || messageText.trim().length === 0 || (isDirectChat && !selectedParticipant)}
-                      onClick={() => {
-                        void handleSendMessage();
-                      }}
-                      sx={{
-                        minWidth: { sm: 170 },
-                        borderRadius: 2
-                      }}
-                    >
-                      Invia
-                    </Button>
                   </Stack>
                 </Stack>
               </CardContent>
