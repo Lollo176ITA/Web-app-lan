@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { afterEach, describe, expect, it } from "vitest";
 import request from "supertest";
 import { createApp } from "../server/app";
@@ -253,6 +254,193 @@ describe("Routeroom API", () => {
     expect(deleteResponse.body.deletedIds).toHaveLength(2);
     const itemsResponse = await request(app).get("/api/items").expect(200);
     expect(itemsResponse.body).toHaveLength(0);
+    close();
+  });
+
+  it("persists chat, stream rooms, and playback state across restarts", async () => {
+    const storageRoot = await createTemporaryStorage();
+    const { app, close } = await createApp({ storageRoot });
+    const videoBuffer = await fs.readFile(path.join(fixturesDirectory, "sample-video.webm"));
+
+    const uploadResponse = await request(app)
+      .post("/api/items")
+      .attach("files", videoBuffer, {
+        filename: "sample-video.webm",
+        contentType: "video/webm"
+      })
+      .expect(201);
+
+    const [{ id: videoId }] = uploadResponse.body.items as Array<{ id: string }>;
+
+    const roomResponse = await request(app)
+      .post("/api/stream/rooms")
+      .send({ name: "Salotto sync" })
+      .expect(201);
+
+    const roomId = roomResponse.body.room.id as string;
+
+    await request(app)
+      .post("/api/chat/messages")
+      .send({ identity: { nickname: "Anna" }, text: "Ciao LAN" })
+      .expect(201);
+
+    await request(app)
+      .post(`/api/stream/rooms/${roomId}/messages`)
+      .send({ identity: { nickname: "Bruno" }, text: "Video pronto" })
+      .expect(201);
+
+    await request(app)
+      .post(`/api/stream/rooms/${roomId}/video`)
+      .send({ videoItemId: videoId })
+      .expect(200);
+
+    await request(app)
+      .post(`/api/stream/rooms/${roomId}/playback`)
+      .send({ action: "play", positionSeconds: 12.5 })
+      .expect(200);
+
+    await delay(40);
+
+    const roomSnapshot = await request(app).get(`/api/stream/rooms/${roomId}`).expect(200);
+    expect(roomSnapshot.body.room.playback.status).toBe("playing");
+    expect(roomSnapshot.body.room.playback.positionSeconds).toBeGreaterThanOrEqual(12.5);
+    close();
+
+    const reloaded = await createApp({ storageRoot });
+    const chatSnapshot = await request(reloaded.app).get("/api/chat").expect(200);
+    const restoredRoom = await request(reloaded.app).get(`/api/stream/rooms/${roomId}`).expect(200);
+
+    expect(chatSnapshot.body.messages).toHaveLength(1);
+    expect(chatSnapshot.body.messages[0].text).toBe("Ciao LAN");
+    expect(restoredRoom.body.room.name).toBe("Salotto sync");
+    expect(restoredRoom.body.room.currentVideoName).toBe("sample-video.webm");
+    expect(restoredRoom.body.room.messages).toHaveLength(1);
+    expect(restoredRoom.body.room.messages[0].text).toBe("Video pronto");
+    expect(restoredRoom.body.room.playback.status).toBe("playing");
+    expect(restoredRoom.body.room.playback.positionSeconds).toBeGreaterThanOrEqual(12.5);
+    reloaded.close();
+  });
+
+  it("rejects selecting a non-video item for a streaming room", async () => {
+    const storageRoot = await createTemporaryStorage();
+    const { app, close } = await createApp({ storageRoot });
+
+    const uploadResponse = await request(app)
+      .post("/api/items")
+      .attach("files", Buffer.from("routeroom"), {
+        filename: "notes.txt",
+        contentType: "text/plain"
+      })
+      .expect(201);
+
+    const roomResponse = await request(app)
+      .post("/api/stream/rooms")
+      .send({ name: "Solo video" })
+      .expect(201);
+
+    const [{ id: itemId }] = uploadResponse.body.items as Array<{ id: string }>;
+
+    await request(app)
+      .post(`/api/stream/rooms/${roomResponse.body.room.id}/video`)
+      .send({ videoItemId: itemId })
+      .expect(400);
+
+    close();
+  });
+
+  it("removes room chat when a stream room is deleted", async () => {
+    const storageRoot = await createTemporaryStorage();
+    const { app, close } = await createApp({ storageRoot });
+
+    const roomResponse = await request(app)
+      .post("/api/stream/rooms")
+      .send({ name: "Stanza temporanea" })
+      .expect(201);
+
+    const roomId = roomResponse.body.room.id as string;
+
+    await request(app)
+      .post(`/api/stream/rooms/${roomId}/messages`)
+      .send({ identity: { nickname: "Luca" }, text: "Ci sono" })
+      .expect(201);
+
+    await request(app).delete(`/api/stream/rooms/${roomId}`).expect(200);
+    await request(app).get(`/api/stream/rooms/${roomId}`).expect(404);
+    const roomsResponse = await request(app).get("/api/stream/rooms").expect(200);
+    expect(roomsResponse.body.rooms).toHaveLength(0);
+    close();
+  });
+
+  it("emits new SSE events for global chat and stream rooms", async () => {
+    const storageRoot = await createTemporaryStorage();
+    const { app, close } = await createApp({ storageRoot });
+    const server = await new Promise<ReturnType<typeof app.listen>>((resolve) => {
+      const nextServer = app.listen(0, "127.0.0.1", () => {
+        resolve(nextServer);
+      });
+    });
+    const address = server.address();
+
+    if (!address || typeof address === "string") {
+      throw new Error("Expected an ephemeral port");
+    }
+
+    const controller = new AbortController();
+    const response = await fetch(`http://127.0.0.1:${address.port}/api/events`, {
+      signal: controller.signal
+    });
+
+    const reader = response.body?.getReader();
+
+    if (!reader) {
+      throw new Error("Expected SSE body reader");
+    }
+
+    const readPromise = (async () => {
+      let transcript = "";
+
+      while (
+        !transcript.includes("event: stream-room-created") ||
+        !transcript.includes("event: chat-global-updated")
+      ) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        transcript += Buffer.from(value).toString("utf8");
+      }
+
+      return transcript;
+    })();
+
+    await request(server)
+      .post("/api/stream/rooms")
+      .send({ name: "Event room" })
+      .expect(201);
+
+    await request(server)
+      .post("/api/chat/messages")
+      .send({ identity: { nickname: "Marta" }, text: "Evento globale" })
+      .expect(201);
+
+    const transcript = await Promise.race([
+      readPromise,
+      delay(3000).then(() => {
+        throw new Error("Timed out waiting for SSE events");
+      })
+    ]);
+
+    controller.abort();
+    await new Promise<void>((resolve) => {
+      server.close(() => {
+        resolve();
+      });
+    });
+
+    expect(transcript).toContain("event: stream-room-created");
+    expect(transcript).toContain("event: chat-global-updated");
     close();
   });
 

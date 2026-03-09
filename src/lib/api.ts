@@ -1,11 +1,25 @@
 import type {
   ArchiveFormat,
+  ChatSnapshotResponse,
+  CreateStreamRoomResponse,
   CreateArchiveResponse,
   CreateFolderResponse,
+  DeleteStreamRoomResponse,
   DeleteItemResponse,
+  DirectChatSnapshotResponse,
   ItemPreview,
+  LanIdentity,
   LibraryItem,
+  PostChatMessageRequest,
+  PostRoomMessageRequest,
+  SendChatMessageResponse,
+  SendPrivateChatMessageResponse,
+  SendRoomMessageResponse,
+  SetStreamRoomVideoResponse,
   SessionInfo,
+  StreamRoomResponse,
+  StreamRoomsResponse,
+  UpdateStreamRoomPlaybackResponse,
   UploadResponse
 } from "../../shared/types";
 
@@ -34,6 +48,100 @@ export function fetchItem(itemId: string) {
 export async function fetchSnapshot() {
   const [session, items] = await Promise.all([fetchSession(), fetchItems()]);
   return { session, items };
+}
+
+export function fetchChatSnapshot(viewerId?: string) {
+  const params = viewerId ? `?${new URLSearchParams({ viewerId }).toString()}` : "";
+  return readJson<ChatSnapshotResponse>(`/api/chat${params}`);
+}
+
+export function sendChatMessage(identity: LanIdentity, text: string) {
+  const body: PostChatMessageRequest = { identity, text };
+
+  return readJson<SendChatMessageResponse>("/api/chat/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+export function fetchDirectChatSnapshot(userId: string, viewerId: string) {
+  const params = new URLSearchParams({ viewerId });
+  return readJson<DirectChatSnapshotResponse>(`/api/chat/users/${encodeURIComponent(userId)}?${params.toString()}`);
+}
+
+export function sendDirectChatMessage(userId: string, identity: LanIdentity, text: string) {
+  const body: PostChatMessageRequest = { identity, text };
+
+  return readJson<SendPrivateChatMessageResponse>(`/api/chat/users/${encodeURIComponent(userId)}/messages`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+export function fetchStreamRooms() {
+  return readJson<StreamRoomsResponse>("/api/stream/rooms");
+}
+
+export function createStreamRoom(name: string) {
+  return readJson<CreateStreamRoomResponse>("/api/stream/rooms", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ name })
+  });
+}
+
+export function fetchStreamRoom(roomId: string) {
+  return readJson<StreamRoomResponse>(`/api/stream/rooms/${roomId}`);
+}
+
+export function deleteStreamRoom(roomId: string) {
+  return readJson<DeleteStreamRoomResponse>(`/api/stream/rooms/${roomId}`, {
+    method: "DELETE"
+  });
+}
+
+export function sendRoomMessage(roomId: string, identity: LanIdentity, text: string) {
+  const body: PostRoomMessageRequest = { identity, text };
+
+  return readJson<SendRoomMessageResponse>(`/api/stream/rooms/${roomId}/messages`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+export function setStreamRoomVideo(roomId: string, videoItemId: string) {
+  return readJson<SetStreamRoomVideoResponse>(`/api/stream/rooms/${roomId}/video`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ videoItemId })
+  });
+}
+
+export function updateStreamRoomPlayback(
+  roomId: string,
+  action: "play" | "pause" | "seek",
+  positionSeconds: number
+) {
+  return readJson<UpdateStreamRoomPlaybackResponse>(`/api/stream/rooms/${roomId}/playback`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ action, positionSeconds })
+  });
 }
 
 export async function uploadFiles(files: File[], parentId?: string | null) {
@@ -82,14 +190,17 @@ export function fetchItemPreview(itemId: string) {
   return readJson<ItemPreview>(`/api/items/${itemId}/preview`);
 }
 
-export function openLibraryEvents(
-  onUpdate: () => void,
+export function openLanEvents(
+  handlers: Record<string, () => void>,
   onFallback: () => void,
   onOpen?: () => void
 ) {
   const source = new EventSource("/api/events");
 
-  source.addEventListener("library-updated", onUpdate);
+  Object.entries(handlers).forEach(([eventName, handler]) => {
+    source.addEventListener(eventName, handler);
+  });
+
   source.onopen = () => {
     onOpen?.();
   };
@@ -99,4 +210,18 @@ export function openLibraryEvents(
   };
 
   return source;
+}
+
+export function openLibraryEvents(
+  onUpdate: () => void,
+  onFallback: () => void,
+  onOpen?: () => void
+) {
+  return openLanEvents(
+    {
+      "library-updated": onUpdate
+    },
+    onFallback,
+    onOpen
+  );
 }

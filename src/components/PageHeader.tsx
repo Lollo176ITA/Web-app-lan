@@ -12,7 +12,9 @@ interface PageHeaderProps {
 
 const navItems = [
   { label: "Home", to: "/", matches: (pathname: string) => pathname === "/" },
-  { label: "App", to: "/app", matches: (pathname: string) => pathname.startsWith("/app") || pathname.startsWith("/player") }
+  { label: "App", to: "/app", matches: (pathname: string) => pathname.startsWith("/app") || pathname.startsWith("/player") },
+  { label: "Chat", to: "/chat/globale", matches: (pathname: string) => pathname.startsWith("/chat") },
+  { label: "Streaming", to: "/stream", matches: (pathname: string) => pathname.startsWith("/stream") }
 ];
 
 export function PageHeader({ title, subtitle, trailing }: PageHeaderProps) {

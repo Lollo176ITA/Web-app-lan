@@ -9,15 +9,34 @@ import WordExtractor from "word-extractor";
 import { nanoid } from "nanoid";
 import { EventHub } from "./events.js";
 import { getSessionUrls } from "./network.js";
+import { CollaborationStore } from "./realtime.js";
 import { LibraryStore } from "./storage.js";
 import type {
   ArchiveFormat,
+  ChatSnapshotResponse,
+  DirectChatSnapshotResponse,
+  CreateStreamRoomRequest,
+  CreateStreamRoomResponse,
   CreateArchiveRequest,
   CreateArchiveResponse,
   CreateFolderRequest,
+  DeleteStreamRoomResponse,
   DeleteItemResponse,
   ItemPreview,
-  SessionInfo
+  PostChatMessageRequest,
+  PostRoomMessageRequest,
+  SendChatMessageResponse,
+  SendPrivateChatMessageResponse,
+  SendRoomMessageResponse,
+  SetStreamRoomVideoRequest,
+  SetStreamRoomVideoResponse,
+  SessionInfo,
+  StreamRoomDetail,
+  StreamRoomResponse,
+  StreamRoomsResponse,
+  StreamRoomSummary,
+  UpdateStreamRoomPlaybackRequest,
+  UpdateStreamRoomPlaybackResponse
 } from "../shared/types.js";
 import {
   createFolderArchive,
@@ -137,6 +156,7 @@ export async function createApp(options: CreateAppOptions = {}) {
   const storageRoot = options.storageRoot ?? path.resolve(process.cwd(), "storage");
   const urls = getSessionUrls(port);
   const store = new LibraryStore(storageRoot);
+  const collaboration = new CollaborationStore(storageRoot);
   const events = new EventHub();
   const availableArchiveFormats = await detectAvailableArchiveFormats();
   const defaultFolderDownloadFormat =
@@ -145,6 +165,11 @@ export async function createApp(options: CreateAppOptions = {}) {
     null;
 
   await store.init({ seedDemo: options.seedDemo });
+  await collaboration.init();
+  await collaboration.pruneMissingVideos((videoItemId) => {
+    const item = store.findItem(videoItemId);
+    return item?.kind === "video";
+  });
 
   const upload = multer({
     storage: multer.diskStorage({
@@ -211,6 +236,72 @@ export async function createApp(options: CreateAppOptions = {}) {
     });
   }
 
+  function buildRoomSummary(
+    room: NonNullable<ReturnType<CollaborationStore["findRoom"]>>
+  ): StreamRoomSummary {
+    const videoItem =
+      room.playback.videoItemId ? store.findItem(room.playback.videoItemId) ?? null : null;
+
+    return {
+      id: room.id,
+      name: room.name,
+      createdAt: room.createdAt,
+      updatedAt: room.updatedAt,
+      currentVideoName: videoItem?.kind === "video" ? videoItem.name : null,
+      messageCount: collaboration.getRoomMessages(room.id).length,
+      playback: collaboration.materializePlayback(room)
+    };
+  }
+
+  function buildRoomDetail(
+    room: NonNullable<ReturnType<CollaborationStore["findRoom"]>>
+  ): StreamRoomDetail {
+    const videoItem =
+      room.playback.videoItemId ? store.findItem(room.playback.videoItemId) ?? null : null;
+
+    return {
+      ...buildRoomSummary(room),
+      videoItem: videoItem?.kind === "video" ? videoItem : null,
+      messages: collaboration.getRoomMessages(room.id)
+    };
+  }
+
+  function broadcastGlobalChatUpdated() {
+    events.broadcast("chat-global-updated", {
+      count: collaboration.getGlobalMessages().length
+    });
+  }
+
+  function broadcastPrivateChatUpdated(participantIds: string[]) {
+    events.broadcast("chat-private-updated", {
+      participantIds
+    });
+  }
+
+  function broadcastRoomCreated(roomId: string) {
+    events.broadcast("stream-room-created", {
+      roomId
+    });
+  }
+
+  function broadcastRoomUpdated(roomId: string) {
+    events.broadcast("stream-room-updated", {
+      roomId
+    });
+  }
+
+  function broadcastRoomDeleted(roomId: string) {
+    events.broadcast("stream-room-deleted", {
+      roomId
+    });
+  }
+
+  function broadcastRoomChatUpdated(roomId: string) {
+    events.broadcast("stream-room-chat-updated", {
+      roomId
+    });
+  }
+
   app.use(express.json());
 
   app.get("/api/health", (_request, response) => {
@@ -233,6 +324,281 @@ export async function createApp(options: CreateAppOptions = {}) {
 
   app.get("/api/items", (_request, response) => {
     response.json(store.getItems());
+  });
+
+  app.get("/api/chat", (request, response) => {
+    const viewerId = typeof request.query.viewerId === "string" ? request.query.viewerId.trim() : "";
+    const payload: ChatSnapshotResponse = {
+      globalMessages: collaboration.getGlobalMessages(),
+      threads: viewerId ? collaboration.listPrivateThreads(viewerId) : [],
+      knownUsers: collaboration.getKnownUsers()
+    };
+
+    response.json(payload);
+  });
+
+  app.post("/api/chat/messages", async (request, response, next) => {
+    try {
+      const payload = request.body as PostChatMessageRequest | undefined;
+
+      if (
+        !payload ||
+        typeof payload.text !== "string" ||
+        typeof payload.identity?.id !== "string" ||
+        typeof payload.identity?.nickname !== "string"
+      ) {
+        response.status(400).json({ message: "Messaggio o nickname non validi." });
+        return;
+      }
+
+      const message = await collaboration.addGlobalMessage(payload.identity, payload.text);
+      broadcastGlobalChatUpdated();
+
+      const result: SendChatMessageResponse = { message };
+      response.status(201).json(result);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Invalid message") {
+        response.status(400).json({ message: "Messaggio o nickname non validi." });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
+  app.get("/api/chat/users/:id", (request, response) => {
+    const viewerId = typeof request.query.viewerId === "string" ? request.query.viewerId.trim() : "";
+
+    if (!viewerId) {
+      response.status(400).json({ message: "Utente richiedente mancante." });
+      return;
+    }
+
+    const participant = collaboration.findKnownUser(request.params.id);
+    const payload: DirectChatSnapshotResponse = {
+      participant,
+      messages: collaboration.getPrivateMessages(viewerId, request.params.id),
+      knownUsers: collaboration.getKnownUsers()
+    };
+
+    response.json(payload);
+  });
+
+  app.post("/api/chat/users/:id/messages", async (request, response, next) => {
+    try {
+      const payload = request.body as PostChatMessageRequest | undefined;
+
+      if (
+        !payload ||
+        typeof payload.text !== "string" ||
+        typeof payload.identity?.id !== "string" ||
+        typeof payload.identity?.nickname !== "string"
+      ) {
+        response.status(400).json({ message: "Messaggio o nickname non validi." });
+        return;
+      }
+
+      const recipient = collaboration.findKnownUser(request.params.id);
+
+      if (!recipient) {
+        response.status(404).json({ message: "Utente non trovato." });
+        return;
+      }
+
+      const message = await collaboration.addPrivateMessage(payload.identity, recipient, payload.text);
+      broadcastPrivateChatUpdated([payload.identity.id, recipient.id]);
+
+      const result: SendPrivateChatMessageResponse = { message };
+      response.status(201).json(result);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Invalid message") {
+        response.status(400).json({ message: "Messaggio o nickname non validi." });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
+  app.get("/api/stream/rooms", (_request, response) => {
+    const payload: StreamRoomsResponse = {
+      rooms: collaboration.listRooms().map(buildRoomSummary)
+    };
+
+    response.json(payload);
+  });
+
+  app.post("/api/stream/rooms", async (request, response, next) => {
+    try {
+      const payload = request.body as CreateStreamRoomRequest | undefined;
+
+      if (!payload || typeof payload.name !== "string") {
+        response.status(400).json({ message: "Nome stanza mancante." });
+        return;
+      }
+
+      const room = await collaboration.createRoom(payload.name);
+      broadcastRoomCreated(room.id);
+
+      const result: CreateStreamRoomResponse = {
+        room: buildRoomSummary(room)
+      };
+      response.status(201).json(result);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Room name required") {
+        response.status(400).json({ message: "Nome stanza mancante." });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
+  app.get("/api/stream/rooms/:id", (request, response) => {
+    const room = collaboration.findRoom(request.params.id);
+
+    if (!room) {
+      response.status(404).json({ message: "Stanza non trovata." });
+      return;
+    }
+
+    const payload: StreamRoomResponse = {
+      room: buildRoomDetail(room)
+    };
+
+    response.json(payload);
+  });
+
+  app.delete("/api/stream/rooms/:id", async (request, response, next) => {
+    try {
+      const deleted = await collaboration.deleteRoom(request.params.id);
+
+      if (!deleted) {
+        response.status(404).json({ message: "Stanza non trovata." });
+        return;
+      }
+
+      broadcastRoomDeleted(request.params.id);
+
+      const payload: DeleteStreamRoomResponse = {
+        deletedRoomId: request.params.id
+      };
+      response.json(payload);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/stream/rooms/:id/messages", async (request, response, next) => {
+    try {
+      const payload = request.body as PostRoomMessageRequest | undefined;
+
+      if (
+        !payload ||
+        typeof payload.text !== "string" ||
+        typeof payload.identity?.id !== "string" ||
+        typeof payload.identity?.nickname !== "string"
+      ) {
+        response.status(400).json({ message: "Messaggio o nickname non validi." });
+        return;
+      }
+
+      const message = await collaboration.addRoomMessage(request.params.id, payload.identity, payload.text);
+
+      if (!message) {
+        response.status(404).json({ message: "Stanza non trovata." });
+        return;
+      }
+
+      broadcastRoomChatUpdated(request.params.id);
+      broadcastRoomUpdated(request.params.id);
+
+      const result: SendRoomMessageResponse = {
+        message
+      };
+      response.status(201).json(result);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Invalid message") {
+        response.status(400).json({ message: "Messaggio o nickname non validi." });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
+  app.post("/api/stream/rooms/:id/video", async (request, response, next) => {
+    try {
+      const payload = request.body as SetStreamRoomVideoRequest | undefined;
+
+      if (!payload || typeof payload.videoItemId !== "string") {
+        response.status(400).json({ message: "Video stanza non valido." });
+        return;
+      }
+
+      const item = store.findItem(payload.videoItemId);
+
+      if (!item || item.kind !== "video") {
+        response.status(400).json({ message: "Seleziona un video valido dalla libreria." });
+        return;
+      }
+
+      const room = await collaboration.setRoomVideo(request.params.id, item.id);
+
+      if (!room) {
+        response.status(404).json({ message: "Stanza non trovata." });
+        return;
+      }
+
+      broadcastRoomUpdated(request.params.id);
+
+      const result: SetStreamRoomVideoResponse = {
+        room: buildRoomDetail(room)
+      };
+      response.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/stream/rooms/:id/playback", async (request, response, next) => {
+    try {
+      const payload = request.body as UpdateStreamRoomPlaybackRequest | undefined;
+
+      if (
+        !payload ||
+        (payload.action !== "play" && payload.action !== "pause" && payload.action !== "seek") ||
+        typeof payload.positionSeconds !== "number"
+      ) {
+        response.status(400).json({ message: "Comando playback non valido." });
+        return;
+      }
+
+      const room = await collaboration.updatePlayback(
+        request.params.id,
+        payload.action,
+        payload.positionSeconds
+      );
+
+      if (!room) {
+        response.status(404).json({ message: "Stanza non trovata." });
+        return;
+      }
+
+      broadcastRoomUpdated(request.params.id);
+
+      const result: UpdateStreamRoomPlaybackResponse = {
+        room: buildRoomDetail(room)
+      };
+      response.json(result);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Missing room video") {
+        response.status(400).json({ message: "Seleziona prima un video per la stanza." });
+        return;
+      }
+
+      next(error);
+    }
   });
 
   app.get("/api/items/:id", (request, response) => {
@@ -305,6 +671,11 @@ export async function createApp(options: CreateAppOptions = {}) {
       }
 
       broadcastLibraryUpdated(deletedIds);
+      const changedRoomIds = await collaboration.clearDeletedVideos(deletedIds);
+
+      for (const roomId of changedRoomIds) {
+        broadcastRoomUpdated(roomId);
+      }
 
       const payload: DeleteItemResponse = {
         deletedIds
