@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import LanRoundedIcon from "@mui/icons-material/LanRounded";
-import { Avatar, Box, Button, Paper, Stack, Typography } from "@mui/material";
+import { Avatar, Box, Button, ButtonBase, Paper, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { Link as RouterLink, useLocation } from "react-router-dom";
+import { useIdentity } from "../lib/identity-context";
 
 interface PageHeaderProps {
   title: string;
@@ -19,6 +20,9 @@ const navItems = [
 
 export function PageHeader({ title, subtitle, trailing }: PageHeaderProps) {
   const location = useLocation();
+  const { identity } = useIdentity();
+  const profilePath = identity ? `/utente/${identity.id}` : null;
+  const profileInitial = identity?.nickname.trim().charAt(0).toUpperCase() ?? "?";
 
   return (
     <Paper
@@ -112,6 +116,29 @@ export function PageHeader({ title, subtitle, trailing }: PageHeaderProps) {
           </Stack>
 
           {trailing ? <Box sx={{ flexShrink: 0 }}>{trailing}</Box> : null}
+
+          {profilePath ? (
+            <ButtonBase
+              component={RouterLink}
+              to={profilePath}
+              sx={{
+                borderRadius: 2,
+                overflow: "hidden"
+              }}
+            >
+              <Avatar
+                sx={{
+                  width: { xs: 38, md: 42 },
+                  height: { xs: 38, md: 42 },
+                  bgcolor: location.pathname.startsWith("/utente/") ? alpha("#1769aa", 0.16) : alpha("#10273a", 0.08),
+                  color: location.pathname.startsWith("/utente/") ? "primary.main" : "text.primary",
+                  fontWeight: 700
+                }}
+              >
+                {profileInitial}
+              </Avatar>
+            </ButtonBase>
+          ) : null}
         </Stack>
       </Stack>
     </Paper>

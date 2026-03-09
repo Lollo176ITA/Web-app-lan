@@ -1,6 +1,7 @@
 import type {
   ArchiveFormat,
   ChatSnapshotResponse,
+  ClientProfileResponse,
   CreateStreamRoomResponse,
   CreateArchiveResponse,
   CreateFolderResponse,
@@ -53,6 +54,10 @@ export async function fetchSnapshot() {
 export function fetchChatSnapshot(viewerId?: string) {
   const params = viewerId ? `?${new URLSearchParams({ viewerId }).toString()}` : "";
   return readJson<ChatSnapshotResponse>(`/api/chat${params}`);
+}
+
+export function fetchClientProfile() {
+  return readJson<ClientProfileResponse>("/api/me");
 }
 
 export function sendChatMessage(identity: LanIdentity, text: string) {

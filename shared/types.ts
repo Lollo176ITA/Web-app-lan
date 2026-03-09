@@ -162,6 +162,11 @@ export interface SendPrivateChatMessageResponse {
   message: PrivateChatMessage;
 }
 
+export interface ClientProfileResponse {
+  clientIp: string | null;
+  userAgent: string | null;
+}
+
 export interface StreamRoomsResponse {
   rooms: StreamRoomSummary[];
 }

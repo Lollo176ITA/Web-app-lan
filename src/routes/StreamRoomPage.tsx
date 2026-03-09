@@ -2,7 +2,6 @@ import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
-import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import MeetingRoomRoundedIcon from "@mui/icons-material/MeetingRoomRounded";
 import MovieRoundedIcon from "@mui/icons-material/MovieRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
@@ -28,11 +27,10 @@ import {
 import { alpha, useTheme } from "@mui/material/styles";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { resolvePlaybackPosition } from "../../shared/playback";
-import type { LanIdentity, LibraryItem, RoomChatMessage, StreamRoomDetail } from "../../shared/types";
-import { NicknameDialog } from "../components/NicknameDialog";
+import type { LibraryItem, RoomChatMessage, StreamRoomDetail } from "../../shared/types";
 import { PageHeader } from "../components/PageHeader";
 import { copyTextToClipboard } from "../lib/clipboard";
-import { createIdentityFromNickname, persistIdentity, readStoredIdentity } from "../lib/identity";
+import { useIdentity } from "../lib/identity-context";
 import {
   deleteStreamRoom,
   fetchItems,
@@ -65,8 +63,7 @@ function buildRoomShareUrl(roomId: string) {
 export function StreamRoomPage() {
   const { roomId } = useParams();
   const navigate = useNavigate();
-  const [identity, setIdentity] = useState<LanIdentity | null>(() => readStoredIdentity());
-  const [nicknameDialogOpen, setNicknameDialogOpen] = useState(() => readStoredIdentity() === null);
+  const { identity } = useIdentity();
   const [room, setRoom] = useState<StreamRoomDetail | null>(null);
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [messageText, setMessageText] = useState("");
@@ -252,7 +249,6 @@ export function StreamRoomPage() {
     }
 
     if (!identity) {
-      setNicknameDialogOpen(true);
       return;
     }
 
@@ -363,7 +359,6 @@ export function StreamRoomPage() {
 
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }}>
                   <Chip label={room.playback.status === "playing" ? "In riproduzione" : "In pausa"} />
-                  <Chip label={identity ? `Nickname: ${identity.nickname}` : "Nickname richiesto"} />
                   <Button
                     variant="outlined"
                     startIcon={<ContentCopyRoundedIcon />}
@@ -378,15 +373,6 @@ export function StreamRoomPage() {
                     }}
                   >
                     Copia link
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<EditRoundedIcon />}
-                    onClick={() => {
-                      setNicknameDialogOpen(true);
-                    }}
-                  >
-                    Modifica nickname
                   </Button>
                   <Button
                     color="error"
@@ -621,19 +607,6 @@ export function StreamRoomPage() {
           </Box>
         </Stack>
       </Container>
-
-      <NicknameDialog
-        open={nicknameDialogOpen}
-        initialValue={identity?.nickname ?? ""}
-        onClose={identity ? () => setNicknameDialogOpen(false) : undefined}
-        onSave={(nickname) => {
-          const nextIdentity = createIdentityFromNickname(nickname);
-          persistIdentity(nextIdentity);
-          setIdentity(nextIdentity);
-          setNicknameDialogOpen(false);
-          setSnackbar("Nickname aggiornato.");
-        }}
-      />
 
       <Snackbar
         open={Boolean(snackbar)}

@@ -1,7 +1,6 @@
 import { startTransition, useEffect, useMemo, useState } from "react";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
-import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import MeetingRoomRoundedIcon from "@mui/icons-material/MeetingRoomRounded";
 import MovieRoundedIcon from "@mui/icons-material/MovieRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
@@ -22,10 +21,8 @@ import {
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import { Link as RouterLink } from "react-router-dom";
-import type { LanIdentity, LibraryItem, StreamRoomSummary } from "../../shared/types";
-import { NicknameDialog } from "../components/NicknameDialog";
+import type { LibraryItem, StreamRoomSummary } from "../../shared/types";
 import { PageHeader } from "../components/PageHeader";
-import { createIdentityFromNickname, persistIdentity, readStoredIdentity } from "../lib/identity";
 import { createStreamRoom, fetchItems, fetchStreamRooms, openLanEvents } from "../lib/api";
 
 type LiveState = "live" | "fallback" | "connecting";
@@ -40,8 +37,6 @@ function formatRoomTime(value: string) {
 }
 
 export function StreamRoomsPage() {
-  const [identity, setIdentity] = useState<LanIdentity | null>(() => readStoredIdentity());
-  const [nicknameDialogOpen, setNicknameDialogOpen] = useState(() => readStoredIdentity() === null);
   const [rooms, setRooms] = useState<StreamRoomSummary[]>([]);
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [roomName, setRoomName] = useState("");
@@ -266,19 +261,6 @@ export function StreamRoomsPage() {
           </Card>
         </Stack>
       </Container>
-
-      <NicknameDialog
-        open={nicknameDialogOpen}
-        initialValue={identity?.nickname ?? ""}
-        onClose={identity ? () => setNicknameDialogOpen(false) : undefined}
-        onSave={(nickname) => {
-          const nextIdentity = createIdentityFromNickname(nickname);
-          persistIdentity(nextIdentity);
-          setIdentity(nextIdentity);
-          setNicknameDialogOpen(false);
-          setSnackbar("Nickname aggiornato.");
-        }}
-      />
 
       <Snackbar
         open={Boolean(snackbar)}

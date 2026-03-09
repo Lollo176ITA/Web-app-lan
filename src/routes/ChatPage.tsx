@@ -1,7 +1,6 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
-import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import ForumRoundedIcon from "@mui/icons-material/ForumRounded";
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
@@ -27,12 +26,10 @@ import type {
   ChatMessage,
   ChatSnapshotResponse,
   ChatThreadSummary,
-  LanIdentity,
   PrivateChatMessage
 } from "../../shared/types";
-import { NicknameDialog } from "../components/NicknameDialog";
 import { PageHeader } from "../components/PageHeader";
-import { createIdentityFromNickname, persistIdentity, readStoredIdentity } from "../lib/identity";
+import { useIdentity } from "../lib/identity-context";
 import {
   fetchChatSnapshot,
   fetchDirectChatSnapshot,
@@ -95,16 +92,15 @@ function buildThreadMap(threads: ChatThreadSummary[]) {
 export function ChatPage() {
   const { userId } = useParams();
   const isDirectChat = Boolean(userId);
-  const [identity, setIdentity] = useState<LanIdentity | null>(() => readStoredIdentity());
+  const { identity } = useIdentity();
   const [overview, setOverview] = useState<ChatSnapshotResponse>({
     globalMessages: [],
     threads: [],
     knownUsers: []
   });
   const [directMessages, setDirectMessages] = useState<PrivateChatMessage[]>([]);
-  const [directParticipant, setDirectParticipant] = useState<LanIdentity | null>(null);
+  const [directParticipant, setDirectParticipant] = useState<ChatSnapshotResponse["knownUsers"][number] | null>(null);
   const [messageText, setMessageText] = useState("");
-  const [nicknameDialogOpen, setNicknameDialogOpen] = useState(() => readStoredIdentity() === null);
   const [liveState, setLiveState] = useState<LiveState>("connecting");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -213,7 +209,6 @@ export function ChatPage() {
     const text = messageText.trim();
 
     if (!identity) {
-      setNicknameDialogOpen(true);
       return;
     }
 
@@ -266,44 +261,6 @@ export function ChatPage() {
         />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
-          <Card sx={{ borderRadius: 2.5 }}>
-            <CardContent>
-              <Stack
-                direction={{ xs: "column", md: "row" }}
-                spacing={2}
-                alignItems={{ xs: "flex-start", md: "center" }}
-                justifyContent="space-between"
-              >
-                <Stack spacing={1}>
-                  <Typography variant="h5">
-                    {isDirectChat ? `Chat privata con ${selectedParticipant?.nickname ?? "utente LAN"}` : "Chat globale LAN"}
-                  </Typography>
-                  <Typography color="text.secondary">
-                    {isDirectChat
-                      ? "Messaggi diretti tra due utenti nella rete locale."
-                      : "Canale comune per tutti gli utenti collegati alla LAN."}
-                  </Typography>
-                </Stack>
-
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }}>
-                  <Chip
-                    label={identity ? `Nickname: ${identity.nickname}` : "Nickname richiesto"}
-                    sx={{ maxWidth: "100%" }}
-                  />
-                  <Button
-                    variant="outlined"
-                    startIcon={<EditRoundedIcon />}
-                    onClick={() => {
-                      setNicknameDialogOpen(true);
-                    }}
-                  >
-                    Modifica nickname
-                  </Button>
-                </Stack>
-              </Stack>
-            </CardContent>
-          </Card>
-
           <Stack direction={{ xs: "column", lg: "row" }} spacing={2.5} alignItems="stretch">
             <Card
               sx={{
@@ -593,19 +550,6 @@ export function ChatPage() {
           </Stack>
         </Stack>
       </Container>
-
-      <NicknameDialog
-        open={nicknameDialogOpen}
-        initialValue={identity?.nickname ?? ""}
-        onClose={identity ? () => setNicknameDialogOpen(false) : undefined}
-        onSave={(nickname) => {
-          const nextIdentity = createIdentityFromNickname(nickname);
-          persistIdentity(nextIdentity);
-          setIdentity(nextIdentity);
-          setNicknameDialogOpen(false);
-          setSnackbar("Nickname aggiornato.");
-        }}
-      />
 
       <Snackbar
         open={Boolean(snackbar)}

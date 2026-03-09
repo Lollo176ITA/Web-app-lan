@@ -3,13 +3,22 @@ import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextF
 import { normalizeNickname } from "../lib/identity";
 
 interface NicknameDialogProps {
+  dialogTitle?: string;
+  helperText?: string;
   initialValue?: string;
   open: boolean;
   onClose?: () => void;
   onSave: (nickname: string) => void;
 }
 
-export function NicknameDialog({ initialValue = "", open, onClose, onSave }: NicknameDialogProps) {
+export function NicknameDialog({
+  dialogTitle = "Nickname LAN",
+  helperText = "Questo nome verra mostrato nella chat globale, nelle chat private LAN e nelle stanze streaming.",
+  initialValue = "",
+  open,
+  onClose,
+  onSave
+}: NicknameDialogProps) {
   const [value, setValue] = useState(initialValue);
 
   useEffect(() => {
@@ -22,9 +31,12 @@ export function NicknameDialog({ initialValue = "", open, onClose, onSave }: Nic
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>Nickname LAN</DialogTitle>
+      <DialogTitle>{dialogTitle}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
+          <Typography color="text.secondary" variant="body2">
+            {helperText}
+          </Typography>
           <TextField
             autoFocus
             fullWidth

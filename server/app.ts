@@ -14,6 +14,7 @@ import { LibraryStore } from "./storage.js";
 import type {
   ArchiveFormat,
   ChatSnapshotResponse,
+  ClientProfileResponse,
   DirectChatSnapshotResponse,
   CreateStreamRoomRequest,
   CreateStreamRoomResponse,
@@ -91,6 +92,14 @@ function normalizeStringArray(value: unknown) {
 
 function normalizeArchiveFormat(value: unknown): ArchiveFormat | null {
   return value === "zip" || value === "7z" || value === "rar" ? value : null;
+}
+
+function normalizeClientIp(value: string | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  return value.startsWith("::ffff:") ? value.slice(7) : value;
 }
 
 function buildPreviewText(text: string, source: "text" | "word"): ItemPreview {
@@ -306,6 +315,15 @@ export async function createApp(options: CreateAppOptions = {}) {
 
   app.get("/api/health", (_request, response) => {
     response.json({ ok: true });
+  });
+
+  app.get("/api/me", (request, response) => {
+    const payload: ClientProfileResponse = {
+      clientIp: normalizeClientIp(request.ip || request.socket.remoteAddress),
+      userAgent: typeof request.get("user-agent") === "string" ? request.get("user-agent") ?? null : null
+    };
+
+    response.json(payload);
   });
 
   app.get("/api/session", (_request, response) => {
