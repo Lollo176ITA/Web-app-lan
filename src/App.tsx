@@ -15,6 +15,9 @@ const VideoPlayerPage = lazy(async () => import("./routes/VideoPlayerPage").then
 const UserProfilePage = lazy(async () =>
   import("./routes/UserProfilePage").then((module) => ({ default: module.UserProfilePage }))
 );
+const DiagnosticsPage = lazy(async () =>
+  import("./routes/DiagnosticsPage").then((module) => ({ default: module.DiagnosticsPage }))
+);
 
 function RouteFallback() {
   return (
@@ -57,6 +60,7 @@ export default function App() {
           <Route path="/stream/room/:roomId" element={<StreamRoomPage />} />
           <Route path="/player/:itemId" element={<VideoPlayerPage />} />
           <Route path="/utente/:userId" element={<UserProfilePage />} />
+          <Route path="/diagnostics" element={<DiagnosticsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

@@ -9,6 +9,7 @@ interface PageHeaderProps {
   title: string;
   subtitle?: string;
   trailing?: ReactNode;
+  trailingLinkTo?: string;
 }
 
 const navItems = [
@@ -18,7 +19,7 @@ const navItems = [
   { label: "Streaming", to: "/stream", matches: (pathname: string) => pathname.startsWith("/stream") }
 ];
 
-export function PageHeader({ title, subtitle, trailing }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, trailing, trailingLinkTo }: PageHeaderProps) {
   const location = useLocation();
   const { identity } = useIdentity();
   const profilePath = identity ? `/utente/${identity.id}` : null;
@@ -115,7 +116,22 @@ export function PageHeader({ title, subtitle, trailing }: PageHeaderProps) {
             })}
           </Stack>
 
-          {trailing ? <Box sx={{ flexShrink: 0 }}>{trailing}</Box> : null}
+          {trailing ? (
+            trailingLinkTo ? (
+              <ButtonBase
+                component={RouterLink}
+                to={trailingLinkTo}
+                sx={{
+                  borderRadius: 2,
+                  overflow: "hidden"
+                }}
+              >
+                <Box sx={{ flexShrink: 0 }}>{trailing}</Box>
+              </ButtonBase>
+            ) : (
+              <Box sx={{ flexShrink: 0 }}>{trailing}</Box>
+            )
+          ) : null}
 
           {profilePath ? (
             <ButtonBase

@@ -485,6 +485,7 @@ export function AppPage() {
         <PageHeader
           title="Routeroom"
           subtitle="LAN media relay"
+          trailingLinkTo="/diagnostics"
           trailing={
             <Avatar
               sx={{

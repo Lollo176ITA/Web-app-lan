@@ -247,6 +247,7 @@ export function ChatPage() {
         <PageHeader
           title="Chat LAN"
           subtitle={isDirectChat ? "Conversazione privata" : "Canale globale"}
+          trailingLinkTo="/diagnostics"
           trailing={
             <Avatar
               sx={{

@@ -11,6 +11,7 @@ import { EventHub } from "./events.js";
 import { getSessionUrls } from "./network.js";
 import { CollaborationStore } from "./realtime.js";
 import { LibraryStore } from "./storage.js";
+import { collectHostDiagnostics } from "./diagnostics.js";
 import type {
   ArchiveFormat,
   ChatSnapshotResponse,
@@ -23,6 +24,7 @@ import type {
   CreateFolderRequest,
   DeleteStreamRoomResponse,
   DeleteItemResponse,
+  HostDiagnosticsResponse,
   ItemPreview,
   PostChatMessageRequest,
   PostRoomMessageRequest,
@@ -50,6 +52,7 @@ interface CreateAppOptions {
   seedDemo?: boolean;
   storageRoot?: string;
   staticDir?: string;
+  listenHost?: string;
 }
 
 const wordExtractor = new WordExtractor();
@@ -162,6 +165,7 @@ async function createItemPreview(
 
 export async function createApp(options: CreateAppOptions = {}) {
   const port = options.port ?? 8787;
+  const listenHost = options.listenHost ?? "0.0.0.0";
   const storageRoot = options.storageRoot ?? path.resolve(process.cwd(), "storage");
   const urls = getSessionUrls(port);
   const store = new LibraryStore(storageRoot);
@@ -338,6 +342,19 @@ export async function createApp(options: CreateAppOptions = {}) {
     };
 
     response.json(sessionInfo);
+  });
+
+  app.get("/api/diagnostics", async (_request, response, next) => {
+    try {
+      const payload: HostDiagnosticsResponse = await collectHostDiagnostics({
+        lanUrl: urls.lanUrl,
+        listenHost,
+        port
+      });
+      response.json(payload);
+    } catch (error) {
+      next(error);
+    }
   });
 
   app.get("/api/items", (_request, response) => {

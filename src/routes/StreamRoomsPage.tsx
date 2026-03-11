@@ -195,6 +195,7 @@ export function StreamRoomsPage() {
         <PageHeader
           title="Stanze Streaming"
           subtitle="Watch party locale"
+          trailingLinkTo="/diagnostics"
           trailing={
             <Avatar
               sx={{

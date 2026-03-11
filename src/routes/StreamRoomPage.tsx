@@ -323,6 +323,7 @@ export function StreamRoomPage() {
         <PageHeader
           title={room.name}
           subtitle="Stanza streaming sincronizzata"
+          trailingLinkTo="/diagnostics"
           trailing={
             <Avatar
               sx={{

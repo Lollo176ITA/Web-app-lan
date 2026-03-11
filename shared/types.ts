@@ -77,6 +77,33 @@ export interface SessionInfo {
   availableArchiveFormats: ArchiveFormat[];
 }
 
+export type HostDiagnosticStatus = "pass" | "warn" | "fail" | "info";
+
+export interface HostDiagnosticCheck {
+  id: string;
+  label: string;
+  status: HostDiagnosticStatus;
+  message: string;
+}
+
+export interface HostDiagnosticCommand {
+  id: string;
+  label: string;
+  shell: "powershell" | "bash";
+  command: string;
+  reason: string;
+}
+
+export interface HostDiagnosticsResponse {
+  supported: boolean;
+  platform: string;
+  port: number;
+  lanUrl: string;
+  listenHost: string;
+  checks: HostDiagnosticCheck[];
+  commands: HostDiagnosticCommand[];
+}
+
 export interface UploadResponse {
   items: LibraryItem[];
 }

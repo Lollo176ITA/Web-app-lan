@@ -71,6 +71,7 @@ export function LandingPage() {
         <PageHeader
           title="Routeroom"
           subtitle="LAN media relay"
+          trailingLinkTo="/diagnostics"
           trailing={
             <Avatar
               sx={{

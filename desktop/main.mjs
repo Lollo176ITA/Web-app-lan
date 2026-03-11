@@ -24,7 +24,8 @@ async function startRouteroomServer() {
     port: desktopPort,
     seedDemo: true,
     staticDir,
-    storageRoot
+    storageRoot,
+    listenHost: desktopHost
   });
 
   await new Promise((resolve, reject) => {

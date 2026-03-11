@@ -8,6 +8,7 @@ import type {
   DeleteStreamRoomResponse,
   DeleteItemResponse,
   DirectChatSnapshotResponse,
+  HostDiagnosticsResponse,
   ItemPreview,
   LanIdentity,
   LibraryItem,
@@ -36,6 +37,10 @@ async function readJson<T>(resource: string, init?: RequestInit) {
 
 export function fetchSession() {
   return readJson<SessionInfo>("/api/session");
+}
+
+export function fetchDiagnostics() {
+  return readJson<HostDiagnosticsResponse>("/api/diagnostics");
 }
 
 export function fetchItems() {

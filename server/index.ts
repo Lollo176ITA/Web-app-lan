@@ -11,7 +11,8 @@ const { app, urls } = await createApp({
   port,
   seedDemo: true,
   staticDir,
-  storageRoot
+  storageRoot,
+  listenHost: "0.0.0.0"
 });
 
 const server = app.listen(port, "0.0.0.0", () => {
