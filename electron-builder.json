@@ -7,8 +7,12 @@
   "files": [
     "desktop/**/*",
     "dist/**/*",
-    "node_modules/**/*",
-    "package.json"
+    "package.json",
+    "!**/*.map",
+    "!**/{test,tests,__tests__,powered-test}/**",
+    "!**/{example,examples}/**",
+    "!**/{docs,doc}/**",
+    "!**/{README,README.md,CHANGELOG,CHANGELOG.md,*.md}"
   ],
   "win": {
     "target": [
