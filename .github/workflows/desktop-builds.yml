@@ -77,7 +77,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target.id }}
-          path: release/**
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+            release/*.zip
           if-no-files-found: error
 
       - name: Publish build branch
@@ -90,7 +94,103 @@ jobs:
           set -euo pipefail
 
           publish_dir="$(mktemp -d)"
-          cp -R release/. "$publish_dir/"
+          export PUBLISH_DIR="$publish_dir"
+
+          python3 <<'PY'
+          import hashlib
+          import json
+          import os
+          import pathlib
+          import shutil
+
+          release_dir = pathlib.Path("release")
+          publish_dir = pathlib.Path(os.environ["PUBLISH_DIR"])
+          max_chunk_size = 95 * 1024 * 1024
+
+          publish_dir.mkdir(parents=True, exist_ok=True)
+
+          metadata = {
+              "target": os.environ["TARGET_ID"],
+              "sourceBranch": os.environ["GITHUB_REF_NAME"],
+              "sourceCommit": os.environ["GITHUB_SHA"],
+              "workflowRunUrl": f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+              "files": [],
+          }
+
+          def sha256_for(path: pathlib.Path) -> str:
+              digest = hashlib.sha256()
+              with path.open("rb") as handle:
+                  for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                      digest.update(chunk)
+              return digest.hexdigest()
+
+          allowed_suffixes = {
+              ".AppImage",
+              ".dmg",
+              ".exe",
+              ".zip",
+          }
+
+          def should_publish(path: pathlib.Path) -> bool:
+              if not path.is_file():
+                  return False
+              if path.name == ".DS_Store":
+                  return False
+              if path.name.startswith("builder-debug"):
+                  return False
+              if path.suffix not in allowed_suffixes:
+                  return False
+              return True
+
+          for item in sorted(release_dir.rglob("*")):
+              if not should_publish(item):
+                  continue
+
+              size = item.stat().st_size
+              digest = sha256_for(item)
+              relative_name = item.relative_to(release_dir).as_posix().replace("/", "__")
+
+              if size <= max_chunk_size:
+                  destination = publish_dir / relative_name
+                  shutil.copy2(item, destination)
+                  metadata["files"].append({
+                      "name": relative_name,
+                      "originalName": item.relative_to(release_dir).as_posix(),
+                      "size": size,
+                      "sha256": digest,
+                      "split": False,
+                  })
+                  continue
+
+              parts = []
+              with item.open("rb") as source:
+                  index = 0
+                  while True:
+                      chunk = source.read(max_chunk_size)
+                      if not chunk:
+                          break
+                      part_name = f"{relative_name}.part-{index:03d}"
+                      (publish_dir / part_name).write_bytes(chunk)
+                      parts.append({
+                          "name": part_name,
+                          "size": len(chunk),
+                      })
+                      index += 1
+
+              metadata["files"].append({
+                  "name": relative_name,
+                  "originalName": item.relative_to(release_dir).as_posix(),
+                  "size": size,
+                  "sha256": digest,
+                  "split": True,
+                  "parts": parts,
+              })
+
+          (publish_dir / "build-info.json").write_text(
+              json.dumps(metadata, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
 
           cat > "$publish_dir/README.md" <<EOF
           # ${TARGET_ID}
@@ -100,14 +200,58 @@ jobs:
           - Source branch: ${GITHUB_REF_NAME}
           - Source commit: ${GITHUB_SHA}
           - Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+
+          Some distributables may be split into `.part-000`, `.part-001`, ... files to stay below GitHub's 100 MiB per-file repository limit.
+          See `build-info.json` for the exact manifest.
           EOF
 
-          cat > "$publish_dir/build-info.json" <<EOF
-          {
-            "target": "${TARGET_ID}",
-            "sourceBranch": "${GITHUB_REF_NAME}",
-            "sourceCommit": "${GITHUB_SHA}",
-            "workflowRunUrl": "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          cat > "$publish_dir/assemble.sh" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import json
+          import pathlib
+
+          root = pathlib.Path(".")
+          metadata = json.loads((root / "build-info.json").read_text(encoding="utf-8"))
+
+          for entry in metadata["files"]:
+              if not entry.get("split"):
+                  continue
+
+              destination = root / entry["name"]
+              with destination.open("wb") as output:
+                  for part in entry["parts"]:
+                      output.write((root / part["name"]).read_bytes())
+
+              print(f"assembled {destination}")
+          PY
+          EOF
+          chmod +x "$publish_dir/assemble.sh"
+
+          cat > "$publish_dir/assemble.ps1" <<'EOF'
+          $metadata = Get-Content -Raw build-info.json | ConvertFrom-Json
+          foreach ($entry in $metadata.files) {
+            if (-not $entry.split) { continue }
+
+            $destination = Join-Path (Get-Location) $entry.name
+            if (Test-Path $destination) {
+              Remove-Item $destination
+            }
+
+            $stream = [System.IO.File]::Open($destination, [System.IO.FileMode]::CreateNew)
+            try {
+              foreach ($part in $entry.parts) {
+                $bytes = [System.IO.File]::ReadAllBytes((Join-Path (Get-Location) $part.name))
+                $stream.Write($bytes, 0, $bytes.Length)
+              }
+            }
+            finally {
+              $stream.Dispose()
+            }
+
+            Write-Host "assembled $($entry.name)"
           }
           EOF
 
