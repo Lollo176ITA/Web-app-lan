@@ -18,10 +18,6 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   Snackbar,
   Stack,
   Tab,
@@ -302,6 +298,14 @@ export function AppPage() {
 
     applyLinkedSelection(items);
   }, [items, searchParams]);
+
+  useEffect(() => {
+    if (!isMobile || filter === "all") {
+      return;
+    }
+
+    setFilter("all");
+  }, [filter, isMobile]);
 
   const currentFolder = currentFolderId
     ? (items.find((item) => item.id === currentFolderId && item.kind === "folder") ?? null)
@@ -617,41 +621,23 @@ export function AppPage() {
                   onShowQrCode={handleShowQrCode}
                 />
 
-                <Box
-                  sx={{
-                    display: "grid",
-                    gap: 1.25,
-                    gridTemplateColumns: "1fr",
-                    alignItems: "center"
-                  }}
-                >
+                {!isMobile ? (
                   <Box
                     sx={{
-                      p: 0.75,
-                      borderRadius: 4,
-                      bgcolor: alpha("#1769aa", 0.05),
-                      border: `1px solid ${alpha("#1769aa", 0.08)}`
+                      display: "grid",
+                      gap: 1.25,
+                      gridTemplateColumns: "1fr",
+                      alignItems: "center"
                     }}
                   >
-                    <FormControl fullWidth size="small" sx={{ display: { xs: "flex", sm: "none" } }}>
-                      <InputLabel id="library-filter-label">Filtro libreria</InputLabel>
-                      <Select
-                        labelId="library-filter-label"
-                        value={filter}
-                        label="Filtro libreria"
-                        onChange={(event) => {
-                          setFilter(event.target.value as FilterValue);
-                        }}
-                      >
-                        {filters.map((entry) => (
-                          <MenuItem key={entry.value} value={entry.value}>
-                            {entry.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-
-                    <Box sx={{ display: { xs: "none", sm: "block" } }}>
+                    <Box
+                      sx={{
+                        p: 0.75,
+                        borderRadius: 4,
+                        bgcolor: alpha("#1769aa", 0.05),
+                        border: `1px solid ${alpha("#1769aa", 0.08)}`
+                      }}
+                    >
                       <Tabs
                         value={filter}
                         onChange={(_event, nextValue: FilterValue) => {
@@ -680,8 +666,7 @@ export function AppPage() {
                       </Tabs>
                     </Box>
                   </Box>
-
-                </Box>
+                ) : null}
               </Stack>
             </CardContent>
 
@@ -699,22 +684,24 @@ export function AppPage() {
                   }
                 }}
               >
-                <LibraryGrid
-                  availableArchiveFormats={availableArchiveFormats}
-                  items={filteredItems}
-                  layoutMode={layoutMode}
-                  selectedId={selectedId}
-                  onCreateArchive={(item, format) => {
-                    void handleCreateArchive(item, format);
-                  }}
-                  onDelete={(item) => {
-                    void handleDelete(item);
-                  }}
-                  onDownload={handleDownload}
-                  onOpenFolder={setCurrentFolderId}
-                  onSelect={setSelectedId}
-                  onShowQrCode={handleShowQrCode}
-                />
+                {!isMobile ? (
+                  <LibraryGrid
+                    availableArchiveFormats={availableArchiveFormats}
+                    items={filteredItems}
+                    layoutMode={layoutMode}
+                    selectedId={selectedId}
+                    onCreateArchive={(item, format) => {
+                      void handleCreateArchive(item, format);
+                    }}
+                    onDelete={(item) => {
+                      void handleDelete(item);
+                    }}
+                    onDownload={handleDownload}
+                    onOpenFolder={setCurrentFolderId}
+                    onSelect={setSelectedId}
+                    onShowQrCode={handleShowQrCode}
+                  />
+                ) : null}
                 <Box ref={detailPanelRef}>
                   <MediaDetail item={selectedItem} onCopyLink={copyText} />
                 </Box>
