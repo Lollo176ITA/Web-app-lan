@@ -15,7 +15,7 @@ import {
   Stack,
   Typography
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import type { ArchiveFormat, LibraryItem, LibraryLayoutMode } from "../../shared/types";
 import { formatBytes, formatDate } from "../lib/format";
 import { ItemActionsMenu } from "./ItemActionsMenu";
@@ -90,6 +90,9 @@ export function LibraryGrid({
   onSelect,
   onShowQrCode
 }: LibraryGridProps) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+
   if (items.length === 0) {
     return (
       <Card variant="outlined">
@@ -134,8 +137,12 @@ export function LibraryGrid({
                 overflow: "hidden",
                 width: "100%",
                 minWidth: 0,
-                borderColor: isSelected ? alpha(config.accent, 0.36) : "rgba(16, 39, 58, 0.08)",
-                boxShadow: isSelected ? `0 12px 28px ${alpha(config.accent, 0.14)}` : "0 8px 22px rgba(16, 39, 58, 0.04)"
+                borderColor: isSelected ? alpha(config.accent, isDark ? 0.46 : 0.36) : alpha(theme.palette.text.primary, isDark ? 0.16 : 0.08),
+                boxShadow: isSelected
+                  ? `0 12px 28px ${alpha(config.accent, isDark ? 0.22 : 0.14)}`
+                  : isDark
+                    ? "0 10px 28px rgba(0, 0, 0, 0.24)"
+                    : "0 8px 22px rgba(16, 39, 58, 0.04)"
               }}
             >
               <ItemActionsMenu
@@ -150,7 +157,7 @@ export function LibraryGrid({
                   top: 8,
                   right: 8,
                   zIndex: 2,
-                  bgcolor: "rgba(255,255,255,0.92)"
+                  bgcolor: alpha(theme.palette.background.paper, isDark ? 0.9 : 0.92)
                 }}
               />
 
@@ -204,8 +211,12 @@ export function LibraryGrid({
             sx={{
               position: "relative",
               overflow: "hidden",
-              borderColor: isSelected ? alpha(config.accent, 0.36) : "rgba(16, 39, 58, 0.08)",
-              boxShadow: isSelected ? `0 16px 36px ${alpha(config.accent, 0.16)}` : "0 10px 28px rgba(16, 39, 58, 0.05)"
+              borderColor: isSelected ? alpha(config.accent, isDark ? 0.46 : 0.36) : alpha(theme.palette.text.primary, isDark ? 0.16 : 0.08),
+              boxShadow: isSelected
+                ? `0 16px 36px ${alpha(config.accent, isDark ? 0.24 : 0.16)}`
+                : isDark
+                  ? "0 12px 32px rgba(0, 0, 0, 0.26)"
+                  : "0 10px 28px rgba(16, 39, 58, 0.05)"
             }}
           >
             <ItemActionsMenu
@@ -220,7 +231,7 @@ export function LibraryGrid({
                 top: 10,
                 right: 10,
                 zIndex: 2,
-                bgcolor: "rgba(255,255,255,0.92)"
+                bgcolor: alpha(theme.palette.background.paper, isDark ? 0.9 : 0.92)
               }}
             />
 

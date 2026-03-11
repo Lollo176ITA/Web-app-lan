@@ -13,7 +13,7 @@ import {
   Stack,
   Typography
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 
 interface UploadSurfaceProps {
   onUpload: (files: File[]) => Promise<void>;
@@ -22,6 +22,8 @@ interface UploadSurfaceProps {
 }
 
 export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfaceProps) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
   const inputId = useId();
   const directoryInputRef = useRef<HTMLInputElement | null>(null);
   const [isActive, setIsActive] = useState(false);
@@ -62,8 +64,10 @@ export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfac
       sx={{
         borderStyle: "dashed",
         borderWidth: 2,
-        borderColor: isActive ? "secondary.main" : alpha("#1769aa", 0.18),
-        bgcolor: isActive ? "rgba(15, 157, 148, 0.08)" : "rgba(23, 105, 170, 0.03)"
+        borderColor: isActive ? "secondary.main" : alpha(theme.palette.primary.main, isDark ? 0.28 : 0.18),
+        bgcolor: isActive
+          ? alpha(theme.palette.secondary.main, isDark ? 0.16 : 0.08)
+          : alpha(theme.palette.primary.main, isDark ? 0.1 : 0.03)
       }}
     >
       <CardContent>
@@ -74,7 +78,7 @@ export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfac
               height: 72,
               bgcolor: "primary.main",
               color: "common.white",
-              boxShadow: "0 12px 30px rgba(23, 105, 170, 0.24)"
+              boxShadow: isDark ? "0 16px 36px rgba(0, 0, 0, 0.32)" : "0 12px 30px rgba(23, 105, 170, 0.24)"
             }}
           >
             {uploading ? <CircularProgress color="inherit" size={30} /> : <CloudUploadRoundedIcon sx={{ fontSize: 34 }} />}

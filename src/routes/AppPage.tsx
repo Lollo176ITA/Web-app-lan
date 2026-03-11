@@ -182,6 +182,7 @@ export function AppPage() {
   const [qrItemDataUrl, setQrItemDataUrl] = useState("");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isDark = theme.palette.mode === "dark";
   const layoutMode: LibraryLayoutMode = isMobile ? "minimal" : "compact";
   const detailPanelRef = useRef<HTMLDivElement | null>(null);
   const appliedDeepLinkRef = useRef<string | null>(null);
@@ -258,7 +259,7 @@ export function AppPage() {
       width: 192,
       color: {
         dark: "#10273a",
-        light: "#0000"
+        light: "#ffffff"
       }
     }).then(setQrCodeDataUrl);
   }, [session?.lanUrl]);
@@ -274,7 +275,7 @@ export function AppPage() {
       width: 256,
       color: {
         dark: "#10273a",
-        light: "#0000"
+        light: "#ffffff"
       }
     }).then(setQrItemDataUrl);
   }, [qrItemTarget]);
@@ -492,8 +493,8 @@ export function AppPage() {
                         alignItems: "center",
                         gridTemplateColumns: { xs: "1fr", sm: "minmax(0, 1fr) auto" },
                         borderRadius: "24px",
-                        bgcolor: alpha("#1769aa", 0.05),
-                        border: `1px solid ${alpha("#1769aa", 0.08)}`
+                        bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.05),
+                        border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
                       }}
                     >
                       <Stack spacing={2}>
@@ -513,8 +514,8 @@ export function AppPage() {
                             p: 1.25,
                             justifySelf: { xs: "flex-start", sm: "end" },
                             borderRadius: "20px",
-                            bgcolor: "background.paper",
-                            border: `1px solid ${alpha("#1769aa", 0.1)}`
+                            bgcolor: "#ffffff",
+                            border: `1px solid ${alpha("#1769aa", 0.16)}`
                           }}
                         >
                           <Box
@@ -634,8 +635,8 @@ export function AppPage() {
                       sx={{
                         p: 0.75,
                         borderRadius: 4,
-                        bgcolor: alpha("#1769aa", 0.05),
-                        border: `1px solid ${alpha("#1769aa", 0.08)}`
+                        bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.05),
+                        border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
                       }}
                     >
                       <Tabs
@@ -656,7 +657,7 @@ export function AppPage() {
                           "& .MuiTab-root.Mui-selected": {
                             bgcolor: "background.paper",
                             color: "primary.main",
-                            boxShadow: "0 8px 18px rgba(16, 39, 58, 0.08)"
+                            boxShadow: isDark ? "0 10px 24px rgba(0, 0, 0, 0.3)" : "0 8px 18px rgba(16, 39, 58, 0.08)"
                           }
                         }}
                       >
@@ -734,8 +735,8 @@ export function AppPage() {
                 sx={{
                   p: 1.5,
                   borderRadius: 2,
-                  bgcolor: "background.paper",
-                  border: `1px solid ${alpha("#1769aa", 0.1)}`
+                  bgcolor: "#ffffff",
+                  border: `1px solid ${alpha("#1769aa", 0.16)}`
                 }}
               >
                 {qrItemDataUrl ? (

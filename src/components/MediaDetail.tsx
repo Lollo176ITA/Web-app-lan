@@ -22,7 +22,7 @@ import {
   Stack,
   Typography
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import type { ItemPreview, LibraryItem } from "../../shared/types";
 import { fetchItemPreview } from "../lib/api";
 import { formatBytes, formatDate } from "../lib/format";
@@ -54,10 +54,12 @@ const detailAccent = {
 
 function DocumentPreview({
   item,
+  isDark,
   preview,
   loading
 }: {
   item: LibraryItem;
+  isDark: boolean;
   loading: boolean;
   preview: ItemPreview | null;
 }) {
@@ -106,7 +108,7 @@ function DocumentPreview({
           overflow: "auto",
           p: 2,
           borderRadius: 1.5,
-          border: "1px solid rgba(16, 39, 58, 0.12)",
+          border: `1px solid ${alpha("#1769aa", isDark ? 0.2 : 0.12)}`,
           bgcolor: "background.paper",
           fontFamily: '"Roboto Mono", "SFMono-Regular", monospace',
           fontSize: "0.92rem",
@@ -130,6 +132,8 @@ function DocumentPreview({
 }
 
 export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
   const [preview, setPreview] = useState<ItemPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
@@ -236,12 +240,12 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
             sx={{
               overflow: "hidden",
               borderRadius: 2,
-              border: "1px solid rgba(16, 39, 58, 0.12)",
+              border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.2 : 0.12)}`,
               minHeight: item.kind === "video" ? { xs: "auto", sm: 280 } : 280,
               display: "grid",
               placeItems: item.kind === "video" ? "stretch" : "center",
               p: item.kind === "document" ? 1.5 : 0,
-              bgcolor: alpha(accent, 0.08)
+              bgcolor: alpha(accent, isDark ? 0.14 : 0.08)
             }}
           >
             {item.kind === "video" ? (
@@ -291,7 +295,7 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
             ) : null}
 
             {item.kind === "document" ? (
-              <DocumentPreview item={item} preview={preview} loading={previewLoading} />
+              <DocumentPreview item={item} isDark={isDark} preview={preview} loading={previewLoading} />
             ) : null}
 
             {!["video", "image", "audio", "document", "folder"].includes(item.kind) ? (

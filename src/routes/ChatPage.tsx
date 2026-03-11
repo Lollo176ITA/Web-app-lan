@@ -64,8 +64,18 @@ function hashValue(value: string) {
   return hash;
 }
 
-function buildUserTone(identityId: string) {
+function buildUserTone(identityId: string, isDark: boolean) {
   const hue = hashValue(identityId);
+
+  if (isDark) {
+    return {
+      solid: `hsl(${hue} 82% 72%)`,
+      text: `hsl(${hue} 92% 84%)`,
+      soft: `hsla(${hue} 52% 30% / 0.34)`,
+      border: `hsla(${hue} 82% 72% / 0.28)`,
+      glow: `hsla(${hue} 88% 68% / 0.18)`
+    };
+  }
 
   return {
     solid: `hsl(${hue} 62% 46%)`,
@@ -94,6 +104,7 @@ export function ChatPage() {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isDark = theme.palette.mode === "dark";
   const isDirectChat = Boolean(userId);
   const showGlobalThread = new URLSearchParams(location.search).get("view") === "thread";
   const isConversationScreen = isDirectChat || showGlobalThread;
@@ -284,10 +295,12 @@ export function ChatPage() {
                           display: "block",
                           textAlign: "left",
                           borderRadius: 2,
-                          border: `1px solid ${globalThreadActive ? alpha("#1769aa", 0.24) : alpha("#10273a", 0.08)}`,
+                          border: `1px solid ${globalThreadActive ? alpha(theme.palette.primary.main, isDark ? 0.3 : 0.24) : alpha(theme.palette.text.primary, isDark ? 0.16 : 0.08)}`,
                           background: globalThreadActive
-                            ? "linear-gradient(135deg, rgba(23,105,170,0.14), rgba(15,157,148,0.08))"
-                            : "rgba(255,255,255,0.72)"
+                            ? isDark
+                              ? "linear-gradient(135deg, rgba(108,174,255,0.22), rgba(86,215,202,0.14))"
+                              : "linear-gradient(135deg, rgba(23,105,170,0.14), rgba(15,157,148,0.08))"
+                            : alpha(theme.palette.background.paper, isDark ? 0.76 : 0.72)
                         }}
                       >
                         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ px: 1.5, py: 1.35 }}>
@@ -319,8 +332,8 @@ export function ChatPage() {
                             px: 1.5,
                             py: 2,
                             borderRadius: 2,
-                            border: `1px dashed ${alpha("#1769aa", 0.18)}`,
-                            bgcolor: alpha("#10273a", 0.02)
+                            border: `1px dashed ${alpha(theme.palette.primary.main, isDark ? 0.26 : 0.18)}`,
+                            bgcolor: alpha(theme.palette.primary.main, isDark ? 0.1 : 0.02)
                           }}
                         >
                           <Typography color="text.secondary">
@@ -329,7 +342,7 @@ export function ChatPage() {
                         </Box>
                       ) : (
                         sidebarUsers.map(({ participant, thread }) => {
-                          const tone = buildUserTone(participant.id);
+                          const tone = buildUserTone(participant.id, isDark);
                           const isActive = participant.id === userId;
 
                           return (
@@ -342,8 +355,8 @@ export function ChatPage() {
                                 display: "block",
                                 textAlign: "left",
                                 borderRadius: 2,
-                                border: `1px solid ${isActive ? tone.border : alpha("#10273a", 0.08)}`,
-                                background: isActive ? tone.soft : "rgba(255,255,255,0.76)",
+                                border: `1px solid ${isActive ? tone.border : alpha(theme.palette.text.primary, isDark ? 0.16 : 0.08)}`,
+                                background: isActive ? tone.soft : alpha(theme.palette.background.paper, isDark ? 0.8 : 0.76),
                                 boxShadow: isActive ? `inset 3px 0 0 ${tone.solid}` : "none"
                               }}
                             >
@@ -429,10 +442,12 @@ export function ChatPage() {
                         px: { xs: 0.5, md: 0.75 },
                         py: 0.75,
                         borderRadius: 2,
-                        bgcolor: alpha("#f8fbfd", 0.92),
-                        border: `1px solid ${alpha("#1769aa", 0.1)}`,
+                        bgcolor: alpha(theme.palette.background.paper, isDark ? 0.82 : 0.92),
+                        border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.1)}`,
                         backgroundImage:
-                          "linear-gradient(180deg, rgba(255,255,255,0.78), rgba(240,247,251,0.92)), radial-gradient(circle at top, rgba(23,105,170,0.08), transparent 34%)"
+                          isDark
+                            ? "linear-gradient(180deg, rgba(14,24,35,0.98), rgba(9,18,29,0.94)), radial-gradient(circle at top, rgba(108,174,255,0.14), transparent 34%)"
+                            : "linear-gradient(180deg, rgba(255,255,255,0.78), rgba(240,247,251,0.92)), radial-gradient(circle at top, rgba(23,105,170,0.08), transparent 34%)"
                       }}
                     >
                       {loading ? (
@@ -447,7 +462,7 @@ export function ChatPage() {
                         <Stack spacing={1.25}>
                           {activeMessages.map((message) => {
                             const isOwnMessage = identity?.id === message.identity.id;
-                            const tone = buildUserTone(message.identity.id);
+                            const tone = buildUserTone(message.identity.id, isDark);
 
                             return (
                               <Box
@@ -490,7 +505,13 @@ export function ChatPage() {
                                         {formatMessageTime(message.sentAt)}
                                       </Typography>
                                     </Stack>
-                                    <Typography sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word", color: "#173042" }}>
+                                    <Typography
+                                      sx={{
+                                        whiteSpace: "pre-wrap",
+                                        wordBreak: "break-word",
+                                        color: isDark ? alpha(theme.palette.common.white, 0.92) : "#173042"
+                                      }}
+                                    >
                                       {message.text}
                                     </Typography>
                                   </Stack>

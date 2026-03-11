@@ -24,7 +24,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { resolvePlaybackPosition } from "../../shared/playback";
 import type { LibraryItem, RoomChatMessage, StreamRoomDetail } from "../../shared/types";
@@ -59,6 +59,8 @@ function buildRoomShareUrl(roomId: string) {
 }
 
 export function StreamRoomPage() {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
   const { roomId } = useParams();
   const navigate = useNavigate();
   const { identity } = useIdentity();
@@ -492,8 +494,8 @@ export function StreamRoomPage() {
                       overflowY: "auto",
                       p: 1,
                       borderRadius: 4,
-                      bgcolor: alpha("#10273a", 0.02),
-                      border: `1px solid ${alpha("#1769aa", 0.08)}`
+                      bgcolor: alpha(theme.palette.primary.main, isDark ? 0.1 : 0.02),
+                      border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
                     }}
                   >
                     {roomMessages.length === 0 ? (
@@ -514,8 +516,12 @@ export function StreamRoomPage() {
                               <Card
                                 variant="outlined"
                                 sx={{
-                                  bgcolor: isOwnMessage ? alpha("#1769aa", 0.08) : "background.paper",
-                                  borderColor: isOwnMessage ? alpha("#1769aa", 0.16) : alpha("#10273a", 0.06)
+                                  bgcolor: isOwnMessage
+                                    ? alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08)
+                                    : "background.paper",
+                                  borderColor: isOwnMessage
+                                    ? alpha(theme.palette.primary.main, isDark ? 0.28 : 0.16)
+                                    : alpha(theme.palette.text.primary, isDark ? 0.14 : 0.06)
                                 }}
                               >
                                 <CardContent sx={{ p: 2 }}>

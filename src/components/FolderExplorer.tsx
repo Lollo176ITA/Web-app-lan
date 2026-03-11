@@ -17,7 +17,7 @@ import {
   Stack,
   Typography
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import type { ArchiveFormat, LibraryItem } from "../../shared/types";
 import { ItemActionsMenu } from "./ItemActionsMenu";
 
@@ -93,6 +93,8 @@ export function FolderExplorer({
   onSelectItem,
   onShowQrCode
 }: FolderExplorerProps) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
   const folderPath = buildFolderPath(items, currentFolderId);
   const pathFolderIds = new Set(folderPath.map((folder) => folder.id));
   const columns = [
@@ -151,7 +153,7 @@ export function FolderExplorer({
                 sx={{
                   px: 2,
                   py: 1.5,
-                  borderBottom: `1px solid ${alpha("#1769aa", 0.08)}`
+                  borderBottom: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
                 }}
               >
                 <Typography variant="subtitle1">{column.title}</Typography>
@@ -194,15 +196,15 @@ export function FolderExplorer({
                             ? `3px solid ${accent}`
                             : "3px solid transparent",
                         bgcolor: isCurrentFolder
-                          ? alpha(accent, 0.14)
+                          ? alpha(accent, isDark ? 0.22 : 0.14)
                           : isPathFolder
-                            ? alpha(accent, 0.08)
+                            ? alpha(accent, isDark ? 0.14 : 0.08)
                             : undefined,
                         "&:hover": {
                           bgcolor: isCurrentFolder
-                            ? alpha(accent, 0.18)
+                            ? alpha(accent, isDark ? 0.28 : 0.18)
                             : isPathFolder
-                              ? alpha(accent, 0.12)
+                              ? alpha(accent, isDark ? 0.18 : 0.12)
                               : undefined
                         }
                       }}

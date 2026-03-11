@@ -124,7 +124,7 @@ export function StreamRoomsPage() {
       width: 256,
       color: {
         dark: "#10273a",
-        light: "#0000"
+        light: "#ffffff"
       }
     }).then(setQrRoomDataUrl);
   }, [qrRoomTarget, sessionLanUrl]);
@@ -374,8 +374,8 @@ export function StreamRoomsPage() {
                 sx={{
                   p: 1.5,
                   borderRadius: 2,
-                  bgcolor: "background.paper",
-                  border: `1px solid ${alpha("#1769aa", 0.1)}`
+                  bgcolor: "#ffffff",
+                  border: `1px solid ${alpha("#1769aa", 0.16)}`
                 }}
               >
                 {qrRoomDataUrl ? (

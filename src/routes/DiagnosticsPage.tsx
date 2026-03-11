@@ -17,7 +17,7 @@ import {
   Stack,
   Typography
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import type { HostDiagnosticCheck, HostDiagnosticCommand, HostDiagnosticsResponse } from "../../shared/types";
 import { PageHeader } from "../components/PageHeader";
 import { fetchDiagnostics } from "../lib/api";
@@ -39,25 +39,27 @@ function getCommandsForCheck(checkId: string, commands: HostDiagnosticCommand[])
   }
 }
 
-function getCheckTone(check: HostDiagnosticCheck) {
+function getCheckTone(check: HostDiagnosticCheck, isDark: boolean) {
   if (check.status === "pass") {
     return {
       accent: "#2e7d32",
-      soft: alpha("#2e7d32", 0.08),
-      border: alpha("#2e7d32", 0.18),
+      soft: alpha("#2e7d32", isDark ? 0.16 : 0.08),
+      border: alpha("#2e7d32", isDark ? 0.26 : 0.18),
       label: "OK"
     };
   }
 
   return {
     accent: "#c62828",
-    soft: alpha("#c62828", 0.08),
-    border: alpha("#c62828", 0.18),
+    soft: alpha("#c62828", isDark ? 0.16 : 0.08),
+    border: alpha("#c62828", isDark ? 0.26 : 0.18),
     label: check.status === "warn" ? "Da verificare" : "Errore"
   };
 }
 
 export function DiagnosticsPage() {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
   const [diagnostics, setDiagnostics] = useState<HostDiagnosticsResponse | null>(null);
   const [state, setState] = useState<DiagnosticsState>("loading");
   const [snackbar, setSnackbar] = useState<string | null>(null);
@@ -131,7 +133,7 @@ export function DiagnosticsPage() {
                 }}
               >
                 {diagnostics.checks.map((check) => {
-                  const tone = getCheckTone(check);
+                  const tone = getCheckTone(check, isDark);
                   const suggestedCommands = check.status === "pass" ? [] : getCommandsForCheck(check.id, diagnostics.commands);
 
                   return (
@@ -185,7 +187,7 @@ export function DiagnosticsPage() {
                                     p: 1.5,
                                     borderRadius: 2,
                                     bgcolor: "background.paper",
-                                    border: `1px solid ${alpha("#1769aa", 0.08)}`
+                                    border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
                                   }}
                                 >
                                   <Stack spacing={1.25}>
@@ -214,8 +216,8 @@ export function DiagnosticsPage() {
                                         display: "block",
                                         p: 1.25,
                                         borderRadius: 2,
-                                        bgcolor: alpha("#1769aa", 0.03),
-                                        border: `1px solid ${alpha("#1769aa", 0.08)}`,
+                                        bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.03),
+                                        border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`,
                                         fontSize: "0.85rem",
                                         wordBreak: "break-word"
                                       }}
