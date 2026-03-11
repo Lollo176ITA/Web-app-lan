@@ -1,0 +1,121 @@
+name: Desktop Builds
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/desktop-builds.yml"
+      - "desktop/**"
+      - "electron-builder.json"
+      - "index.html"
+      - "package-lock.json"
+      - "package.json"
+      - "public/**"
+      - "scripts/**"
+      - "server/**"
+      - "shared/**"
+      - "src/**"
+      - "tsconfig.json"
+      - "tsconfig.server.json"
+      - "vite.config.ts"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-builds-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.target.name }}
+    runs-on: ${{ matrix.target.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - name: Windows x64
+            id: win-x64
+            runner: windows-latest
+            script: desktop:dist:win:x64
+            branch: builds/win-x64
+          - name: Windows ARM64
+            id: win-arm64
+            runner: windows-latest
+            script: desktop:dist:win:arm64
+            branch: builds/win-arm64
+          - name: macOS ARM64
+            id: mac-arm64
+            runner: macos-latest
+            script: desktop:dist:mac:arm64
+            branch: builds/mac-arm64
+          - name: Linux x64
+            id: linux-x64
+            runner: ubuntu-latest
+            script: desktop:dist:linux:x64
+            branch: builds/linux-x64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build target
+        run: npm run ${{ matrix.target.script }}
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target.id }}
+          path: release/**
+          if-no-files-found: error
+
+      - name: Publish build branch
+        shell: bash
+        env:
+          TARGET_ID: ${{ matrix.target.id }}
+          TARGET_BRANCH: ${{ matrix.target.branch }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          publish_dir="$(mktemp -d)"
+          cp -R release/. "$publish_dir/"
+
+          cat > "$publish_dir/README.md" <<EOF
+          # ${TARGET_ID}
+
+          Build output published from GitHub Actions.
+
+          - Source branch: ${GITHUB_REF_NAME}
+          - Source commit: ${GITHUB_SHA}
+          - Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          EOF
+
+          cat > "$publish_dir/build-info.json" <<EOF
+          {
+            "target": "${TARGET_ID}",
+            "sourceBranch": "${GITHUB_REF_NAME}",
+            "sourceCommit": "${GITHUB_SHA}",
+            "workflowRunUrl": "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          }
+          EOF
+
+          cd "$publish_dir"
+          git init -b "$TARGET_BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Build ${TARGET_ID} from ${GITHUB_SHA}"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin "HEAD:${TARGET_BRANCH}"

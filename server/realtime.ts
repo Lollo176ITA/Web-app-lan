@@ -268,28 +268,31 @@ export class CollaborationStore {
   }
 
   listPrivateThreads(userId: string): ChatThreadSummary[] {
-    const threads = [...this.privateMessages.values()]
-      .map((messages) => {
+    const threads = [...this.privateMessages.values()].reduce<ChatThreadSummary[]>(
+      (summaries, messages) => {
         const lastMessage = messages.at(-1) ?? null;
 
         if (!lastMessage) {
-          return null;
+          return summaries;
         }
 
         const isSender = lastMessage.identity.id === userId;
         const isRecipient = lastMessage.recipient.id === userId;
 
         if (!isSender && !isRecipient) {
-          return null;
+          return summaries;
         }
 
-        return {
+        summaries.push({
           participant: isSender ? lastMessage.recipient : lastMessage.identity,
           messageCount: messages.length,
           lastMessage
-        };
-      })
-      .filter((thread): thread is ChatThreadSummary => thread !== null);
+        });
+
+        return summaries;
+      },
+      []
+    );
 
     return threads.sort((left, right) => {
       const leftDate = left.lastMessage?.sentAt ?? "";

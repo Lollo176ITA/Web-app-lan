@@ -15,6 +15,8 @@ npm install
 npm run dev
 npm run build
 npm run start
+npm run desktop:start
+npm run desktop:dist
 npm test
 npm run test:e2e
 ```
@@ -27,6 +29,12 @@ npm run test:e2e
 ## Storage
 - I file vengono salvati in `storage/library/`
 - Il manifest persistente viene scritto in `storage/index.json`
+
+## Desktop
+- `npm run desktop:start` builda client/server e apre Routeroom in Electron
+- `npm run desktop:dist` genera un pacchetto desktop in `release/`
+- `npm run desktop:dist:win` genera il pacchetto Windows `.exe` tramite target `NSIS`
+- La versione desktop salva i dati in una cartella app dedicata invece che nel `storage/` del repo
 
 ## Asset visuali
 - Illustrazioni fallback: `public/visuals/`

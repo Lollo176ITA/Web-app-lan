@@ -7,3 +7,6 @@ coverage/
 storage/
 test-results/
 test*
+
+desktop/
+release/
