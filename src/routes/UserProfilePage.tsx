@@ -22,6 +22,7 @@ import { PageHeader } from "../components/PageHeader";
 import { fetchClientProfile } from "../lib/api";
 import { normalizeNickname } from "../lib/identity";
 import { useIdentity } from "../lib/identity-context";
+import { useLanLiveState } from "../lib/useLanLiveState";
 
 interface ProfileMeta {
   clientIp: string | null;
@@ -38,6 +39,7 @@ export function UserProfilePage() {
   const [nicknameDraft, setNicknameDraft] = useState(identity?.nickname ?? "");
   const [profileMeta, setProfileMeta] = useState<ProfileMeta | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const liveState = useLanLiveState();
 
   useEffect(() => {
     setNicknameDraft(identity?.nickname ?? "");
@@ -63,9 +65,9 @@ export function UserProfilePage() {
   const hasNicknameChanges = normalizedNickname.length > 0 && normalizedNickname !== identity.nickname;
 
   return (
-    <Box sx={{ pb: 7 }}>
+    <Box sx={{ pb: 8 }}>
       <Container maxWidth="lg" sx={{ pt: { xs: 2, md: 3 } }}>
-        <PageHeader title="Il tuo profilo" subtitle="Identita locale" />
+        <PageHeader title="Il tuo profilo" subtitle="Identita locale" networkState={liveState} />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
           <Card sx={{ borderRadius: 2.5 }}>

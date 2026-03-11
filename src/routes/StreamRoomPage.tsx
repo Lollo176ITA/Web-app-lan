@@ -1,11 +1,9 @@
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
-import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import MeetingRoomRoundedIcon from "@mui/icons-material/MeetingRoomRounded";
 import MovieRoundedIcon from "@mui/icons-material/MovieRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
-import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import {
   Alert,
   Avatar,
@@ -26,7 +24,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { alpha, useTheme } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { resolvePlaybackPosition } from "../../shared/playback";
 import type { LibraryItem, RoomChatMessage, StreamRoomDetail } from "../../shared/types";
@@ -37,13 +35,11 @@ import {
   deleteStreamRoom,
   fetchItems,
   fetchStreamRoom,
-  openLanEvents,
   sendRoomMessage,
   setStreamRoomVideo,
   updateStreamRoomPlayback
 } from "../lib/api";
-
-type LiveState = "live" | "fallback" | "connecting";
+import { useLanLiveState } from "../lib/useLanLiveState";
 
 function formatMessageTime(value: string) {
   return new Intl.DateTimeFormat("it-IT", {
@@ -70,20 +66,47 @@ export function StreamRoomPage() {
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [messageText, setMessageText] = useState("");
   const [loading, setLoading] = useState(true);
-  const [liveState, setLiveState] = useState<LiveState>("connecting");
   const [error, setError] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [updatingVideo, setUpdatingVideo] = useState(false);
   const [deletingRoom, setDeletingRoom] = useState(false);
   const [isPlayerMuted, setIsPlayerMuted] = useState(true);
-  const theme = useTheme();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const suppressVideoEventsUntilRef = useRef(0);
 
   const videoItems = useMemo(() => items.filter((item) => item.kind === "video"), [items]);
   const roomMessages = room?.messages ?? [];
   const shareUrl = roomId ? buildRoomShareUrl(roomId) : "";
+
+  const liveState = useLanLiveState(
+    {
+      handlers: {
+        "stream-room-updated": () => {
+          void syncRoom();
+        },
+        "stream-room-chat-updated": () => {
+          void syncRoom();
+        },
+        "stream-room-deleted": () => {
+          void syncRoom();
+        },
+        "library-updated": () => {
+          void syncRoom();
+        }
+      },
+      onFallback: () => {
+        const pollingId = window.setInterval(() => {
+          void syncRoom();
+        }, 15000);
+
+        return () => {
+          window.clearInterval(pollingId);
+        };
+      }
+    },
+    [roomId]
+  );
 
   async function syncRoom() {
     if (!roomId) {
@@ -112,48 +135,6 @@ export function StreamRoomPage() {
 
   useEffect(() => {
     void syncRoom();
-  }, [roomId]);
-
-  useEffect(() => {
-    let pollingId: number | undefined;
-
-    const source = openLanEvents(
-      {
-        "stream-room-updated": () => {
-          setLiveState("live");
-          void syncRoom();
-        },
-        "stream-room-chat-updated": () => {
-          setLiveState("live");
-          void syncRoom();
-        },
-        "stream-room-deleted": () => {
-          setLiveState("live");
-          void syncRoom();
-        },
-        "library-updated": () => {
-          setLiveState("live");
-          void syncRoom();
-        }
-      },
-      () => {
-        setLiveState("fallback");
-        pollingId = window.setInterval(() => {
-          void syncRoom();
-        }, 15000);
-      },
-      () => {
-        setLiveState("live");
-      }
-    );
-
-    return () => {
-      source.close();
-
-      if (pollingId) {
-        window.clearInterval(pollingId);
-      }
-    };
   }, [roomId]);
 
   useEffect(() => {
@@ -320,24 +301,7 @@ export function StreamRoomPage() {
   return (
     <Box sx={{ pb: 7 }}>
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
-        <PageHeader
-          title={room.name}
-          subtitle="Stanza streaming sincronizzata"
-          trailingLinkTo="/diagnostics"
-          trailing={
-            <Avatar
-              sx={{
-                width: 40,
-                height: 40,
-                bgcolor:
-                  liveState === "live" ? alpha(theme.palette.secondary.main, 0.18) : alpha("#10273a", 0.08),
-                color: liveState === "live" ? "secondary.main" : "text.secondary"
-              }}
-            >
-              {liveState === "live" ? <WifiRoundedIcon /> : <AutorenewRoundedIcon />}
-            </Avatar>
-          }
-        />
+        <PageHeader title={room.name} subtitle="Stanza streaming sincronizzata" networkState={liveState} />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
           <Card>

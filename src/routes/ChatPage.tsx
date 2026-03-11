@@ -1,10 +1,8 @@
 import { startTransition, useEffect, useRef, useState } from "react";
-import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
 import ForumRoundedIcon from "@mui/icons-material/ForumRounded";
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
-import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import {
   Alert,
   Avatar,
@@ -22,7 +20,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { alpha, useTheme } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import type {
   ChatMessage,
@@ -35,12 +33,10 @@ import { useIdentity } from "../lib/identity-context";
 import {
   fetchChatSnapshot,
   fetchDirectChatSnapshot,
-  openLanEvents,
   sendChatMessage,
   sendDirectChatMessage
 } from "../lib/api";
-
-type LiveState = "live" | "fallback" | "connecting";
+import { useLanLiveState } from "../lib/useLanLiveState";
 type ActiveChatMessage = ChatMessage | PrivateChatMessage;
 
 function formatMessageTime(value: string) {
@@ -103,11 +99,9 @@ export function ChatPage() {
   const [directMessages, setDirectMessages] = useState<PrivateChatMessage[]>([]);
   const [directParticipant, setDirectParticipant] = useState<ChatSnapshotResponse["knownUsers"][number] | null>(null);
   const [messageText, setMessageText] = useState("");
-  const [liveState, setLiveState] = useState<LiveState>("connecting");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
-  const theme = useTheme();
   const messagesViewportRef = useRef<HTMLDivElement | null>(null);
   const activeConversationKey = userId ? `user:${userId}` : "global";
 
@@ -131,6 +125,29 @@ export function ChatPage() {
       return left.participant.nickname.localeCompare(right.participant.nickname, "it");
     });
 
+  const liveState = useLanLiveState(
+    {
+      handlers: {
+        "chat-global-updated": () => {
+          void syncChatState();
+        },
+        "chat-private-updated": () => {
+          void syncChatState();
+        }
+      },
+      onFallback: () => {
+        const pollingId = window.setInterval(() => {
+          void syncChatState();
+        }, 15000);
+
+        return () => {
+          window.clearInterval(pollingId);
+        };
+      }
+    },
+    [identity?.id, userId]
+  );
+
   async function syncChatState() {
     try {
       const [nextOverview, nextDirect] = await Promise.all([
@@ -152,40 +169,6 @@ export function ChatPage() {
 
   useEffect(() => {
     void syncChatState();
-  }, [identity?.id, userId]);
-
-  useEffect(() => {
-    let pollingId: number | undefined;
-
-    const source = openLanEvents(
-      {
-        "chat-global-updated": () => {
-          setLiveState("live");
-          void syncChatState();
-        },
-        "chat-private-updated": () => {
-          setLiveState("live");
-          void syncChatState();
-        }
-      },
-      () => {
-        setLiveState("fallback");
-        pollingId = window.setInterval(() => {
-          void syncChatState();
-        }, 15000);
-      },
-      () => {
-        setLiveState("live");
-      }
-    );
-
-    return () => {
-      source.close();
-
-      if (pollingId) {
-        window.clearInterval(pollingId);
-      }
-    };
   }, [identity?.id, userId]);
 
   useEffect(() => {
@@ -247,20 +230,7 @@ export function ChatPage() {
         <PageHeader
           title="Chat LAN"
           subtitle={isDirectChat ? "Conversazione privata" : "Canale globale"}
-          trailingLinkTo="/diagnostics"
-          trailing={
-            <Avatar
-              sx={{
-                width: 40,
-                height: 40,
-                bgcolor:
-                  liveState === "live" ? alpha(theme.palette.secondary.main, 0.18) : alpha("#10273a", 0.08),
-                color: liveState === "live" ? "secondary.main" : "text.secondary"
-              }}
-            >
-              {liveState === "live" ? <WifiRoundedIcon /> : <AutorenewRoundedIcon />}
-            </Avatar>
-          }
+          networkState={liveState}
         />
 
         <Stack spacing={3} sx={{ mt: 3 }}>

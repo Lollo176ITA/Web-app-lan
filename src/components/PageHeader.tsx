@@ -1,13 +1,18 @@
 import type { ReactNode } from "react";
+import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import LanRoundedIcon from "@mui/icons-material/LanRounded";
+import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import { Avatar, Box, Button, ButtonBase, Paper, Stack, Typography } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import { useIdentity } from "../lib/identity-context";
+
+type NetworkState = "live" | "fallback" | "connecting";
 
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
+  networkState?: NetworkState;
   trailing?: ReactNode;
   trailingLinkTo?: string;
 }
@@ -19,11 +24,27 @@ const navItems = [
   { label: "Streaming", to: "/stream", matches: (pathname: string) => pathname.startsWith("/stream") }
 ];
 
-export function PageHeader({ title, subtitle, trailing, trailingLinkTo }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, networkState, trailing, trailingLinkTo }: PageHeaderProps) {
   const location = useLocation();
+  const theme = useTheme();
   const { identity } = useIdentity();
   const profilePath = identity ? `/utente/${identity.id}` : null;
   const profileInitial = identity?.nickname.trim().charAt(0).toUpperCase() ?? "?";
+  const trailingContent =
+    trailing ??
+    (networkState ? (
+      <Avatar
+        sx={{
+          width: 40,
+          height: 40,
+          bgcolor: networkState === "live" ? alpha(theme.palette.secondary.main, 0.18) : alpha("#10273a", 0.08),
+          color: networkState === "live" ? "secondary.main" : "text.secondary"
+        }}
+      >
+        {networkState === "live" ? <WifiRoundedIcon /> : <AutorenewRoundedIcon />}
+      </Avatar>
+    ) : null);
+  const trailingDestination = trailing ? trailingLinkTo : networkState ? trailingLinkTo ?? "/diagnostics" : trailingLinkTo;
 
   return (
     <Paper
@@ -116,20 +137,20 @@ export function PageHeader({ title, subtitle, trailing, trailingLinkTo }: PageHe
             })}
           </Stack>
 
-          {trailing ? (
-            trailingLinkTo ? (
+          {trailingContent ? (
+            trailingDestination ? (
               <ButtonBase
                 component={RouterLink}
-                to={trailingLinkTo}
+                to={trailingDestination}
                 sx={{
                   borderRadius: 2,
                   overflow: "hidden"
                 }}
               >
-                <Box sx={{ flexShrink: 0 }}>{trailing}</Box>
+                <Box sx={{ flexShrink: 0 }}>{trailingContent}</Box>
               </ButtonBase>
             ) : (
-              <Box sx={{ flexShrink: 0 }}>{trailing}</Box>
+              <Box sx={{ flexShrink: 0 }}>{trailingContent}</Box>
             )
           ) : null}
 

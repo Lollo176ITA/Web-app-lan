@@ -20,6 +20,7 @@ import type { HostDiagnosticStatus, HostDiagnosticsResponse } from "../../shared
 import { PageHeader } from "../components/PageHeader";
 import { fetchDiagnostics } from "../lib/api";
 import { copyTextToClipboard } from "../lib/clipboard";
+import { useLanLiveState } from "../lib/useLanLiveState";
 
 type DiagnosticsState = "loading" | "ready";
 
@@ -40,6 +41,7 @@ export function DiagnosticsPage() {
   const [diagnostics, setDiagnostics] = useState<HostDiagnosticsResponse | null>(null);
   const [state, setState] = useState<DiagnosticsState>("loading");
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const liveState = useLanLiveState();
 
   async function refreshDiagnostics() {
     setState("loading");
@@ -62,7 +64,7 @@ export function DiagnosticsPage() {
   return (
     <Box sx={{ pb: 7 }}>
       <Container maxWidth="lg" sx={{ pt: { xs: 2, md: 3 } }}>
-        <PageHeader title="Diagnostica LAN" subtitle="Host self-test" />
+        <PageHeader title="Diagnostica LAN" subtitle="Host self-test" networkState={liveState} />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
           <Card sx={{ borderRadius: 2.5 }}>

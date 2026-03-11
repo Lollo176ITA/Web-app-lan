@@ -1,18 +1,14 @@
 import { startTransition, useEffect, useRef, useState } from "react";
-import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import CreateNewFolderRoundedIcon from "@mui/icons-material/CreateNewFolderRounded";
-import LanRoundedIcon from "@mui/icons-material/LanRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
-import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import {
   Alert,
   Avatar,
   Box,
   Button,
-  ButtonBase,
   Card,
   CardContent,
   CardHeader,
@@ -54,13 +50,12 @@ import {
   createFolder,
   deleteItem,
   fetchSnapshot,
-  openLibraryEvents,
   uploadFiles
 } from "../lib/api";
 import { formatBytes } from "../lib/format";
+import { useLanLiveState } from "../lib/useLanLiveState";
 
 type FilterValue = "all" | Exclude<LibraryKind, "folder">;
-type LiveState = "live" | "fallback" | "connecting";
 
 const filters: Array<{ label: string; value: FilterValue }> = [
   { label: "Tutti", value: "all" },
@@ -184,7 +179,6 @@ export function AppPage() {
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
-  const [liveState, setLiveState] = useState<LiveState>("connecting");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
@@ -238,6 +232,22 @@ export function AppPage() {
     });
   }
 
+  const liveState = useLanLiveState({
+    source: "library",
+    onEvent: () => {
+      void syncSnapshot();
+    },
+    onFallback: () => {
+      const pollingId = window.setInterval(() => {
+        void syncSnapshot();
+      }, 15000);
+
+      return () => {
+        window.clearInterval(pollingId);
+      };
+    }
+  });
+
   useEffect(() => {
     void syncSnapshot();
   }, []);
@@ -272,39 +282,6 @@ export function AppPage() {
       }
     }).then(setQrItemDataUrl);
   }, [qrItemTarget]);
-
-  useEffect(() => {
-    let pollingId: number | undefined;
-    let source: EventSource | undefined;
-
-    const startPolling = () => {
-      setLiveState("fallback");
-      pollingId = window.setInterval(() => {
-        void syncSnapshot();
-      }, 15000);
-    };
-
-    source = openLibraryEvents(
-      () => {
-        setLiveState("live");
-        void syncSnapshot();
-      },
-      () => {
-        startPolling();
-      },
-      () => {
-        setLiveState("live");
-      }
-    );
-
-    return () => {
-      source?.close();
-
-      if (pollingId) {
-        window.clearInterval(pollingId);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     if (!currentFolderId) {
@@ -482,24 +459,7 @@ export function AppPage() {
   return (
     <Box sx={{ pb: 7 }}>
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
-        <PageHeader
-          title="Routeroom"
-          subtitle="LAN media relay"
-          trailingLinkTo="/diagnostics"
-          trailing={
-            <Avatar
-              sx={{
-                width: 40,
-                height: 40,
-                bgcolor:
-                  liveState === "live" ? alpha(theme.palette.secondary.main, 0.18) : alpha("#10273a", 0.08),
-                color: liveState === "live" ? "secondary.main" : "text.secondary"
-              }}
-            >
-              {liveState === "live" ? <WifiRoundedIcon /> : <AutorenewRoundedIcon />}
-            </Avatar>
-          }
-        />
+        <PageHeader title="Routeroom" subtitle="LAN media relay" networkState={liveState} />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
           <Box

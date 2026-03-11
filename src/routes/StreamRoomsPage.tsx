@@ -1,12 +1,10 @@
 import { startTransition, useEffect, useMemo, useState } from "react";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
-import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import MeetingRoomRoundedIcon from "@mui/icons-material/MeetingRoomRounded";
 import MovieRoundedIcon from "@mui/icons-material/MovieRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
-import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import {
   Alert,
   Avatar,
@@ -26,15 +24,14 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { alpha, useTheme } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
 import QRCode from "qrcode";
 import { Link as RouterLink } from "react-router-dom";
 import type { LibraryItem, StreamRoomSummary } from "../../shared/types";
 import { PageHeader } from "../components/PageHeader";
 import { copyTextToClipboard } from "../lib/clipboard";
-import { createStreamRoom, deleteStreamRoom, fetchItems, fetchSession, fetchStreamRooms, openLanEvents } from "../lib/api";
-
-type LiveState = "live" | "fallback" | "connecting";
+import { createStreamRoom, deleteStreamRoom, fetchItems, fetchSession, fetchStreamRooms } from "../lib/api";
+import { useLanLiveState } from "../lib/useLanLiveState";
 
 function formatRoomTime(value: string) {
   return new Intl.DateTimeFormat("it-IT", {
@@ -72,14 +69,38 @@ export function StreamRoomsPage() {
   const [loading, setLoading] = useState(true);
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [deletingRoomId, setDeletingRoomId] = useState<string | null>(null);
-  const [liveState, setLiveState] = useState<LiveState>("connecting");
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [sessionLanUrl, setSessionLanUrl] = useState<string | null>(null);
   const [qrRoomTarget, setQrRoomTarget] = useState<StreamRoomSummary | null>(null);
   const [qrRoomDataUrl, setQrRoomDataUrl] = useState("");
-  const theme = useTheme();
 
   const videoItems = useMemo(() => items.filter((item) => item.kind === "video"), [items]);
+
+  const liveState = useLanLiveState({
+    handlers: {
+      "stream-room-created": () => {
+        void syncData();
+      },
+      "stream-room-updated": () => {
+        void syncData();
+      },
+      "stream-room-deleted": () => {
+        void syncData();
+      },
+      "library-updated": () => {
+        void syncData();
+      }
+    },
+    onFallback: () => {
+      const pollingId = window.setInterval(() => {
+        void syncData();
+      }, 15000);
+
+      return () => {
+        window.clearInterval(pollingId);
+      };
+    }
+  });
 
   async function syncData() {
     const [roomsResponse, allItems, session] = await Promise.all([fetchStreamRooms(), fetchItems(), fetchSession()]);
@@ -110,48 +131,6 @@ export function StreamRoomsPage() {
 
   useEffect(() => {
     void syncData();
-  }, []);
-
-  useEffect(() => {
-    let pollingId: number | undefined;
-
-    const source = openLanEvents(
-      {
-        "stream-room-created": () => {
-          setLiveState("live");
-          void syncData();
-        },
-        "stream-room-updated": () => {
-          setLiveState("live");
-          void syncData();
-        },
-        "stream-room-deleted": () => {
-          setLiveState("live");
-          void syncData();
-        },
-        "library-updated": () => {
-          setLiveState("live");
-          void syncData();
-        }
-      },
-      () => {
-        setLiveState("fallback");
-        pollingId = window.setInterval(() => {
-          void syncData();
-        }, 15000);
-      },
-      () => {
-        setLiveState("live");
-      }
-    );
-
-    return () => {
-      source.close();
-
-      if (pollingId) {
-        window.clearInterval(pollingId);
-      }
-    };
   }, []);
 
   async function handleCreateRoom() {
@@ -192,24 +171,7 @@ export function StreamRoomsPage() {
   return (
     <Box sx={{ pb: 7 }}>
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
-        <PageHeader
-          title="Stanze Streaming"
-          subtitle="Watch party locale"
-          trailingLinkTo="/diagnostics"
-          trailing={
-            <Avatar
-              sx={{
-                width: 40,
-                height: 40,
-                bgcolor:
-                  liveState === "live" ? alpha(theme.palette.secondary.main, 0.18) : alpha("#10273a", 0.08),
-                color: liveState === "live" ? "secondary.main" : "text.secondary"
-              }}
-            >
-              {liveState === "live" ? <WifiRoundedIcon /> : <AutorenewRoundedIcon />}
-            </Avatar>
-          }
-        />
+        <PageHeader title="Stanze Streaming" subtitle="Watch party locale" networkState={liveState} />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
           <Box

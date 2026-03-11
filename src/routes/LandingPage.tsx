@@ -1,11 +1,8 @@
-import { useEffect, useState } from "react";
-import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import ArrowOutwardRoundedIcon from "@mui/icons-material/ArrowOutwardRounded";
 import CloudOffRoundedIcon from "@mui/icons-material/CloudOffRounded";
 import FlashOnRoundedIcon from "@mui/icons-material/FlashOnRounded";
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
-import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import {
   Box,
   Button,
@@ -18,12 +15,10 @@ import {
   Typography,
   Avatar
 } from "@mui/material";
-import { alpha, useTheme } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
 import { Link as RouterLink } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
-import { openLibraryEvents } from "../lib/api";
-
-type LiveState = "live" | "fallback" | "connecting";
+import { useLanLiveState } from "../lib/useLanLiveState";
 
 const featureCards = [
   {
@@ -44,48 +39,12 @@ const featureCards = [
 ];
 
 export function LandingPage() {
-  const [liveState, setLiveState] = useState<LiveState>("connecting");
-  const theme = useTheme();
-
-  useEffect(() => {
-    const source = openLibraryEvents(
-      () => {
-        setLiveState("live");
-      },
-      () => {
-        setLiveState("fallback");
-      },
-      () => {
-        setLiveState("live");
-      }
-    );
-
-    return () => {
-      source.close();
-    };
-  }, []);
+  const liveState = useLanLiveState({ source: "library" });
 
   return (
     <Box sx={{ pb: 8 }}>
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
-        <PageHeader
-          title="Routeroom"
-          subtitle="LAN media relay"
-          trailingLinkTo="/diagnostics"
-          trailing={
-            <Avatar
-              sx={{
-                width: 40,
-                height: 40,
-                bgcolor:
-                  liveState === "live" ? alpha(theme.palette.secondary.main, 0.18) : alpha("#10273a", 0.08),
-                color: liveState === "live" ? "secondary.main" : "text.secondary"
-              }}
-            >
-              {liveState === "live" ? <WifiRoundedIcon /> : <AutorenewRoundedIcon />}
-            </Avatar>
-          }
-        />
+        <PageHeader title="Routeroom" subtitle="LAN media relay" networkState={liveState} />
 
         <Card sx={{ mt: 3, overflow: "hidden" }}>
           <CardContent sx={{ p: { xs: 2.5, md: 4.5 } }}>
