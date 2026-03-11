@@ -62,16 +62,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
 
       - name: Restore Electron caches
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ${{ env.ELECTRON_CACHE }}
@@ -87,8 +87,14 @@ jobs:
       - name: Build target
         run: npm run ${{ matrix.target.script }}
 
+      - name: Remove unpacked outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          find release -maxdepth 1 -type d -name '*-unpacked' -exec rm -rf {} +
+
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.target.id }}
           path: |

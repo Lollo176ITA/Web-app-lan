@@ -6,6 +6,7 @@ import { createApp } from "../dist/server/app.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDevelopment = !app.isPackaged;
 const desktopPort = Number.parseInt(process.env.PORT ?? "8787", 10);
+const desktopHost = "0.0.0.0";
 
 let mainWindow = null;
 let activeServer = null;
@@ -27,7 +28,7 @@ async function startRouteroomServer() {
   });
 
   await new Promise((resolve, reject) => {
-    const server = created.app.listen(desktopPort, "127.0.0.1", () => {
+    const server = created.app.listen(desktopPort, desktopHost, () => {
       activeServer = server;
       activeApp = created;
       resolve();
