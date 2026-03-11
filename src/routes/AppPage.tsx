@@ -693,7 +693,10 @@ export function AppPage() {
                   display: "grid",
                   gap: 2.5,
                   alignItems: "start",
-                  gridTemplateColumns: { xs: "1fr", xl: "minmax(0, 0.92fr) minmax(0, 1.08fr)" }
+                  gridTemplateColumns: { xs: "1fr", xl: "minmax(0, 0.92fr) minmax(0, 1.08fr)" },
+                  "& > *": {
+                    minWidth: 0
+                  }
                 }}
               >
                 <LibraryGrid

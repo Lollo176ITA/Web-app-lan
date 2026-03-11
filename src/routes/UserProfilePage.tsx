@@ -66,33 +66,10 @@ export function UserProfilePage() {
 
   return (
     <Box sx={{ pb: 8 }}>
-      <Container maxWidth="lg" sx={{ pt: { xs: 2, md: 3 } }}>
+      <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
         <PageHeader title="Il tuo profilo" subtitle="Identita locale" networkState={liveState} />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
-          <Card sx={{ borderRadius: 2.5 }}>
-            <CardContent>
-              <Stack direction={{ xs: "column", md: "row" }} spacing={2.5} alignItems={{ xs: "flex-start", md: "center" }}>
-                <Avatar
-                  sx={{
-                    width: 72,
-                    height: 72,
-                    fontSize: "1.8rem",
-                    fontWeight: 700,
-                    bgcolor: alpha("#1769aa", 0.14),
-                    color: "primary.main"
-                  }}
-                >
-                  {buildProfileInitial(identity.nickname)}
-                </Avatar>
-
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="h4">{identity.nickname}</Typography>
-                </Box>
-              </Stack>
-            </CardContent>
-          </Card>
-
           <Stack direction={{ xs: "column", md: "row" }} spacing={2.5}>
             <Card sx={{ flex: 1, borderRadius: 2.5 }}>
               <CardContent>
@@ -158,13 +135,6 @@ export function UserProfilePage() {
                     </Typography>
                     <Typography sx={{ wordBreak: "break-all" }}>{identity.id}</Typography>
                   </Box>
-
-                  <Box>
-                    <Typography variant="overline" color="secondary.main">
-                      Pagina profilo
-                    </Typography>
-                    <Typography sx={{ wordBreak: "break-all" }}>{window.location.origin}/utente/{identity.id}</Typography>
-                  </Box>
                 </Stack>
               </CardContent>
             </Card>
@@ -183,14 +153,7 @@ export function UserProfilePage() {
                 {profileMeta?.clientIp ? null : (
                   <Alert severity="info">Non sono riuscito a leggere l'IP client dalla richiesta corrente.</Alert>
                 )}
-
-                <Box>
-                  <Typography variant="overline" color="secondary.main">
-                    IP locale visto dal server
-                  </Typography>
-                  <Typography>{profileMeta?.clientIp ?? "Non disponibile"}</Typography>
-                </Box>
-
+                
                 <Box>
                   <Typography variant="overline" color="secondary.main">
                     User agent

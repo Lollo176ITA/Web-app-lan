@@ -196,15 +196,32 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
   const shareUrl = item.downloadUrl ?? item.contentUrl ?? "";
 
   return (
-    <Card>
+    <Card sx={{ minWidth: 0 }}>
       <CardHeader
+        sx={{
+          alignItems: "flex-start",
+          "& .MuiCardHeader-content": {
+            minWidth: 0
+          }
+        }}
         avatar={
           <Avatar sx={{ bgcolor: alpha(accent, 0.14), color: accent }}>
             <Icon />
           </Avatar>
         }
-        titleTypographyProps={{ variant: "h4", sx: { fontSize: "clamp(1.45rem, 2vw, 2rem)" } }}
-        subheaderTypographyProps={{ color: "text.secondary" }}
+        titleTypographyProps={{
+          variant: "h4",
+          sx: {
+            fontSize: "clamp(1.25rem, 4.8vw, 2rem)",
+            overflowWrap: "anywhere"
+          }
+        }}
+        subheaderTypographyProps={{
+          color: "text.secondary",
+          sx: {
+            overflowWrap: "anywhere"
+          }
+        }}
         title={item.name}
         subheader={
           item.kind === "folder"
@@ -220,20 +237,28 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
               overflow: "hidden",
               borderRadius: 2,
               border: "1px solid rgba(16, 39, 58, 0.12)",
-              minHeight: 280,
+              minHeight: item.kind === "video" ? { xs: "auto", sm: 280 } : 280,
               display: "grid",
-              placeItems: "center",
+              placeItems: item.kind === "video" ? "stretch" : "center",
               p: item.kind === "document" ? 1.5 : 0,
               bgcolor: alpha(accent, 0.08)
             }}
           >
             {item.kind === "video" ? (
-              <Box
-                component="video"
-                controls
-                src={item.streamUrl}
-                sx={{ width: "100%", maxHeight: 420, display: "block", bgcolor: "#08131e" }}
-              />
+              <Box sx={{ width: "100%", aspectRatio: "16 / 9", bgcolor: "#08131e" }}>
+                <Box
+                  component="video"
+                  controls
+                  src={item.streamUrl}
+                  sx={{
+                    width: "100%",
+                    height: "100%",
+                    display: "block",
+                    bgcolor: "#08131e",
+                    objectFit: "contain"
+                  }}
+                />
+              </Box>
             ) : null}
 
             {item.kind === "image" ? (

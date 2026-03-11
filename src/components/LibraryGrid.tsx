@@ -112,7 +112,10 @@ export function LibraryGrid({
       sx={{
         display: "grid",
         gridTemplateColumns: getGridTemplate(layoutMode),
-        gap: 2
+        gap: 2,
+        "& > *": {
+          minWidth: 0
+        }
       }}
     >
       {sortVisibleItems(items).map((item) => {
@@ -129,6 +132,8 @@ export function LibraryGrid({
               sx={{
                 position: "relative",
                 overflow: "hidden",
+                width: "100%",
+                minWidth: 0,
                 borderColor: isSelected ? alpha(config.accent, 0.36) : "rgba(16, 39, 58, 0.08)",
                 boxShadow: isSelected ? `0 12px 28px ${alpha(config.accent, 0.14)}` : "0 8px 22px rgba(16, 39, 58, 0.04)"
               }}
@@ -158,8 +163,14 @@ export function LibraryGrid({
 
                   onSelect(item.id);
                 }}
+                sx={{ width: "100%", minWidth: 0 }}
               >
-                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ px: 2, py: 1.5, pr: 6 }}>
+                <Stack
+                  direction="row"
+                  spacing={1.5}
+                  alignItems="center"
+                  sx={{ px: 2, py: 1.5, pr: 6, width: "100%", minWidth: 0 }}
+                >
                   <Avatar
                     sx={{
                       width: 36,
@@ -170,7 +181,7 @@ export function LibraryGrid({
                   >
                     <Icon fontSize="small" />
                   </Avatar>
-                  <Stack spacing={0.2} sx={{ minWidth: 0 }}>
+                  <Stack spacing={0.2} sx={{ minWidth: 0, flex: 1 }}>
                     <Typography noWrap fontWeight={600}>
                       {item.name}
                     </Typography>
