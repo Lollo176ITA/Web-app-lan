@@ -304,7 +304,6 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
                 <Typography variant="overline" color="secondary.main">
                   Navigazione
                 </Typography>
-                <Typography variant="h6">Routy</Typography>
               </Box>
             </Stack>
             <IconButton

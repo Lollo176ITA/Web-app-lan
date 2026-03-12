@@ -7,6 +7,7 @@ import FolderZipRoundedIcon from "@mui/icons-material/FolderZipRounded";
 import LanRoundedIcon from "@mui/icons-material/LanRounded";
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
+import SettingsEthernetRoundedIcon from "@mui/icons-material/SettingsEthernetRounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import {
@@ -27,54 +28,54 @@ import { useLanLiveState } from "../lib/useLanLiveState";
 
 const featureCards = [
   {
-    icon: FlashOnRoundedIcon,
-    title: "Velocita della rete locale",
-    body: "Upload, download e aggiornamenti passano nella tua LAN. Routy riduce attrito e latenza senza deviare sul cloud."
+    icon: ShieldRoundedIcon,
+    title: "La tua rete, il tuo spazio",
+    body: "Routy trasforma un device della LAN in un hub locale per file, media, chat e watch party. Tutto resta sotto il tuo controllo, senza cloud e senza servizi esterni."
   },
   {
     icon: DevicesRoundedIcon,
-    title: "Una libreria sola, tutti i device",
-    body: "L'host centrale espone file, documenti, audio e video con la stessa vista su desktop, tablet e mobile."
+    title: "Un'esperienza coerente su ogni device",
+    body: "Desktop, tablet e smartphone vedono la stessa libreria, lo stesso player e le stesse stanze. Entri da browser e continui ovunque con la stessa logica."
   },
   {
-    icon: PlayCircleOutlineRoundedIcon,
-    title: "Playback e stanze streaming",
-    body: "Apri i contenuti nel browser oppure sincronizza una stanza video locale senza installare nulla sugli altri device."
-  },
-  {
-    icon: QrCode2RoundedIcon,
-    title: "Link e QR gia pronti",
-    body: "Condividi l'URL LAN o mostra un QR code: chi e sulla stessa rete entra subito nella libreria o nel player giusto."
-  },
-  {
-    icon: ShieldRoundedIcon,
-    title: "Zero account, zero servizi esterni",
-    body: "Routy lavora in locale: apri il server, condividi l'indirizzo della rete e resti operativo anche senza Internet."
-  },
-  {
-    icon: ChatRoundedIcon,
-    title: "Chat e presenza in rete",
-    body: "La chat globale e le conversazioni dirette restano dentro la LAN, con identita locale e utenti subito visibili."
+    icon: FlashOnRoundedIcon,
+    title: "Più vicino dei soliti trasferimenti",
+    body: "File, stream e aggiornamenti passano direttamente nella rete locale. Meno dipendenze, meno attese, più immediatezza nella condivisione quotidiana."
   },
   {
     icon: FolderZipRoundedIcon,
-    title: "Cartelle e archivi al volo",
-    body: "Crei cartelle, prepari raccolte e scarichi archivi direttamente dall'host senza passaggi manuali."
+    title: "Una libreria locale che resta viva",
+    body: "Carichi file, cartelle e raccolte senza costruire flussi complicati. Routy mantiene tutto persistente sull'host, pronto anche dopo riavvii e nuove sessioni."
   },
   {
     icon: VisibilityRoundedIcon,
-    title: "Anteprime immediate",
-    body: "Apri un media, lo ispezioni subito e passi dal dettaglio al player locale senza cambiare strumento."
+    title: "Guarda prima, apri subito",
+    body: "Testi, PDF e documenti Office si aprono in anteprima direttamente nell'interfaccia. Meno passaggi, meno download inutili, più continuità tra sfogliare e usare."
+  },
+  {
+    icon: PlayCircleOutlineRoundedIcon,
+    title: "Player diretto per audio e video",
+    body: "Ogni contenuto può aprirsi nel suo player locale dedicato, con streaming fluido e accesso immediato dal link giusto invece che da una home generica."
+  },
+  {
+    icon: QrCode2RoundedIcon,
+    title: "Entra con un link o con un QR",
+    body: "Condividere è semplice: Routy genera URL LAN e QR code pronti per portare chiunque direttamente nella libreria, nel player o nella stanza corretta."
+  },
+  {
+    icon: ChatRoundedIcon,
+    title: "Presenza, chat e identità locali",
+    body: "La rete prende vita con una chat globale, conversazioni private e profili locali riconoscibili. Non condividi solo contenuti: condividi anche presenza."
   },
   {
     icon: LanRoundedIcon,
-    title: "Host e rete sotto controllo",
-    body: "Lo stato LAN resta visibile mentre condividi contenuti, cosi capisci subito se l'host e raggiungibile."
+    title: "Watch party davvero sincronizzati",
+    body: "Crea una stanza, scegli un video e sincronizza play, pausa e seek tra tutti i partecipanti. Un'esperienza condivisa, costruita interamente dentro la LAN."
   },
   {
-    icon: ArrowOutwardRoundedIcon,
-    title: "Condivisione mirata",
-    body: "Ogni contenuto puo puntare alla libreria, al player o alla stanza giusta, invece di mandare tutti in una home generica."
+    icon: SettingsEthernetRoundedIcon,
+    title: "Pronto anche quando la rete si complica",
+    body: "Diagnostica host, controlli LAN e modalità desktop con Electron ti aiutano a mantenere tutto stabile, raggiungibile e persistente anche in ambienti reali."
   }
 ];
 
