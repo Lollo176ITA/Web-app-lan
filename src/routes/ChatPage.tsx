@@ -180,6 +180,19 @@ export function ChatPage() {
     [identity?.id, userId]
   );
 
+  function scrollMessagesToBottom(behavior: ScrollBehavior) {
+    const viewport = messagesViewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    viewport.scrollTo({
+      top: viewport.scrollHeight,
+      behavior
+    });
+  }
+
   async function syncChatState() {
     try {
       const [nextOverview, nextDirect] = await Promise.all([
@@ -206,21 +219,23 @@ export function ChatPage() {
   useEffect(() => {
     const viewport = messagesViewportRef.current;
 
-    if (!viewport || loading) {
+    if (!viewport || loading || !showConversationPanel) {
       return;
     }
 
+    let timeoutId = 0;
     const frameId = window.requestAnimationFrame(() => {
-      viewport.scrollTo({
-        top: viewport.scrollHeight,
-        behavior: "smooth"
-      });
+      scrollMessagesToBottom(isMobile ? "auto" : "smooth");
+      timeoutId = window.setTimeout(() => {
+        scrollMessagesToBottom("auto");
+      }, 180);
     });
 
     return () => {
       window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
     };
-  }, [activeConversationKey, activeMessages.length, loading]);
+  }, [activeConversationKey, activeMessages.length, isMobile, loading, showConversationPanel]);
 
   async function handleSendMessage() {
     const text = messageText.trim();

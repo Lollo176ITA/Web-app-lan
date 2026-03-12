@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
 import LanRoundedIcon from "@mui/icons-material/LanRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
@@ -99,6 +100,10 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
     ? `linear-gradient(180deg, ${alpha(theme.palette.background.paper, 0.9)} 0%, ${alpha("#08131d", 0.86)} 100%)`
     : "rgba(255,255,255,0.78)";
 
+  function toggleMobileMenu() {
+    setMobileMenuOpen((currentValue) => !currentValue);
+  }
+
   function renderThemeToggleButton() {
     return (
       <IconButton
@@ -189,10 +194,8 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
             <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
               {renderThemeToggleButton()}
               <IconButton
-                aria-label="Apri menu"
-                onClick={() => {
-                  setMobileMenuOpen(true);
-                }}
+                aria-label={mobileMenuOpen ? "Chiudi menu" : "Apri menu"}
+                onClick={toggleMobileMenu}
                 sx={{
                   flexShrink: 0,
                   borderRadius: 2.5,
@@ -201,7 +204,7 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
                   border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.24 : 0.12)}`
                 }}
               >
-                <MenuRoundedIcon />
+                {mobileMenuOpen ? <CloseRoundedIcon /> : <MenuRoundedIcon />}
               </IconButton>
             </Stack>
           ) : (
@@ -292,7 +295,21 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
               </Typography>
               <Typography variant="h6">Routeroom</Typography>
             </Box>
-            {profilePath ? <Avatar sx={getProfileAvatarStyles()}>{profileInitial}</Avatar> : null}
+            <IconButton
+              aria-label="Chiudi menu"
+              onClick={() => {
+                setMobileMenuOpen(false);
+              }}
+              sx={{
+                flexShrink: 0,
+                borderRadius: 2.5,
+                bgcolor: alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08),
+                color: isDark ? theme.palette.primary.light : "primary.main",
+                border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.24 : 0.12)}`
+              }}
+            >
+              <CloseRoundedIcon />
+            </IconButton>
           </Stack>
 
           <List sx={{ py: 0 }}>
