@@ -1,18 +1,21 @@
+import { useState } from "react";
 import ArrowOutwardRoundedIcon from "@mui/icons-material/ArrowOutwardRounded";
-import CloudOffRoundedIcon from "@mui/icons-material/CloudOffRounded";
+import ChatRoundedIcon from "@mui/icons-material/ChatRounded";
+import DevicesRoundedIcon from "@mui/icons-material/DevicesRounded";
 import FlashOnRoundedIcon from "@mui/icons-material/FlashOnRounded";
+import FolderZipRoundedIcon from "@mui/icons-material/FolderZipRounded";
+import LanRoundedIcon from "@mui/icons-material/LanRounded";
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
-import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
+import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import {
-  Avatar,
   Box,
   Button,
+  ButtonBase,
   Card,
   CardContent,
   CardMedia,
-  Chip,
   Container,
   Stack,
   Typography
@@ -29,7 +32,7 @@ const featureCards = [
     body: "Upload, download e aggiornamenti passano nella tua LAN. Routy riduce attrito e latenza senza deviare sul cloud."
   },
   {
-    icon: StorageRoundedIcon,
+    icon: DevicesRoundedIcon,
     title: "Una libreria sola, tutti i device",
     body: "L'host centrale espone file, documenti, audio e video con la stessa vista su desktop, tablet e mobile."
   },
@@ -47,6 +50,31 @@ const featureCards = [
     icon: ShieldRoundedIcon,
     title: "Zero account, zero servizi esterni",
     body: "Routy lavora in locale: apri il server, condividi l'indirizzo della rete e resti operativo anche senza Internet."
+  },
+  {
+    icon: ChatRoundedIcon,
+    title: "Chat e presenza in rete",
+    body: "La chat globale e le conversazioni dirette restano dentro la LAN, con identita locale e utenti subito visibili."
+  },
+  {
+    icon: FolderZipRoundedIcon,
+    title: "Cartelle e archivi al volo",
+    body: "Crei cartelle, prepari raccolte e scarichi archivi direttamente dall'host senza passaggi manuali."
+  },
+  {
+    icon: VisibilityRoundedIcon,
+    title: "Anteprime immediate",
+    body: "Apri un media, lo ispezioni subito e passi dal dettaglio al player locale senza cambiare strumento."
+  },
+  {
+    icon: LanRoundedIcon,
+    title: "Host e rete sotto controllo",
+    body: "Lo stato LAN resta visibile mentre condividi contenuti, cosi capisci subito se l'host e raggiungibile."
+  },
+  {
+    icon: ArrowOutwardRoundedIcon,
+    title: "Condivisione mirata",
+    body: "Ogni contenuto puo puntare alla libreria, al player o alla stanza giusta, invece di mandare tutti in una home generica."
   }
 ];
 
@@ -55,6 +83,8 @@ export function LandingPage() {
   const liveState = useLanLiveState({ source: "library" });
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
+  const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
+  const selectedFeature = featureCards[selectedFeatureIndex];
 
   return (
     <Box sx={{ pb: 8 }}>
@@ -151,40 +181,83 @@ export function LandingPage() {
                     sx={{ display: "block", width: "100%", objectFit: "cover" }}
                   />
                 </Card>
-                <Box
-                  sx={{
-                    display: "grid",
-                    gap: 1.5,
-                    gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" }
-                  }}
-                >
-                </Box>
               </Stack>
             </Box>
           </CardContent>
         </Card>
-        <Box
-          sx={{
-            display: "grid",
-            gap: 2,
-            mt: { xs: 4, md: 5 },
-            gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" }
-          }}
-        >
-          {featureCards.map(({ icon: Icon, title, body }) => (
-            <Card key={title}>
-              <CardContent>
-                <Stack spacing={2}>
-                  <Avatar sx={{ width: 52, height: 52, bgcolor: alpha("#0f9d94", 0.12), color: "secondary.main" }}>
-                    <Icon />
-                  </Avatar>
-                  <Typography variant="h5">{title}</Typography>
-                  <Typography color="text.secondary">{body}</Typography>
-                </Stack>
-              </CardContent>
-            </Card>
-          ))}
-        </Box>
+        <Card sx={{ mt: { xs: 4, md: 5 } }}>
+          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <Stack spacing={2.5}>
+              <Box>
+                <Typography variant="overline" color="secondary.main">
+                  Perche Routy
+                </Typography>
+                <Typography variant="h3">10 motivi semplici ma efficaci</Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: "grid",
+                  gap: { xs: 1, md: 1.25 },
+                  gridTemplateColumns: { xs: "repeat(5, minmax(0, 1fr))", lg: "repeat(10, minmax(0, 1fr))" },
+                  alignItems: "center"
+                }}
+              >
+                {featureCards.map(({ icon: Icon, title }, index) => {
+                  const isSelected = index === selectedFeatureIndex;
+
+                  return (
+                    <ButtonBase
+                      key={title}
+                      onClick={() => {
+                        setSelectedFeatureIndex(index);
+                      }}
+                      aria-label={title}
+                      aria-pressed={isSelected}
+                      sx={{
+                        minWidth: 0,
+                        p: { xs: 0.4, md: 0.55 },
+                        justifyContent: "center",
+                        color: isSelected ? "secondary.main" : "text.secondary",
+                        opacity: isSelected ? 1 : 0.52,
+                        transition: "transform 160ms ease, color 160ms ease, opacity 160ms ease",
+                        "&:hover": {
+                          transform: "translateY(-2px)",
+                          color: isSelected ? "secondary.main" : "text.primary",
+                          opacity: 0.82
+                        }
+                      }}
+                    >
+                      <Icon
+                        sx={{
+                          fontSize: { xs: 28, md: 34 },
+                          transform: isSelected ? "scale(1.08)" : "scale(1)",
+                          transition: "transform 160ms ease"
+                        }}
+                      />
+                    </ButtonBase>
+                  );
+                })}
+              </Box>
+
+              <Card
+                variant="outlined"
+                sx={{
+                  background: isDark
+                    ? `linear-gradient(180deg, ${alpha(theme.palette.background.paper, 0.84)} 0%, ${alpha("#08131d", 0.9)} 100%)`
+                    : "rgba(255,255,255,0.76)",
+                  minHeight: 150
+                }}
+              >
+                <CardContent sx={{ p: { xs: 2, md: 2.5 } }}>
+                  <Stack spacing={1}>
+                    <Typography variant="h5">{selectedFeature.title}</Typography>
+                    <Typography color="text.secondary">{selectedFeature.body}</Typography>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Stack>
+          </CardContent>
+        </Card>
       </Container>
     </Box>
   );
