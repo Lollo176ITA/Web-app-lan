@@ -333,6 +333,13 @@ export class CollaborationStore {
     return message;
   }
 
+  async clearGlobalMessages() {
+    const clearedMessages = this.globalMessages.length;
+    this.globalMessages = [];
+    await this.persist();
+    return clearedMessages;
+  }
+
   async addPrivateMessage(identity: LanIdentity, recipient: LanIdentity, text: string) {
     const normalizedIdentity = normalizeIdentity(identity);
     const normalizedRecipient = normalizeIdentity(recipient);

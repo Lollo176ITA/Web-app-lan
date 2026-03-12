@@ -1,6 +1,7 @@
 import type {
   ArchiveFormat,
   ChatSnapshotResponse,
+  ClearGlobalChatResponse,
   ClientProfileResponse,
   CreateStreamRoomResponse,
   CreateArchiveResponse,
@@ -74,6 +75,12 @@ export function sendChatMessage(identity: LanIdentity, text: string) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify(body)
+  });
+}
+
+export function clearGlobalChat() {
+  return readJson<ClearGlobalChatResponse>("/api/chat/messages", {
+    method: "DELETE"
   });
 }
 

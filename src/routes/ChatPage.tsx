@@ -1,6 +1,7 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ForumRoundedIcon from "@mui/icons-material/ForumRounded";
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
@@ -33,7 +34,9 @@ import type {
 import { PageHeader } from "../components/PageHeader";
 import { useIdentity } from "../lib/identity-context";
 import {
+  clearGlobalChat,
   fetchChatSnapshot,
+  fetchClientProfile,
   fetchDirectChatSnapshot,
   sendChatMessage,
   sendDirectChatMessage
@@ -119,6 +122,8 @@ export function ChatPage() {
   const [messageText, setMessageText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [clearingGlobalChat, setClearingGlobalChat] = useState(false);
+  const [isHostClient, setIsHostClient] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const messagesViewportRef = useRef<HTMLDivElement | null>(null);
   const activeConversationKey = userId ? `user:${userId}` : "global";
@@ -217,6 +222,26 @@ export function ChatPage() {
   }, [identity?.id, userId]);
 
   useEffect(() => {
+    let isMounted = true;
+
+    void fetchClientProfile()
+      .then((profile) => {
+        if (isMounted) {
+          setIsHostClient(profile.isHost);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setIsHostClient(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
     const viewport = messagesViewportRef.current;
 
     if (!viewport || loading || !showConversationPanel) {
@@ -268,6 +293,30 @@ export function ChatPage() {
       setSnackbar("Invio messaggio non riuscito.");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleClearGlobalChat() {
+    if (!isHostClient || isDirectChat || clearingGlobalChat) {
+      return;
+    }
+
+    const shouldClear = window.confirm("Vuoi davvero svuotare tutta la chat globale?");
+
+    if (!shouldClear) {
+      return;
+    }
+
+    setClearingGlobalChat(true);
+
+    try {
+      await clearGlobalChat();
+      await syncChatState();
+      setSnackbar("Chat globale svuotata.");
+    } catch {
+      setSnackbar("Svuotamento chat globale non riuscito.");
+    } finally {
+      setClearingGlobalChat(false);
     }
   }
 
@@ -436,16 +485,35 @@ export function ChatPage() {
                     ) : null}
 
                     <Stack
-                      direction={{ xs: "column", md: "row" }}
+                      direction="row"
                       spacing={1.5}
-                      alignItems={{ xs: "flex-start", md: "center" }}
+                      alignItems="center"
                       justifyContent="space-between"
+                      sx={{ flexWrap: "wrap" }}
                     >
                       <Box>
                         <Typography variant="h5">
                           {isDirectChat ? selectedParticipant?.nickname ?? "Utente LAN" : "Canale globale"}
                         </Typography>
                       </Box>
+
+                      {!isDirectChat && isHostClient ? (
+                        <IconButton
+                          aria-label="Svuota chat globale"
+                          title="Svuota chat globale"
+                          color="inherit"
+                          disabled={clearingGlobalChat || overview.globalMessages.length === 0}
+                          onClick={() => {
+                            void handleClearGlobalChat();
+                          }}
+                          sx={{
+                            border: `1px solid ${alpha(theme.palette.error.main, isDark ? 0.42 : 0.18)}`,
+                            color: theme.palette.error.main
+                          }}
+                        >
+                          <CloseRoundedIcon />
+                        </IconButton>
+                      ) : null}
                     </Stack>
 
                     <Box

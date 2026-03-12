@@ -15,6 +15,7 @@ import { collectHostDiagnostics } from "./diagnostics.js";
 import type {
   ArchiveFormat,
   ChatSnapshotResponse,
+  ClearGlobalChatResponse,
   ClientProfileResponse,
   DirectChatSnapshotResponse,
   CreateStreamRoomRequest,
@@ -102,7 +103,37 @@ function normalizeClientIp(value: string | undefined) {
     return null;
   }
 
-  return value.startsWith("::ffff:") ? value.slice(7) : value;
+  const withoutMappedPrefix = value.startsWith("::ffff:") ? value.slice(7) : value;
+  const withoutZone = withoutMappedPrefix.split("%")[0] ?? withoutMappedPrefix;
+
+  return withoutZone === "::1" ? "127.0.0.1" : withoutZone.toLowerCase();
+}
+
+function collectHostIpAddresses() {
+  const addresses = new Set<string>(["127.0.0.1"]);
+
+  for (const interfaceAddresses of Object.values(os.networkInterfaces())) {
+    for (const interfaceAddress of interfaceAddresses ?? []) {
+      const normalizedAddress = normalizeClientIp(interfaceAddress.address);
+
+      if (normalizedAddress) {
+        addresses.add(normalizedAddress);
+      }
+    }
+  }
+
+  return addresses;
+}
+
+function isHostRequest(request: express.Request, hostIpAddresses: Set<string>) {
+  const clientIp = normalizeClientIp(request.ip || request.socket.remoteAddress);
+  const localAddress = normalizeClientIp(request.socket.localAddress);
+
+  if (!clientIp) {
+    return false;
+  }
+
+  return clientIp === "127.0.0.1" || (localAddress !== null && clientIp === localAddress) || hostIpAddresses.has(clientIp);
 }
 
 function buildPreviewText(text: string, source: "text" | "word"): ItemPreview {
@@ -172,6 +203,7 @@ export async function createApp(options: CreateAppOptions = {}) {
   const collaboration = new CollaborationStore(storageRoot);
   const events = new EventHub();
   const availableArchiveFormats = await detectAvailableArchiveFormats();
+  const hostIpAddresses = collectHostIpAddresses();
   const defaultFolderDownloadFormat =
     availableArchiveFormats.find((format) => format === "zip") ??
     availableArchiveFormats[0] ??
@@ -324,7 +356,8 @@ export async function createApp(options: CreateAppOptions = {}) {
   app.get("/api/me", (request, response) => {
     const payload: ClientProfileResponse = {
       clientIp: normalizeClientIp(request.ip || request.socket.remoteAddress),
-      userAgent: typeof request.get("user-agent") === "string" ? request.get("user-agent") ?? null : null
+      userAgent: typeof request.get("user-agent") === "string" ? request.get("user-agent") ?? null : null,
+      isHost: isHostRequest(request, hostIpAddresses)
     };
 
     response.json(payload);
@@ -397,6 +430,26 @@ export async function createApp(options: CreateAppOptions = {}) {
         return;
       }
 
+      next(error);
+    }
+  });
+
+  app.delete("/api/chat/messages", async (request, response, next) => {
+    if (!isHostRequest(request, hostIpAddresses)) {
+      response.status(403).json({ message: "Solo l'host puo svuotare la chat globale." });
+      return;
+    }
+
+    try {
+      const clearedMessages = await collaboration.clearGlobalMessages();
+      broadcastGlobalChatUpdated();
+
+      const payload: ClearGlobalChatResponse = {
+        clearedMessages
+      };
+
+      response.json(payload);
+    } catch (error) {
       next(error);
     }
   });

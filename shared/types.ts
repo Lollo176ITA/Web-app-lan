@@ -168,6 +168,10 @@ export interface SendChatMessageResponse {
   message: ChatMessage;
 }
 
+export interface ClearGlobalChatResponse {
+  clearedMessages: number;
+}
+
 export interface PrivateChatMessage extends ChatMessage {
   conversationId: string;
   recipient: LanIdentity;
@@ -192,6 +196,7 @@ export interface SendPrivateChatMessageResponse {
 export interface ClientProfileResponse {
   clientIp: string | null;
   userAgent: string | null;
+  isHost: boolean;
 }
 
 export interface StreamRoomsResponse {
