@@ -1,5 +1,5 @@
 {
-  "name": "routeroom",
+  "name": "routy",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -25,6 +25,7 @@
     "test:e2e": "npm run fixtures && playwright test"
   },
   "dependencies": {
+    "@fontsource/titillium-web": "^5.2.8",
     "express": "^5.1.0",
     "mammoth": "^1.11.0",
     "mime-types": "^3.0.1",
@@ -33,12 +34,11 @@
     "word-extractor": "^1.0.4"
   },
   "devDependencies": {
-    "@playwright/test": "^1.55.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@fontsource/roboto-flex": "^5.2.6",
     "@mui/icons-material": "^7.3.2",
     "@mui/material": "^7.3.2",
+    "@playwright/test": "^1.55.0",
     "@types/express": "^5.0.3",
     "@types/mime-types": "^3.0.1",
     "@types/multer": "^2.0.0",

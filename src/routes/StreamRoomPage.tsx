@@ -473,7 +473,7 @@ export function StreamRoomPage() {
                             Seleziona un video per iniziare la stanza
                           </Typography>
                           <Typography color="rgba(255,255,255,0.72)">
-                            I contenuti arrivano dalla libreria Routeroom gia caricata sull’host.
+                            I contenuti arrivano dalla libreria Routy gia caricata sull’host.
                           </Typography>
                         </Stack>
                       </Box>

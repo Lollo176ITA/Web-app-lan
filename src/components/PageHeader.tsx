@@ -2,7 +2,6 @@ import { useState, type ReactNode } from "react";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
-import LanRoundedIcon from "@mui/icons-material/LanRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
@@ -156,11 +155,16 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
               sx={{
                 width: { xs: 36, md: 40 },
                 height: { xs: 36, md: 40 },
-                bgcolor: alpha(theme.palette.primary.main, isDark ? 0.18 : 0.12),
-                color: isDark ? theme.palette.primary.light : "primary.main"
+                bgcolor: "transparent",
+                boxShadow: isDark ? "0 14px 28px rgba(0, 0, 0, 0.32)" : "0 12px 26px rgba(30, 136, 229, 0.2)"
               }}
             >
-              <LanRoundedIcon sx={{ fontSize: { xs: 20, md: 24 } }} />
+              <Box
+                component="img"
+                src="/brand/routy-mark.svg"
+                alt="Routy"
+                sx={{ width: "100%", height: "100%", display: "block" }}
+              />
             </Avatar>
             <Box sx={{ minWidth: 0, flex: 1 }}>
               {subtitle ? (
@@ -289,12 +293,20 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
       >
         <Stack spacing={1.5}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-            <Box>
-              <Typography variant="overline" color="secondary.main">
-                Navigazione
-              </Typography>
-              <Typography variant="h6">Routeroom</Typography>
-            </Box>
+            <Stack direction="row" spacing={1.25} alignItems="center">
+              <Box
+                component="img"
+                src="/brand/routy-mark.svg"
+                alt="Routy"
+                sx={{ width: 34, height: 34, display: "block", flexShrink: 0 }}
+              />
+              <Box>
+                <Typography variant="overline" color="secondary.main">
+                  Navigazione
+                </Typography>
+                <Typography variant="h6">Routy</Typography>
+              </Box>
+            </Stack>
             <IconButton
               aria-label="Chiudi menu"
               onClick={() => {

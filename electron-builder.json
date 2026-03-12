@@ -1,6 +1,6 @@
 {
-  "appId": "it.routeroom.desktop",
-  "productName": "Routeroom",
+  "appId": "it.routy.desktop",
+  "productName": "Routy",
   "directories": {
     "output": "release"
   },

@@ -1,0 +1,68 @@
+<svg width="1600" height="960" viewBox="0 0 1600 960" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="routy-poster-title routy-poster-desc">
+  <title id="routy-poster-title">Routy teaser poster</title>
+  <desc id="routy-poster-desc">Poster della clip di presentazione Routy con dashboard, device e collegamenti di rete.</desc>
+  <defs>
+    <linearGradient id="poster-bg" x1="158" y1="84" x2="1334" y2="890" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#12253A"/>
+      <stop offset="0.55" stop-color="#08131D"/>
+      <stop offset="1" stop-color="#061018"/>
+    </linearGradient>
+    <radialGradient id="poster-glow-a" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(348 196) rotate(40.5021) scale(492.278 382.432)">
+      <stop stop-color="#1E88E5" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#1E88E5" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="poster-glow-b" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1276 278) rotate(125.837) scale(484.108 374.359)">
+      <stop stop-color="#1EC8A2" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#1EC8A2" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="poster-line" x1="533" y1="360" x2="1261" y2="652" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#61D4FF"/>
+      <stop offset="1" stop-color="#7BF2D7"/>
+    </linearGradient>
+    <linearGradient id="poster-panel" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#0E1D2C" stop-opacity="0.96"/>
+      <stop offset="1" stop-color="#09131D" stop-opacity="0.94"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="960" rx="48" fill="url(#poster-bg)"/>
+  <rect width="1600" height="960" rx="48" fill="url(#poster-glow-a)"/>
+  <rect width="1600" height="960" rx="48" fill="url(#poster-glow-b)"/>
+  <path d="M790 472C922 354 1078 340 1240 426C1327 472 1382 553 1414 655" stroke="url(#poster-line)" stroke-width="6" stroke-linecap="round" stroke-dasharray="12 18"/>
+  <path d="M706 520C816 652 944 718 1136 728" stroke="#1E88E5" stroke-opacity="0.45" stroke-width="4" stroke-linecap="round" stroke-dasharray="8 18"/>
+  <circle cx="792" cy="470" r="17" fill="#0A1724" stroke="#61D4FF" stroke-width="5"/>
+  <circle cx="1240" cy="426" r="17" fill="#0A1724" stroke="#7BF2D7" stroke-width="5"/>
+  <circle cx="1414" cy="655" r="17" fill="#0A1724" stroke="#B7FFF0" stroke-width="5"/>
+  <rect x="76" y="76" width="420" height="808" rx="40" fill="url(#poster-panel)" stroke="#1B3E59" stroke-width="2"/>
+  <text x="132" y="172" fill="#9BE8FF" font-size="26" font-family="Titillium Web, Segoe UI, sans-serif" letter-spacing="0.16em">ROUTY</text>
+  <text x="132" y="274" fill="#F3FBFF" font-size="82" font-weight="700" font-family="Titillium Web, Segoe UI, sans-serif" letter-spacing="-0.05em">Apri la LAN.</text>
+  <text x="132" y="354" fill="#F3FBFF" font-size="82" font-weight="700" font-family="Titillium Web, Segoe UI, sans-serif" letter-spacing="-0.05em">Condividi.</text>
+  <text x="132" y="434" fill="#B8CFE0" font-size="82" font-weight="700" font-family="Titillium Web, Segoe UI, sans-serif" letter-spacing="-0.05em">Guarda.</text>
+  <text x="132" y="534" fill="#8EA7BA" font-size="28" font-family="Titillium Web, Segoe UI, sans-serif">File, video e streaming locale su ogni device della stessa rete.</text>
+  <rect x="132" y="612" width="250" height="72" rx="24" fill="#1E88E5"/>
+  <text x="171" y="658" fill="#F6FBFF" font-size="30" font-weight="700" font-family="Titillium Web, Segoe UI, sans-serif">Zero cloud</text>
+  <rect x="132" y="712" width="306" height="72" rx="24" fill="#0F2A3A" stroke="#244D69"/>
+  <text x="170" y="758" fill="#B7FFF0" font-size="30" font-weight="700" font-family="Titillium Web, Segoe UI, sans-serif">Playback immediato</text>
+  <rect x="582" y="152" width="430" height="248" rx="36" fill="url(#poster-panel)" stroke="#1B3E59" stroke-width="2"/>
+  <rect x="614" y="190" width="170" height="16" rx="8" fill="#173449"/>
+  <rect x="614" y="228" width="238" height="24" rx="12" fill="#EFF9FF"/>
+  <rect x="614" y="272" width="342" height="20" rx="10" fill="#98B6CA"/>
+  <rect x="614" y="320" width="362" height="36" rx="18" fill="#0F9D94" fill-opacity="0.18" stroke="#2CBFAF"/>
+  <text x="658" y="344" fill="#B7FFF0" font-size="22" font-weight="700" font-family="Titillium Web, Segoe UI, sans-serif">host / 192.168.1.24:8787</text>
+  <rect x="1068" y="264" width="396" height="246" rx="36" fill="url(#poster-panel)" stroke="#1B3E59" stroke-width="2"/>
+  <rect x="1100" y="302" width="220" height="20" rx="10" fill="#1A3445"/>
+  <rect x="1100" y="344" width="268" height="24" rx="12" fill="#F6FBFF"/>
+  <rect x="1100" y="392" width="318" height="20" rx="10" fill="#8EA7BA"/>
+  <rect x="1100" y="442" width="152" height="48" rx="20" fill="#1E88E5"/>
+  <text x="1144" y="473" fill="#F6FBFF" font-size="22" font-weight="700" font-family="Titillium Web, Segoe UI, sans-serif">Play</text>
+  <rect x="848" y="586" width="540" height="236" rx="40" fill="url(#poster-panel)" stroke="#1B3E59" stroke-width="2"/>
+  <rect x="886" y="634" width="200" height="18" rx="9" fill="#193144"/>
+  <rect x="886" y="672" width="332" height="28" rx="14" fill="#F3FBFF"/>
+  <rect x="886" y="724" width="434" height="20" rx="10" fill="#8EA7BA"/>
+  <rect x="886" y="768" width="156" height="20" rx="10" fill="#8EA7BA" fill-opacity="0.45"/>
+  <rect x="1254" y="628" width="94" height="94" rx="28" fill="#0E1F2F" stroke="#2A5D7B"/>
+  <path d="M1285 690V658H1300.5C1306.85 658 1312 663.149 1312 669.5C1312 675.851 1306.85 681 1300.5 681H1285M1300.5 681L1315 690" stroke="#F6FBFF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="1285" cy="658" r="3.5" fill="#61D4FF"/>
+  <circle cx="1285" cy="690" r="3.5" fill="#7BF2D7"/>
+  <circle cx="1315" cy="690" r="3.5" fill="#B7FFF0"/>
+  <circle cx="1300.5" cy="681" r="3.5" fill="#1E88E5"/>
+</svg>

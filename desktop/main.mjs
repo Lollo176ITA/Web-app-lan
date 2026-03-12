@@ -66,7 +66,7 @@ async function createMainWindow() {
     minHeight: 720,
     backgroundColor: "#0f1115",
     autoHideMenuBar: true,
-    title: "Routeroom",
+    title: "Routy",
     webPreferences: {
       contextIsolation: true,
       sandbox: true,
@@ -92,7 +92,7 @@ app.whenReady().then(async () => {
     const detail = error instanceof Error ? error.message : String(error);
     await dialog.showMessageBox({
       type: "error",
-      title: "Routeroom non avviato",
+      title: "Routy non avviato",
       message: "Non sono riuscito ad avviare il server desktop.",
       detail
     });

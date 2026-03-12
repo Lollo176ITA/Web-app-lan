@@ -333,7 +333,7 @@ export async function createApp(options: CreateAppOptions = {}) {
   app.get("/api/session", (_request, response) => {
     const summary = store.getSummary();
     const sessionInfo: SessionInfo = {
-      appName: "Routeroom",
+      appName: "Routy",
       hostName: os.hostname(),
       lanUrl: urls.lanUrl,
       storagePath: store.rootDir,

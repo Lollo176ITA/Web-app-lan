@@ -40,7 +40,7 @@ export function createAppTheme(mode: PaletteMode) {
       borderRadius: 18
     },
     typography: {
-      fontFamily: '"Roboto Flex", "Segoe UI", sans-serif',
+      fontFamily: '"Titillium Web", "Segoe UI", sans-serif',
       h1: {
         fontSize: "clamp(3rem, 5vw, 4.9rem)",
         lineHeight: 0.95,

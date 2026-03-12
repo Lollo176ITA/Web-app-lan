@@ -16,7 +16,7 @@ const { app, urls } = await createApp({
 });
 
 const server = app.listen(port, "0.0.0.0", () => {
-  console.log("Routeroom attivo");
+  console.log("Routy attivo");
   console.log(`Locale: ${urls.localUrl}`);
   console.log(`LAN:    ${urls.lanUrl}`);
 });

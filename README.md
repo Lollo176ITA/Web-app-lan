@@ -1,6 +1,6 @@
-# Routeroom
+# Routy
 
-Routeroom trasforma un device nella tua rete locale in un hub LAN per file, video, audio e documenti condivisi senza passare da Internet.
+Routy trasforma un device nella tua rete locale in un hub LAN per file, video, audio e documenti condivisi senza passare da Internet.
 
 ## Stack
 - React + Vite + Material UI per la SPA
@@ -31,7 +31,7 @@ npm run test:e2e
 - Il manifest persistente viene scritto in `storage/index.json`
 
 ## Desktop
-- `npm run desktop:start` builda client/server e apre Routeroom in Electron
+- `npm run desktop:start` builda client/server e apre Routy in Electron
 - `npm run desktop:dist` genera un pacchetto desktop in `release/`
 - `npm run desktop:dist:win` genera il pacchetto Windows `.exe` tramite target `NSIS`
 - La versione desktop salva i dati in una cartella app dedicata invece che nel `storage/` del repo
