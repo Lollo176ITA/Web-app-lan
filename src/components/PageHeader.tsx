@@ -140,6 +140,9 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
       <Paper
         elevation={0}
         sx={{
+          position: "sticky",
+          top: { xs: 8, md: 12 },
+          zIndex: theme.zIndex.appBar,
           px: { xs: 1, md: 2 },
           py: { xs: 1, md: 1.5 },
           borderRadius: { xs: 3, md: 4 },

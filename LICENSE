@@ -1,0 +1,87 @@
+Routy Proprietary License
+
+Copyright (c) 2026 the owner of this repository.
+All rights reserved.
+
+This license applies only to the original source code, artwork, text,
+configuration, and other materials in this repository that are owned by the
+Licensor. It does not apply to third-party software, fonts, icons, or other
+materials that may be included with or referenced by the Software.
+
+1. Definitions
+
+"Licensor" means the copyright owner of this repository or any party
+authorized by that owner to distribute the Software.
+
+"Software" means the original materials in this repository that are owned by
+the Licensor.
+
+2. No Open Source Grant
+
+The Software is proprietary and confidential. No right or license is granted
+except as expressly stated in this license or in a separate written agreement
+signed by the Licensor.
+
+3. Limited Permission
+
+If you lawfully receive a copy of the Software from the Licensor or an
+authorized distributor, you may use the unmodified Software solely for your
+own internal or personal purposes.
+
+You may not, unless the Licensor gives prior written permission:
+
+(a) copy, publish, distribute, sublicense, sell, lease, lend, or otherwise
+make the Software available to any third party;
+
+(b) modify, adapt, translate, or create derivative works of the Software;
+
+(c) reverse engineer, decompile, disassemble, or otherwise attempt to extract
+source code from any compiled form of the Software, except to the extent such
+restriction is prohibited by applicable law; or
+
+(d) remove or alter any copyright, trademark, attribution, or other
+proprietary notice.
+
+4. Third-Party Software and Materials
+
+The Software may include, link to, bundle, or depend on third-party
+components made available under separate license terms, including permissive
+open source licenses and font licenses. Those components are licensed by
+their respective owners, not by the Licensor, and remain subject to their own
+license terms, notices, and attribution requirements.
+
+See THIRD_PARTY_NOTICES.md for project-specific guidance on key third-party
+components used by this project.
+
+5. Trademarks
+
+This license does not grant any right to use the trademarks, logos, trade
+dress, or brand features of the Licensor or any third party. "Google",
+"Material", "Material Design", and any related marks remain the property of
+their respective owners.
+
+6. Termination
+
+Any breach of this license automatically terminates your rights under it. Upon
+termination, you must stop using the Software and delete all copies in your
+possession or control.
+
+7. Warranty Disclaimer
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.
+
+8. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSOR WILL NOT BE
+LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, CONSEQUENTIAL, OR
+PUNITIVE DAMAGES, OR FOR ANY LOSS OF DATA, PROFITS, REVENUE, OR BUSINESS
+OPPORTUNITY, ARISING OUT OF OR RELATING TO THE SOFTWARE OR THIS LICENSE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+9. Entire Agreement
+
+This license is the complete statement of the default terms governing the
+Software unless the Licensor and the recipient enter into a separate written
+agreement.

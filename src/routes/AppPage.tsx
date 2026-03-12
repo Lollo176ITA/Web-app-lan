@@ -18,6 +18,7 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  IconButton,
   Snackbar,
   Stack,
   Tab,
@@ -173,6 +174,7 @@ export function AppPage() {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterValue>("all");
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
+  const [hostQrDialogOpen, setHostQrDialogOpen] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
   const [loading, setLoading] = useState(true);
@@ -498,17 +500,37 @@ export function AppPage() {
                       }}
                     >
                       <Stack spacing={2}>
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            URL LAN
-                          </Typography>
-                          <Typography variant="h6" sx={{ mt: 0.75, wordBreak: "break-word" }}>
-                            {session.lanUrl}
-                          </Typography>
-                        </Box>
+                        <Stack direction="row" spacing={1.25} alignItems="center" justifyContent="space-between">
+                          <Box sx={{ minWidth: 0, flex: 1 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              URL LAN
+                            </Typography>
+                            <Typography variant="h6" sx={{ mt: 0.75, wordBreak: "break-word" }}>
+                              {session.lanUrl}
+                            </Typography>
+                          </Box>
+
+                          {isMobile && qrCodeDataUrl ? (
+                            <IconButton
+                              aria-label="Apri QR code URL LAN"
+                              onClick={() => {
+                                setHostQrDialogOpen(true);
+                              }}
+                              sx={{
+                                flexShrink: 0,
+                                borderRadius: 2.5,
+                                bgcolor: alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08),
+                                color: isDark ? theme.palette.primary.light : "primary.main",
+                                border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.24 : 0.12)}`
+                              }}
+                            >
+                              <QrCode2RoundedIcon />
+                            </IconButton>
+                          ) : null}
+                        </Stack>
                       </Stack>
 
-                      {qrCodeDataUrl ? (
+                      {!isMobile && qrCodeDataUrl ? (
                         <Box
                           sx={{
                             p: 1.25,
@@ -711,6 +733,65 @@ export function AppPage() {
           </Card>
         </Stack>
       </Container>
+
+      <Dialog
+        open={hostQrDialogOpen}
+        onClose={() => {
+          setHostQrDialogOpen(false);
+        }}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>QR code URL LAN</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1, alignItems: "center" }}>
+            <Typography color="text.secondary" variant="body2" sx={{ alignSelf: "stretch" }}>
+              Inquadra questo codice dalla stessa LAN per aprire subito Routy sul device.
+            </Typography>
+            <Box
+              sx={{
+                p: 1.5,
+                borderRadius: 2,
+                bgcolor: "#ffffff",
+                border: `1px solid ${alpha("#1769aa", 0.16)}`
+              }}
+            >
+              {qrCodeDataUrl ? (
+                <Box
+                  component="img"
+                  src={qrCodeDataUrl}
+                  alt="QR code URL LAN"
+                  sx={{ width: 224, height: 224, display: "block" }}
+                />
+              ) : null}
+            </Box>
+            {session ? (
+              <Typography color="text.secondary" variant="body2" sx={{ alignSelf: "stretch", wordBreak: "break-word" }}>
+                {session.lanUrl}
+              </Typography>
+            ) : null}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setHostQrDialogOpen(false);
+            }}
+          >
+            Chiudi
+          </Button>
+          {session ? (
+            <Button
+              startIcon={<ContentCopyRoundedIcon />}
+              onClick={() => {
+                void copyText(session.lanUrl, "URL LAN copiato negli appunti.");
+              }}
+            >
+              Copia URL
+            </Button>
+          ) : null}
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={Boolean(qrItemTarget)}

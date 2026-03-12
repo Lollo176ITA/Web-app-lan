@@ -218,6 +218,17 @@ Esempio:
 PORT=8788 STORAGE_ROOT=.tmp/dev-storage npm run dev
 ```
 
+## Licenza
+
+Il codice originale e i materiali proprietari di questo repository sono
+distribuiti con licenza proprietaria: vedi [LICENSE](LICENSE).
+
+Le dipendenze, i font, le icone e gli altri componenti di terze parti
+rimangono soggetti alle rispettive licenze: vedi
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Nel metadata npm il progetto e marcato come `UNLICENSED`.
+
 ## Build e runtime
 
 Build produzione:

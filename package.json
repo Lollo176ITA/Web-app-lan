@@ -1,6 +1,7 @@
 {
   "name": "routy",
   "version": "1.0.0",
+  "license": "UNLICENSED",
   "private": true,
   "type": "module",
   "main": "desktop/main.mjs",
