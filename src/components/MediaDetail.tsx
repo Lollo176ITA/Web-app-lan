@@ -20,7 +20,8 @@ import {
   Chip,
   Divider,
   Stack,
-  Typography
+  Typography,
+  useMediaQuery
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import type { ItemPreview, LibraryItem } from "../../shared/types";
@@ -133,6 +134,7 @@ function DocumentPreview({
 
 export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isDark = theme.palette.mode === "dark";
   const [preview, setPreview] = useState<ItemPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -202,6 +204,7 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
   return (
     <Card sx={{ minWidth: 0 }}>
       <CardHeader
+        disableTypography
         sx={{
           alignItems: "flex-start",
           "& .MuiCardHeader-content": {
@@ -213,24 +216,37 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
             <Icon />
           </Avatar>
         }
-        titleTypographyProps={{
-          variant: "h4",
-          sx: {
-            fontSize: "clamp(1.25rem, 4.8vw, 2rem)",
-            overflowWrap: "anywhere"
-          }
-        }}
-        subheaderTypographyProps={{
-          color: "text.secondary",
-          sx: {
-            overflowWrap: "anywhere"
-          }
-        }}
-        title={item.name}
+        title={
+          <Typography
+            variant="h4"
+            sx={{
+              fontSize: "clamp(1.25rem, 4.8vw, 2rem)",
+              overflowWrap: "anywhere",
+              ...(isMobile
+                ? {
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 2
+                  }
+                : {})
+            }}
+          >
+            {item.name}
+          </Typography>
+        }
         subheader={
-          item.kind === "folder"
-            ? `${item.childrenCount ?? 0} elementi`
-            : `${item.mimeType} · ${formatBytes(item.sizeBytes)} · ${formatDate(item.createdAt)}`
+          <Typography
+            color="text.secondary"
+            sx={{
+              overflowWrap: "anywhere"
+            }}
+          >
+            {item.kind === "folder"
+              ? `${item.childrenCount ?? 0} elementi`
+              : `${item.mimeType} · ${formatBytes(item.sizeBytes)} · ${formatDate(item.createdAt)}`}
+          </Typography>
         }
       />
       <Divider />

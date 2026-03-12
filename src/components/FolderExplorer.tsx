@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
@@ -15,7 +16,8 @@ import {
   ListItemButton,
   ListItemText,
   Stack,
-  Typography
+  Typography,
+  useMediaQuery
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import type { ArchiveFormat, LibraryItem } from "../../shared/types";
@@ -94,7 +96,9 @@ export function FolderExplorer({
   onShowQrCode
 }: FolderExplorerProps) {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isDark = theme.palette.mode === "dark";
+  const columnsViewportRef = useRef<HTMLDivElement | null>(null);
   const folderPath = buildFolderPath(items, currentFolderId);
   const pathFolderIds = new Set(folderPath.map((folder) => folder.id));
   const columns = [
@@ -109,6 +113,34 @@ export function FolderExplorer({
       items: sortExplorerItems(items.filter((item) => item.parentId === folder.id))
     }))
   ];
+
+  useEffect(() => {
+    const viewport = columnsViewportRef.current;
+
+    if (!isMobile || !viewport) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      if (!currentFolderId) {
+        viewport.scrollTo({
+          left: 0,
+          behavior: "smooth"
+        });
+        return;
+      }
+
+      viewport.lastElementChild?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "end"
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [currentFolderId, isMobile]);
 
   return (
     <Stack spacing={1.5}>
@@ -137,6 +169,7 @@ export function FolderExplorer({
       </Stack>
 
       <Box
+        ref={columnsViewportRef}
         sx={{
           display: "grid",
           gap: 1.5,

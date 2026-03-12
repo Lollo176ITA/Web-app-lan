@@ -11,7 +11,8 @@ import {
   Chip,
   CircularProgress,
   Stack,
-  Typography
+  Typography,
+  useMediaQuery
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 
@@ -23,6 +24,7 @@ interface UploadSurfaceProps {
 
 export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfaceProps) {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isDark = theme.palette.mode === "dark";
   const inputId = useId();
   const directoryInputRef = useRef<HTMLInputElement | null>(null);
@@ -72,26 +74,48 @@ export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfac
     >
       <CardContent>
         <Stack direction={{ xs: "column", md: "row" }} spacing={3} alignItems={{ xs: "flex-start", md: "center" }}>
-          <Avatar
-            sx={{
-              width: 72,
-              height: 72,
-              bgcolor: "primary.main",
-              color: "common.white",
-              boxShadow: isDark ? "0 16px 36px rgba(0, 0, 0, 0.32)" : "0 12px 30px rgba(23, 105, 170, 0.24)"
-            }}
-          >
-            {uploading ? <CircularProgress color="inherit" size={30} /> : <CloudUploadRoundedIcon sx={{ fontSize: 34 }} />}
-          </Avatar>
+          {isMobile ? null : (
+            <Avatar
+              sx={{
+                width: 72,
+                height: 72,
+                bgcolor: "primary.main",
+                color: "common.white",
+                boxShadow: isDark ? "0 16px 36px rgba(0, 0, 0, 0.32)" : "0 12px 30px rgba(23, 105, 170, 0.24)"
+              }}
+            >
+              {uploading ? (
+                <CircularProgress color="inherit" size={30} />
+              ) : (
+                <CloudUploadRoundedIcon sx={{ fontSize: 34 }} />
+              )}
+            </Avatar>
+          )}
 
           <Stack spacing={1.5} sx={{ flex: 1 }}>
-            <Typography variant="h5">Trascina qui i tuoi file LAN</Typography>
+            <Typography variant="h5">{isMobile ? "Carica i tuoi file" : "Trascina qui i tuoi file LAN"}</Typography>
             <Typography color="text.secondary">
-              Video, immagini, audio, documenti e archivi finiscono subito nella libreria condivisa del device host.
-              {targetLabel ? ` Cartella corrente: ${targetLabel}.` : ""}
+              {isMobile
+                ? `Cartella corrente: ${targetLabel ?? "Radice LAN"}.`
+                : `Video, immagini, audio, documenti e archivi finiscono subito nella libreria condivisa del device host.${
+                    targetLabel ? ` Cartella corrente: ${targetLabel}.` : ""
+                  }`}
             </Typography>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-              <Button component="label" variant="contained" size="large">
+            <Box
+              sx={{
+                width: "100%",
+                display: "grid",
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gap: 1.5
+              }}
+            >
+              <Button
+                component="label"
+                variant="contained"
+                size="large"
+                fullWidth
+                sx={{ minWidth: 0 }}
+              >
                 Seleziona file
                 <input
                   hidden
@@ -107,23 +131,25 @@ export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfac
               <Button
                 variant="outlined"
                 size="large"
+                fullWidth
+                sx={{ minWidth: 0 }}
                 onClick={() => {
                   directoryInputRef.current?.click();
                 }}
               >
                 Carica cartella
               </Button>
-              <input
-                ref={directoryInputRef}
-                hidden
-                multiple
-                type="file"
-                onChange={(event) => {
-                  void handleFiles(event.target.files);
-                  event.currentTarget.value = "";
-                }}
-              />
-            </Stack>
+            </Box>
+            <input
+              ref={directoryInputRef}
+              hidden
+              multiple
+              type="file"
+              onChange={(event) => {
+                void handleFiles(event.target.files);
+                event.currentTarget.value = "";
+              }}
+            />
           </Stack>
         </Stack>
       </CardContent>
