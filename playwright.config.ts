@@ -7,12 +7,14 @@ export default defineConfig({
     timeout: 10_000
   },
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: "https://127.0.0.1:5173",
+    ignoreHTTPSErrors: true,
     trace: "retain-on-failure"
   },
   webServer: {
     command: "rm -rf .tmp/playwright-storage && mkdir -p .tmp && STORAGE_ROOT=.tmp/playwright-storage npm run dev",
-    url: "http://127.0.0.1:5173",
+    ignoreHTTPSErrors: true,
+    url: "https://127.0.0.1:5173",
     reuseExistingServer: false,
     stdout: "ignore",
     stderr: "pipe",

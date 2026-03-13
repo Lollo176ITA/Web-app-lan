@@ -23,14 +23,14 @@ afterEach(async () => {
   );
 });
 
-describe("Routeroom API", () => {
+describe("Routy API", () => {
   it("returns session details with LAN metadata", async () => {
     const storageRoot = await createTemporaryStorage();
     const { app, close } = await createApp({ port: 8787, storageRoot });
 
     const response = await request(app).get("/api/session").expect(200);
 
-    expect(response.body.appName).toBe("Routeroom");
+    expect(response.body.appName).toBe("Routy");
     expect(response.body.storagePath).toBe(storageRoot);
     expect(response.body.lanUrl).toContain("http://");
     expect(response.body.availableArchiveFormats).toContain("zip");
@@ -281,12 +281,12 @@ describe("Routeroom API", () => {
 
     await request(app)
       .post("/api/chat/messages")
-      .send({ identity: { nickname: "Anna" }, text: "Ciao LAN" })
+      .send({ identity: { id: "anna-1", nickname: "Anna" }, text: "Ciao LAN" })
       .expect(201);
 
     await request(app)
       .post(`/api/stream/rooms/${roomId}/messages`)
-      .send({ identity: { nickname: "Bruno" }, text: "Video pronto" })
+      .send({ identity: { id: "bruno-1", nickname: "Bruno" }, text: "Video pronto" })
       .expect(201);
 
     await request(app)
@@ -310,8 +310,8 @@ describe("Routeroom API", () => {
     const chatSnapshot = await request(reloaded.app).get("/api/chat").expect(200);
     const restoredRoom = await request(reloaded.app).get(`/api/stream/rooms/${roomId}`).expect(200);
 
-    expect(chatSnapshot.body.messages).toHaveLength(1);
-    expect(chatSnapshot.body.messages[0].text).toBe("Ciao LAN");
+    expect(chatSnapshot.body.globalMessages).toHaveLength(1);
+    expect(chatSnapshot.body.globalMessages[0].text).toBe("Ciao LAN");
     expect(restoredRoom.body.room.name).toBe("Salotto sync");
     expect(restoredRoom.body.room.currentVideoName).toBe("sample-video.webm");
     expect(restoredRoom.body.room.messages).toHaveLength(1);
@@ -348,6 +348,138 @@ describe("Routeroom API", () => {
     close();
   });
 
+  it("starts a room screen share once and rejects concurrent presenters", async () => {
+    const storageRoot = await createTemporaryStorage();
+    const { app, close } = await createApp({ storageRoot });
+
+    const roomResponse = await request(app)
+      .post("/api/stream/rooms")
+      .send({ name: "Presentazione LAN" })
+      .expect(201);
+
+    const roomId = roomResponse.body.room.id as string;
+
+    const startResponse = await request(app)
+      .post(`/api/stream/rooms/${roomId}/screen-share/start`)
+      .send({
+        identity: { id: "host-1", nickname: "Host" },
+        hasAudio: true
+      })
+      .expect(200);
+
+    expect(startResponse.body.room.sourceMode).toBe("screen");
+    expect(startResponse.body.room.screenShare.status).toBe("live");
+    expect(startResponse.body.room.screenShare.presenter.nickname).toBe("Host");
+    expect(startResponse.body.room.screenShare.hasAudio).toBe(true);
+
+    await request(app)
+      .post(`/api/stream/rooms/${roomId}/screen-share/start`)
+      .send({
+        identity: { id: "guest-1", nickname: "Guest" },
+        hasAudio: true
+      })
+      .expect(409);
+
+    close();
+  });
+
+  it("locks video controls during screen share and only lets the presenter stop it", async () => {
+    const storageRoot = await createTemporaryStorage();
+    const { app, close } = await createApp({ storageRoot });
+    const videoBuffer = await fs.readFile(path.join(fixturesDirectory, "sample-video.webm"));
+
+    const uploadResponse = await request(app)
+      .post("/api/items")
+      .attach("files", videoBuffer, {
+        filename: "sample-video.webm",
+        contentType: "video/webm"
+      })
+      .expect(201);
+
+    const [{ id: videoId }] = uploadResponse.body.items as Array<{ id: string }>;
+    const roomResponse = await request(app)
+      .post("/api/stream/rooms")
+      .send({ name: "Sala demo" })
+      .expect(201);
+
+    const roomId = roomResponse.body.room.id as string;
+
+    await request(app)
+      .post(`/api/stream/rooms/${roomId}/video`)
+      .send({ videoItemId: videoId })
+      .expect(200);
+
+    const startResponse = await request(app)
+      .post(`/api/stream/rooms/${roomId}/screen-share/start`)
+      .send({
+        identity: { id: "presenter-1", nickname: "Presenter" },
+        hasAudio: true
+      })
+      .expect(200);
+
+    const sessionId = startResponse.body.room.screenShare.sessionId as string;
+
+    await request(app)
+      .post(`/api/stream/rooms/${roomId}/video`)
+      .send({ videoItemId: videoId })
+      .expect(409);
+
+    await request(app)
+      .post(`/api/stream/rooms/${roomId}/playback`)
+      .send({ action: "play", positionSeconds: 3 })
+      .expect(409);
+
+    await request(app)
+      .post(`/api/stream/rooms/${roomId}/screen-share/stop`)
+      .send({
+        identity: { id: "viewer-1", nickname: "Viewer" },
+        sessionId
+      })
+      .expect(403);
+
+    const stopResponse = await request(app)
+      .post(`/api/stream/rooms/${roomId}/screen-share/stop`)
+      .send({
+        identity: { id: "presenter-1", nickname: "Presenter" },
+        sessionId
+      })
+      .expect(200);
+
+    expect(stopResponse.body.room.sourceMode).toBe("video");
+    expect(stopResponse.body.room.screenShare.status).toBe("idle");
+    close();
+  });
+
+  it("resets active screen share state after restart", async () => {
+    const storageRoot = await createTemporaryStorage();
+    const { app, close } = await createApp({ storageRoot });
+
+    const roomResponse = await request(app)
+      .post("/api/stream/rooms")
+      .send({ name: "Restart room" })
+      .expect(201);
+
+    const roomId = roomResponse.body.room.id as string;
+
+    await request(app)
+      .post(`/api/stream/rooms/${roomId}/screen-share/start`)
+      .send({
+        identity: { id: "presenter-1", nickname: "Presenter" },
+        hasAudio: true
+      })
+      .expect(200);
+
+    close();
+
+    const reloaded = await createApp({ storageRoot });
+    const roomSnapshot = await request(reloaded.app).get(`/api/stream/rooms/${roomId}`).expect(200);
+
+    expect(roomSnapshot.body.room.sourceMode).toBe("video");
+    expect(roomSnapshot.body.room.screenShare.status).toBe("idle");
+    expect(roomSnapshot.body.room.screenShare.presenter).toBeNull();
+    reloaded.close();
+  });
+
   it("removes room chat when a stream room is deleted", async () => {
     const storageRoot = await createTemporaryStorage();
     const { app, close } = await createApp({ storageRoot });
@@ -361,7 +493,7 @@ describe("Routeroom API", () => {
 
     await request(app)
       .post(`/api/stream/rooms/${roomId}/messages`)
-      .send({ identity: { nickname: "Luca" }, text: "Ci sono" })
+      .send({ identity: { id: "luca-1", nickname: "Luca" }, text: "Ci sono" })
       .expect(201);
 
     await request(app).delete(`/api/stream/rooms/${roomId}`).expect(200);
@@ -422,7 +554,7 @@ describe("Routeroom API", () => {
 
     await request(server)
       .post("/api/chat/messages")
-      .send({ identity: { nickname: "Marta" }, text: "Evento globale" })
+      .send({ identity: { id: "marta-1", nickname: "Marta" }, text: "Evento globale" })
       .expect(201);
 
     const transcript = await Promise.race([

@@ -31,6 +31,7 @@ import type { LibraryItem, StreamRoomSummary } from "../../shared/types";
 import { PageHeader } from "../components/PageHeader";
 import { copyTextToClipboard } from "../lib/clipboard";
 import { createStreamRoom, deleteStreamRoom, fetchItems, fetchSession, fetchStreamRooms } from "../lib/api";
+import { createLanShareUrl, resolvePreferredSessionUrl } from "../lib/share-url";
 import { useLanLiveState } from "../lib/useLanLiveState";
 
 function formatRoomTime(value: string) {
@@ -43,17 +44,7 @@ function formatRoomTime(value: string) {
 }
 
 function buildRoomShareUrl(roomId: string, lanUrl?: string | null) {
-  const browserUrl = new URL(window.location.href);
-  const shareUrl = new URL(browserUrl.href);
-
-  if (lanUrl) {
-    const sessionUrl = new URL(lanUrl);
-
-    if (browserUrl.hostname === "localhost" || browserUrl.hostname === "127.0.0.1") {
-      shareUrl.protocol = sessionUrl.protocol;
-      shareUrl.hostname = sessionUrl.hostname;
-    }
-  }
+  const shareUrl = createLanShareUrl(lanUrl);
 
   shareUrl.pathname = `/stream/room/${roomId}`;
   shareUrl.search = "";
@@ -108,7 +99,7 @@ export function StreamRoomsPage() {
     startTransition(() => {
       setRooms(roomsResponse.rooms);
       setItems(allItems);
-      setSessionLanUrl(session.lanUrl);
+      setSessionLanUrl(resolvePreferredSessionUrl(session));
       setLoading(false);
     });
   }
@@ -306,21 +297,38 @@ export function StreamRoomsPage() {
 
                             <Stack spacing={0.25}>
                               <Typography color="text.secondary" variant="caption">
-                                Video corrente
+                                Sorgente attiva
                               </Typography>
                               <Typography variant="body2" sx={{ wordBreak: "break-word" }}>
-                                {room.currentVideoName ?? "Nessun video selezionato"}
+                                {room.sourceMode === "screen"
+                                  ? room.screenShare.presenter
+                                    ? `Schermo live di ${room.screenShare.presenter.nickname}`
+                                    : "Schermo live"
+                                  : room.currentVideoName ?? "Nessun video selezionato"}
                               </Typography>
                             </Stack>
 
                             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                               <Chip
                                 size="small"
+                                color={room.sourceMode === "screen" ? "secondary" : "default"}
+                                label={room.sourceMode === "screen" ? "Schermo live" : "Video"}
+                              />
+                              <Chip
+                                size="small"
                                 label={room.messageCount === 1 ? "1 messaggio" : `${room.messageCount} messaggi`}
                               />
                               <Chip
                                 size="small"
-                                label={room.playback.status === "playing" ? "In riproduzione" : "In pausa"}
+                                label={
+                                  room.sourceMode === "screen"
+                                    ? room.screenShare.presenter
+                                      ? `Presenter: ${room.screenShare.presenter.nickname}`
+                                      : "Presenter attivo"
+                                    : room.playback.status === "playing"
+                                      ? "In riproduzione"
+                                      : "In pausa"
+                                }
                               />
                             </Stack>
 

@@ -46,12 +46,23 @@ export function getPrivateLanIp() {
   return candidates[0]?.address;
 }
 
-export function getSessionUrls(port: number) {
+export function getSessionHosts() {
   const lanIp = getPrivateLanIp();
+  return {
+    lanIp,
+    certificateHosts: lanIp ? ["localhost", "127.0.0.1", lanIp] : ["localhost", "127.0.0.1"]
+  };
+}
+
+export function getSessionUrls(port: number, securePort?: number | null) {
+  const { lanIp } = getSessionHosts();
   const localUrl = `http://127.0.0.1:${port}`;
+  const secureLocalUrl = securePort ? `https://127.0.0.1:${securePort}` : null;
 
   return {
     localUrl,
-    lanUrl: lanIp ? `http://${lanIp}:${port}` : localUrl
+    lanUrl: lanIp ? `http://${lanIp}:${port}` : localUrl,
+    secureLocalUrl,
+    secureLanUrl: securePort ? (lanIp ? `https://${lanIp}:${securePort}` : secureLocalUrl) : null
   };
 }

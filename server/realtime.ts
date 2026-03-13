@@ -9,6 +9,7 @@ import type {
   PlaybackState,
   PrivateChatMessage,
   RoomChatMessage,
+  ScreenShareState,
   StreamRoomPlaybackAction
 } from "../shared/types.js";
 
@@ -21,6 +22,9 @@ interface RoomRecord {
   name: string;
   createdAt: string;
   updatedAt: string;
+  sourceMode: "video" | "screen";
+  interactionPolicy: "view-and-chat";
+  screenShare: ScreenShareState;
   playback: PlaybackState;
 }
 
@@ -38,6 +42,17 @@ function createEmptyPlaybackState(timestamp: string): PlaybackState {
     positionSeconds: 0,
     updatedAt: timestamp,
     startedAt: null
+  };
+}
+
+function createEmptyScreenShareState(): ScreenShareState {
+  return {
+    status: "idle",
+    presenter: null,
+    sessionId: null,
+    startedAt: null,
+    audioRequired: true,
+    hasAudio: false
   };
 }
 
@@ -104,6 +119,9 @@ function normalizeRoomRecord(value: Partial<RoomRecord> | undefined, timestamp: 
     name,
     createdAt: typeof value?.createdAt === "string" ? value.createdAt : timestamp,
     updatedAt: typeof value?.updatedAt === "string" ? value.updatedAt : timestamp,
+    sourceMode: "video",
+    interactionPolicy: "view-and-chat",
+    screenShare: createEmptyScreenShareState(),
     playback: normalizePlaybackState(value?.playback, timestamp)
   };
 }
@@ -380,6 +398,9 @@ export class CollaborationStore {
       name: trimmedName,
       createdAt: timestamp,
       updatedAt: timestamp,
+      sourceMode: "video",
+      interactionPolicy: "view-and-chat",
+      screenShare: createEmptyScreenShareState(),
       playback: createEmptyPlaybackState(timestamp)
     };
 
@@ -437,8 +458,13 @@ export class CollaborationStore {
       return null;
     }
 
+    if (room.sourceMode === "screen") {
+      throw new Error("Room source locked");
+    }
+
     const timestamp = new Date().toISOString();
     room.updatedAt = timestamp;
+    room.sourceMode = "video";
     room.playback = {
       videoItemId,
       status: "paused",
@@ -456,6 +482,10 @@ export class CollaborationStore {
 
     if (!room) {
       return null;
+    }
+
+    if (room.sourceMode === "screen") {
+      throw new Error("Room source locked");
     }
 
     if (!room.playback.videoItemId) {
@@ -495,6 +525,68 @@ export class CollaborationStore {
     }
 
     room.updatedAt = timestamp;
+    await this.persist();
+    return room;
+  }
+
+  async startRoomScreenShare(roomId: string, presenter: LanIdentity, hasAudio: boolean) {
+    const room = this.findRoom(roomId);
+
+    if (!room) {
+      return null;
+    }
+
+    if (room.screenShare.status === "live") {
+      throw new Error("Screen share active");
+    }
+
+    const normalizedPresenter = normalizeIdentity(presenter);
+
+    if (!normalizedPresenter) {
+      throw new Error("Invalid presenter");
+    }
+
+    const timestamp = new Date().toISOString();
+    room.updatedAt = timestamp;
+    room.sourceMode = "screen";
+    room.screenShare = {
+      status: "live",
+      presenter: normalizedPresenter,
+      sessionId: nanoid(12),
+      startedAt: timestamp,
+      audioRequired: true,
+      hasAudio
+    };
+
+    await this.persist();
+    return room;
+  }
+
+  async stopRoomScreenShare(roomId: string, identity: LanIdentity, sessionId: string) {
+    const room = this.findRoom(roomId);
+
+    if (!room) {
+      return null;
+    }
+
+    const normalizedIdentity = normalizeIdentity(identity);
+
+    if (!normalizedIdentity || !sessionId.trim()) {
+      throw new Error("Invalid presenter");
+    }
+
+    if (room.screenShare.status !== "live" || room.screenShare.sessionId !== sessionId) {
+      throw new Error("Screen share inactive");
+    }
+
+    if (room.screenShare.presenter?.id !== normalizedIdentity.id) {
+      throw new Error("Screen share forbidden");
+    }
+
+    const timestamp = new Date().toISOString();
+    room.updatedAt = timestamp;
+    room.sourceMode = "video";
+    room.screenShare = createEmptyScreenShareState();
     await this.persist();
     return room;
   }

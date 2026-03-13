@@ -71,6 +71,8 @@ export interface SessionInfo {
   appName: string;
   hostName: string;
   lanUrl: string;
+  secureLocalUrl: string | null;
+  secureLanUrl: string | null;
   storagePath: string;
   itemCount: number;
   totalBytes: number;
@@ -99,6 +101,7 @@ export interface HostDiagnosticsResponse {
   platform: string;
   port: number;
   lanUrl: string;
+  secureLanUrl: string | null;
   listenHost: string;
   checks: HostDiagnosticCheck[];
   commands: HostDiagnosticCommand[];
@@ -126,6 +129,15 @@ export interface RoomChatMessage extends ChatMessage {
 
 export type PlaybackStatus = "paused" | "playing";
 export type StreamRoomPlaybackAction = "play" | "pause" | "seek";
+export type StreamRoomSourceMode = "video" | "screen";
+export type StreamRoomInteractionPolicy = "view-and-chat";
+export type ScreenShareStatus = "idle" | "live";
+export type ScreenShareSignalKind =
+  | "join-request"
+  | "offer"
+  | "answer"
+  | "ice-candidate"
+  | "hangup";
 
 export interface PlaybackState {
   videoItemId: string | null;
@@ -135,11 +147,23 @@ export interface PlaybackState {
   startedAt: string | null;
 }
 
+export interface ScreenShareState {
+  status: ScreenShareStatus;
+  presenter: LanIdentity | null;
+  sessionId: string | null;
+  startedAt: string | null;
+  audioRequired: true;
+  hasAudio: boolean;
+}
+
 export interface StreamRoom {
   id: string;
   name: string;
   createdAt: string;
   updatedAt: string;
+  sourceMode: StreamRoomSourceMode;
+  interactionPolicy: StreamRoomInteractionPolicy;
+  screenShare: ScreenShareState;
   playback: PlaybackState;
   currentVideoName: string | null;
 }
@@ -243,4 +267,52 @@ export interface UpdateStreamRoomPlaybackRequest {
 
 export interface UpdateStreamRoomPlaybackResponse {
   room: StreamRoomDetail;
+}
+
+export interface StartScreenShareRequest {
+  identity: LanIdentity;
+  hasAudio: boolean;
+}
+
+export interface StartScreenShareResponse {
+  room: StreamRoomDetail;
+}
+
+export interface StopScreenShareRequest {
+  identity: LanIdentity;
+  sessionId: string;
+}
+
+export interface StopScreenShareResponse {
+  room: StreamRoomDetail;
+}
+
+export interface JoinScreenShareRequest {
+  identity: LanIdentity;
+  sessionId: string;
+}
+
+export interface JoinScreenShareResponse {
+  room: StreamRoomDetail;
+}
+
+export interface ScreenShareSignalRequest {
+  identity: LanIdentity;
+  sessionId: string;
+  targetUserId: string;
+  kind: ScreenShareSignalKind;
+  payload: unknown;
+}
+
+export interface ScreenShareSignalResponse {
+  accepted: true;
+}
+
+export interface ScreenShareSignalEvent {
+  roomId: string;
+  sessionId: string;
+  fromIdentity: LanIdentity;
+  targetUserId: string;
+  kind: ScreenShareSignalKind;
+  payload: unknown;
 }

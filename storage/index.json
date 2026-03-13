@@ -1,5 +1,115 @@
 [
   {
+    "id": "GRb1qf8Jur",
+    "name": "Lollo.7z",
+    "storedName": "GRb1qf8Jur--Lollo.7z",
+    "mimeType": "application/x-7z-compressed",
+    "kind": "archive",
+    "sizeBytes": 873196402,
+    "createdAt": "2026-03-12T11:08:21.933Z",
+    "parentId": null
+  },
+  {
+    "id": "3DkA7dD1kv",
+    "name": "La sua espressione era diversa_ non era il solito (1).pdf",
+    "storedName": "3DkA7dD1kv--La-sua-espressione-era-diversa_-non-era-il-solito-1-.pdf",
+    "mimeType": "application/pdf",
+    "kind": "document",
+    "sizeBytes": 1010273,
+    "createdAt": "2026-03-12T11:03:45.534Z",
+    "parentId": "QrlM2HVFqG"
+  },
+  {
+    "id": "3TUAp8CBTx",
+    "name": "1_MERCURI - notula ESEMPIO (1).docx",
+    "storedName": "3TUAp8CBTx--1_MERCURI-notula-ESEMPIO-1-.docx",
+    "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "kind": "document",
+    "sizeBytes": 8145,
+    "createdAt": "2026-03-12T11:03:27.885Z",
+    "parentId": "QrlM2HVFqG"
+  },
+  {
+    "id": "HU1cPhm3up",
+    "name": "Web-app-lan-builds-mac-arm64",
+    "storedName": "",
+    "mimeType": "application/vnd.routeroom.folder",
+    "kind": "folder",
+    "sizeBytes": 0,
+    "createdAt": "2026-03-12T10:55:58.331Z",
+    "parentId": "QrlM2HVFqG"
+  },
+  {
+    "id": "ThJEhmJWEw",
+    "name": "build-info.json",
+    "storedName": "ThJEhmJWEw--build-info.json",
+    "mimeType": "application/json",
+    "kind": "document",
+    "sizeBytes": 693,
+    "createdAt": "2026-03-12T10:55:58.331Z",
+    "parentId": "HU1cPhm3up"
+  },
+  {
+    "id": "khvWdWrrOd",
+    "name": "Routeroom-1.0.0-arm64.dmg.part-001",
+    "storedName": "khvWdWrrOd--Routeroom-1.0.0-arm64.dmg.part-001",
+    "mimeType": "application/octet-stream",
+    "kind": "other",
+    "sizeBytes": 16916663,
+    "createdAt": "2026-03-12T10:55:58.331Z",
+    "parentId": "HU1cPhm3up"
+  },
+  {
+    "id": "Wnnp1nvvZD",
+    "name": "Routeroom-1.0.0-arm64.dmg.part-000",
+    "storedName": "Wnnp1nvvZD--Routeroom-1.0.0-arm64.dmg.part-000",
+    "mimeType": "application/octet-stream",
+    "kind": "other",
+    "sizeBytes": 99614720,
+    "createdAt": "2026-03-12T10:55:58.331Z",
+    "parentId": "HU1cPhm3up"
+  },
+  {
+    "id": "Bt1gVuOh0h",
+    "name": "assemble.sh",
+    "storedName": "Bt1gVuOh0h--assemble.sh",
+    "mimeType": "text/x-sh",
+    "kind": "document",
+    "sizeBytes": 490,
+    "createdAt": "2026-03-12T10:55:58.331Z",
+    "parentId": "HU1cPhm3up"
+  },
+  {
+    "id": "CzrbWHiGTk",
+    "name": "Routeroom-1.0.0-arm64.dmg",
+    "storedName": "CzrbWHiGTk--Routeroom-1.0.0-arm64.dmg",
+    "mimeType": "application/x-apple-diskimage",
+    "kind": "other",
+    "sizeBytes": 116531383,
+    "createdAt": "2026-03-12T10:55:58.331Z",
+    "parentId": "HU1cPhm3up"
+  },
+  {
+    "id": "67CdwmuGAu",
+    "name": "README.md",
+    "storedName": "67CdwmuGAu--README.md",
+    "mimeType": "text/markdown",
+    "kind": "document",
+    "sizeBytes": 362,
+    "createdAt": "2026-03-12T10:55:58.331Z",
+    "parentId": "HU1cPhm3up"
+  },
+  {
+    "id": "m-qVbnpV0s",
+    "name": "assemble.ps1",
+    "storedName": "m-qVbnpV0s--assemble.ps1",
+    "mimeType": "application/octet-stream",
+    "kind": "other",
+    "sizeBytes": 611,
+    "createdAt": "2026-03-12T10:55:58.331Z",
+    "parentId": "HU1cPhm3up"
+  },
+  {
     "id": "VWTIH7ySVz",
     "name": "ChatGPT Image 12 mar 2026, 10_45_12.png",
     "storedName": "VWTIH7ySVz--ChatGPT-Image-12-mar-2026-10_45_12.png",

@@ -27,14 +27,24 @@ import type {
   DeleteItemResponse,
   HostDiagnosticsResponse,
   ItemPreview,
+  JoinScreenShareRequest,
+  JoinScreenShareResponse,
+  LanIdentity,
   PostChatMessageRequest,
   PostRoomMessageRequest,
+  ScreenShareSignalEvent,
+  ScreenShareSignalRequest,
+  ScreenShareSignalResponse,
   SendChatMessageResponse,
   SendPrivateChatMessageResponse,
   SendRoomMessageResponse,
   SetStreamRoomVideoRequest,
   SetStreamRoomVideoResponse,
   SessionInfo,
+  StartScreenShareRequest,
+  StartScreenShareResponse,
+  StopScreenShareRequest,
+  StopScreenShareResponse,
   StreamRoomDetail,
   StreamRoomResponse,
   StreamRoomsResponse,
@@ -50,6 +60,7 @@ import {
 
 interface CreateAppOptions {
   port?: number;
+  httpsPort?: number | null;
   seedDemo?: boolean;
   storageRoot?: string;
   staticDir?: string;
@@ -96,6 +107,15 @@ function normalizeStringArray(value: unknown) {
 
 function normalizeArchiveFormat(value: unknown): ArchiveFormat | null {
   return value === "zip" || value === "7z" || value === "rar" ? value : null;
+}
+
+function hasLanIdentity(value: unknown): value is LanIdentity {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as LanIdentity).id === "string" &&
+    typeof (value as LanIdentity).nickname === "string"
+  );
 }
 
 function normalizeClientIp(value: string | undefined) {
@@ -196,9 +216,10 @@ async function createItemPreview(
 
 export async function createApp(options: CreateAppOptions = {}) {
   const port = options.port ?? 8787;
+  const httpsPort = options.httpsPort ?? null;
   const listenHost = options.listenHost ?? "0.0.0.0";
   const storageRoot = options.storageRoot ?? path.resolve(process.cwd(), "storage");
-  const urls = getSessionUrls(port);
+  const urls = getSessionUrls(port, httpsPort);
   const store = new LibraryStore(storageRoot);
   const collaboration = new CollaborationStore(storageRoot);
   const events = new EventHub();
@@ -292,6 +313,9 @@ export async function createApp(options: CreateAppOptions = {}) {
       name: room.name,
       createdAt: room.createdAt,
       updatedAt: room.updatedAt,
+      sourceMode: room.sourceMode,
+      interactionPolicy: room.interactionPolicy,
+      screenShare: room.screenShare,
       currentVideoName: videoItem?.kind === "video" ? videoItem.name : null,
       messageCount: collaboration.getRoomMessages(room.id).length,
       playback: collaboration.materializePlayback(room)
@@ -347,6 +371,10 @@ export async function createApp(options: CreateAppOptions = {}) {
     });
   }
 
+  function broadcastRoomSignal(payload: ScreenShareSignalEvent) {
+    events.broadcast("stream-room-signal", payload);
+  }
+
   app.use(express.json());
 
   app.get("/api/health", (_request, response) => {
@@ -369,6 +397,8 @@ export async function createApp(options: CreateAppOptions = {}) {
       appName: "Routy",
       hostName: os.hostname(),
       lanUrl: urls.lanUrl,
+      secureLocalUrl: urls.secureLocalUrl,
+      secureLanUrl: urls.secureLanUrl,
       storagePath: store.rootDir,
       availableArchiveFormats,
       ...summary
@@ -381,6 +411,7 @@ export async function createApp(options: CreateAppOptions = {}) {
     try {
       const payload: HostDiagnosticsResponse = await collectHostDiagnostics({
         lanUrl: urls.lanUrl,
+        secureLanUrl: urls.secureLanUrl,
         listenHost,
         port
       });
@@ -645,6 +676,11 @@ export async function createApp(options: CreateAppOptions = {}) {
       };
       response.json(result);
     } catch (error) {
+      if (error instanceof Error && error.message === "Room source locked") {
+        response.status(409).json({ message: "La stanza e in presentazione schermo. Termina prima la condivisione." });
+        return;
+      }
+
       next(error);
     }
   });
@@ -680,6 +716,11 @@ export async function createApp(options: CreateAppOptions = {}) {
       };
       response.json(result);
     } catch (error) {
+      if (error instanceof Error && error.message === "Room source locked") {
+        response.status(409).json({ message: "Il playback video e bloccato durante la presentazione schermo." });
+        return;
+      }
+
       if (error instanceof Error && error.message === "Missing room video") {
         response.status(400).json({ message: "Seleziona prima un video per la stanza." });
         return;
@@ -687,6 +728,166 @@ export async function createApp(options: CreateAppOptions = {}) {
 
       next(error);
     }
+  });
+
+  app.post("/api/stream/rooms/:id/screen-share/start", async (request, response, next) => {
+    try {
+      const payload = request.body as StartScreenShareRequest | undefined;
+
+      if (!payload || !hasLanIdentity(payload.identity) || payload.hasAudio !== true) {
+        response.status(400).json({ message: "La presentazione richiede un presenter valido e audio attivo." });
+        return;
+      }
+
+      const room = await collaboration.startRoomScreenShare(request.params.id, payload.identity, payload.hasAudio);
+
+      if (!room) {
+        response.status(404).json({ message: "Stanza non trovata." });
+        return;
+      }
+
+      broadcastRoomUpdated(request.params.id);
+
+      const result: StartScreenShareResponse = {
+        room: buildRoomDetail(room)
+      };
+      response.json(result);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Screen share active") {
+        response.status(409).json({ message: "C'e gia una presentazione schermo attiva in questa stanza." });
+        return;
+      }
+
+      if (error instanceof Error && error.message === "Invalid presenter") {
+        response.status(400).json({ message: "Presenter non valido." });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
+  app.post("/api/stream/rooms/:id/screen-share/stop", async (request, response, next) => {
+    try {
+      const payload = request.body as StopScreenShareRequest | undefined;
+
+      if (!payload || !hasLanIdentity(payload.identity) || typeof payload.sessionId !== "string") {
+        response.status(400).json({ message: "Richiesta di stop non valida." });
+        return;
+      }
+
+      const room = await collaboration.stopRoomScreenShare(request.params.id, payload.identity, payload.sessionId);
+
+      if (!room) {
+        response.status(404).json({ message: "Stanza non trovata." });
+        return;
+      }
+
+      broadcastRoomUpdated(request.params.id);
+
+      const result: StopScreenShareResponse = {
+        room: buildRoomDetail(room)
+      };
+      response.json(result);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Screen share forbidden") {
+        response.status(403).json({ message: "Solo il presenter attivo puo terminare la presentazione." });
+        return;
+      }
+
+      if (error instanceof Error && error.message === "Screen share inactive") {
+        response.status(409).json({ message: "Non c'e nessuna presentazione attiva per questa stanza." });
+        return;
+      }
+
+      if (error instanceof Error && error.message === "Invalid presenter") {
+        response.status(400).json({ message: "Presenter non valido." });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
+  app.post("/api/stream/rooms/:id/screen-share/join", (request, response) => {
+    const payload = request.body as JoinScreenShareRequest | undefined;
+
+    if (!payload || !hasLanIdentity(payload.identity) || typeof payload.sessionId !== "string") {
+      response.status(400).json({ message: "Richiesta di join non valida." });
+      return;
+    }
+
+    const room = collaboration.findRoom(request.params.id);
+
+    if (!room) {
+      response.status(404).json({ message: "Stanza non trovata." });
+      return;
+    }
+
+    if (room.screenShare.status !== "live" || room.screenShare.sessionId !== payload.sessionId) {
+      response.status(409).json({ message: "La presentazione non e disponibile." });
+      return;
+    }
+
+    if (room.screenShare.presenter && room.screenShare.presenter.id !== payload.identity.id) {
+      broadcastRoomSignal({
+        roomId: room.id,
+        sessionId: payload.sessionId,
+        fromIdentity: payload.identity,
+        targetUserId: room.screenShare.presenter.id,
+        kind: "join-request",
+        payload: null
+      });
+    }
+
+    const result: JoinScreenShareResponse = {
+      room: buildRoomDetail(room)
+    };
+    response.json(result);
+  });
+
+  app.post("/api/stream/rooms/:id/screen-share/signal", (request, response) => {
+    const payload = request.body as ScreenShareSignalRequest | undefined;
+
+    if (
+      !payload ||
+      !hasLanIdentity(payload.identity) ||
+      typeof payload.sessionId !== "string" ||
+      typeof payload.targetUserId !== "string" ||
+      (payload.kind !== "offer" &&
+        payload.kind !== "answer" &&
+        payload.kind !== "ice-candidate" &&
+        payload.kind !== "hangup")
+    ) {
+      response.status(400).json({ message: "Segnale WebRTC non valido." });
+      return;
+    }
+
+    const room = collaboration.findRoom(request.params.id);
+
+    if (!room) {
+      response.status(404).json({ message: "Stanza non trovata." });
+      return;
+    }
+
+    if (room.screenShare.status !== "live" || room.screenShare.sessionId !== payload.sessionId) {
+      response.status(409).json({ message: "La sessione di presentazione non e attiva." });
+      return;
+    }
+
+    broadcastRoomSignal({
+      roomId: room.id,
+      sessionId: payload.sessionId,
+      fromIdentity: payload.identity,
+      targetUserId: payload.targetUserId,
+      kind: payload.kind,
+      payload: payload.payload
+    });
+
+    const result: ScreenShareSignalResponse = {
+      accepted: true
+    };
+    response.json(result);
   });
 
   app.get("/api/items/:id", (request, response) => {

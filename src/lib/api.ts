@@ -11,15 +11,19 @@ import type {
   DirectChatSnapshotResponse,
   HostDiagnosticsResponse,
   ItemPreview,
+  JoinScreenShareResponse,
   LanIdentity,
   LibraryItem,
   PostChatMessageRequest,
   PostRoomMessageRequest,
+  ScreenShareSignalResponse,
   SendChatMessageResponse,
   SendPrivateChatMessageResponse,
   SendRoomMessageResponse,
   SetStreamRoomVideoResponse,
   SessionInfo,
+  StartScreenShareResponse,
+  StopScreenShareResponse,
   StreamRoomResponse,
   StreamRoomsResponse,
   UpdateStreamRoomPlaybackResponse,
@@ -161,6 +165,53 @@ export function updateStreamRoomPlayback(
   });
 }
 
+export function startScreenShare(roomId: string, identity: LanIdentity, hasAudio: boolean) {
+  return readJson<StartScreenShareResponse>(`/api/stream/rooms/${roomId}/screen-share/start`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ identity, hasAudio })
+  });
+}
+
+export function stopScreenShare(roomId: string, identity: LanIdentity, sessionId: string) {
+  return readJson<StopScreenShareResponse>(`/api/stream/rooms/${roomId}/screen-share/stop`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ identity, sessionId })
+  });
+}
+
+export function joinScreenShare(roomId: string, identity: LanIdentity, sessionId: string) {
+  return readJson<JoinScreenShareResponse>(`/api/stream/rooms/${roomId}/screen-share/join`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ identity, sessionId })
+  });
+}
+
+export function sendScreenShareSignal(
+  roomId: string,
+  identity: LanIdentity,
+  sessionId: string,
+  targetUserId: string,
+  kind: "offer" | "answer" | "ice-candidate" | "hangup",
+  payload: unknown
+) {
+  return readJson<ScreenShareSignalResponse>(`/api/stream/rooms/${roomId}/screen-share/signal`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ identity, sessionId, targetUserId, kind, payload })
+  });
+}
+
 export async function uploadFiles(files: File[], parentId?: string | null) {
   const body = new FormData();
   files.forEach((file) => {
@@ -208,14 +259,27 @@ export function fetchItemPreview(itemId: string) {
 }
 
 export function openLanEvents(
-  handlers: Record<string, () => void>,
+  handlers: Record<string, (payload?: unknown) => void>,
   onFallback: () => void,
   onOpen?: () => void
 ) {
   const source = new EventSource("/api/events");
 
   Object.entries(handlers).forEach(([eventName, handler]) => {
-    source.addEventListener(eventName, handler);
+    source.addEventListener(eventName, (event) => {
+      const data = "data" in event ? event.data : "";
+
+      if (!data) {
+        handler();
+        return;
+      }
+
+      try {
+        handler(JSON.parse(data as string) as unknown);
+      } catch {
+        handler(data);
+      }
+    });
   });
 
   source.onopen = () => {

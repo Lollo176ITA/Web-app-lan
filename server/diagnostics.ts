@@ -10,6 +10,7 @@ const execFileAsync = promisify(execFile);
 
 interface CollectDiagnosticsOptions {
   lanUrl: string;
+  secureLanUrl: string | null;
   listenHost: string;
   port: number;
 }
@@ -109,6 +110,17 @@ export async function collectHostDiagnostics(
       : `L'host non risponde al proprio URL LAN ${options.lanUrl}.`
   });
 
+  if (options.secureLanUrl) {
+    checks.push({
+      id: "https-share",
+      label: "URL sicuro locale",
+      status: "info",
+      message:
+        `Routy espone anche ${options.secureLanUrl}. ` +
+        "Alla prima apertura il browser potrebbe chiedere di accettare il certificato locale."
+    });
+  }
+
   if (process.platform === "win32") {
     const profiles = normalizeArray(await collectWindowsProfiles());
     const activeProfile =
@@ -186,6 +198,7 @@ export async function collectHostDiagnostics(
     platform: process.platform,
     port: options.port,
     lanUrl: options.lanUrl,
+    secureLanUrl: options.secureLanUrl,
     listenHost: options.listenHost,
     checks,
     commands

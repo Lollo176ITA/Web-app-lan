@@ -1,7 +1,69 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import path from "node:path";
 
 const fixturesDirectory = path.resolve(process.cwd(), "tests", "fixtures");
+
+async function mockDisplayMedia(page: Page) {
+  await page.addInitScript(() => {
+    async function createFakeDisplayStream() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 960;
+      canvas.height = 540;
+      const context = canvas.getContext("2d");
+      let frame = 0;
+
+      const render = () => {
+        if (!context) {
+          return;
+        }
+
+        context.fillStyle = "#07111d";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.fillStyle = "#3bd6c6";
+        context.fillRect(42, 42, 240, 92);
+        context.fillStyle = "#ffffff";
+        context.font = "bold 36px sans-serif";
+        context.fillText("Screen share mock", 42, 102);
+        context.font = "28px sans-serif";
+        context.fillText(`frame ${frame}`, 42, 164);
+        context.fillStyle = "#8aa6bf";
+        context.fillText("Routeroom live", 42, 214);
+        frame += 1;
+        requestAnimationFrame(render);
+      };
+
+      render();
+
+      const videoStream = canvas.captureStream(12);
+      const audioContext = new AudioContext();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const destination = audioContext.createMediaStreamDestination();
+
+      oscillator.type = "sine";
+      oscillator.frequency.value = 220;
+      gain.gain.value = 0.02;
+      oscillator.connect(gain);
+      gain.connect(destination);
+      oscillator.start();
+
+      return new MediaStream([
+        ...videoStream.getVideoTracks(),
+        ...destination.stream.getAudioTracks()
+      ]);
+    }
+
+    const mediaDevices = navigator.mediaDevices ?? {};
+
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: {
+        ...mediaDevices,
+        getDisplayMedia: async () => createFakeDisplayStream()
+      }
+    });
+  });
+}
 
 test("landing and library manager handle folder uploads, previews, layouts, and delete", async ({ page }) => {
   await page.goto("/");
@@ -237,5 +299,78 @@ test("stream room syncs playback and room chat across two clients", async ({ bro
   await page.getByRole("button", { name: "Elimina stanza" }).click();
   await expect(page).toHaveURL(/\/stream$/);
   await expect.poll(async () => guestPage.getByText("Stanza non trovata.").count()).toBeGreaterThan(0);
+  await guestPage.close();
+});
+
+test("stream room supports screen sharing with viewer lock and video restore", async ({ browser, page }) => {
+  const roomName = `Presentazione LAN ${Date.now()}`;
+
+  await mockDisplayMedia(page);
+  await page.goto("/app");
+  await page.locator('input[type="file"]').first().setInputFiles(path.join(fixturesDirectory, "sample-video.webm"));
+  await expect(page.getByText("1 file caricati in radice LAN.")).toBeVisible();
+
+  await page.goto("/stream");
+  await page.getByRole("textbox", { name: "Nickname" }).fill("Host");
+  await page.getByRole("button", { name: "Salva" }).click();
+  await page.getByLabel("Nome stanza").fill(roomName);
+  await page.getByRole("button", { name: "Crea stanza" }).click();
+  await expect(page.getByText("Stanza creata.")).toBeVisible();
+
+  const roomUrl = await page.locator(".MuiCard-root").evaluateAll((cards, targetRoomName) => {
+    for (const card of cards) {
+      if (!card.textContent?.includes(targetRoomName)) {
+        continue;
+      }
+
+      const link = card.querySelector("a[href*='/stream/room/']");
+
+      if (link instanceof HTMLAnchorElement) {
+        return link.href;
+      }
+    }
+
+    return null;
+  }, roomName);
+
+  expect(roomUrl).toBeTruthy();
+  await page.goto(roomUrl!);
+  await page.getByLabel("Video stanza").click();
+  await page.getByRole("option", { name: "sample-video.webm" }).last().click();
+  await expect(page.getByText("Video stanza aggiornato.")).toBeVisible();
+
+  const guestPage = await browser.newPage();
+  await mockDisplayMedia(guestPage);
+  await guestPage.goto(roomUrl!);
+  await guestPage.getByRole("textbox", { name: "Nickname" }).fill("Guest");
+  await guestPage.getByRole("button", { name: "Salva" }).click();
+  await expect(guestPage.getByText(roomName).first()).toBeVisible();
+
+  await page.getByRole("button", { name: "Presenta schermo" }).click();
+  await expect(page.getByText("Presentazione schermo avviata.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Termina presentazione" })).toBeVisible();
+  await expect(guestPage.getByText("Modalita view-and-chat attiva: puoi guardare il feed, usare la chat, regolare volume e fullscreen solo sul tuo device.")).toBeVisible();
+  await expect(guestPage.getByLabel("Video stanza")).toBeDisabled();
+  await expect(guestPage.getByRole("button", { name: "Presenta schermo" })).toHaveCount(0);
+
+  const guestScreen = guestPage.getByLabel("Presentazione schermo Host");
+  await expect.poll(async () => guestScreen.evaluate((video: HTMLVideoElement) => ({
+    hasStream: Boolean(video.srcObject),
+    readyState: video.readyState,
+    paused: video.paused
+  }))).toMatchObject({
+    hasStream: true,
+    paused: false
+  });
+
+  await guestPage.getByLabel("Messaggio stanza").fill("Ti vedo");
+  await guestPage.getByRole("button", { name: "Invia messaggio" }).click();
+  await expect(page.getByText("Ti vedo")).toBeVisible();
+
+  await page.getByRole("button", { name: "Termina presentazione" }).click();
+  await expect(page.getByText("Presentazione terminata.")).toBeVisible();
+  await expect(page.getByLabel("Video stanza")).toContainText("sample-video.webm");
+  await expect.poll(async () => guestPage.getByRole("button", { name: "Presenta schermo" }).count()).toBe(1);
+  await expect(guestPage.getByLabel("Video stanza")).toContainText("sample-video.webm");
   await guestPage.close();
 });

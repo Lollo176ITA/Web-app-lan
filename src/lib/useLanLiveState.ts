@@ -5,7 +5,7 @@ export type LiveState = "live" | "fallback" | "connecting";
 
 interface UseLanLiveStateOptions {
   source?: "lan" | "library";
-  handlers?: Record<string, () => void>;
+  handlers?: Record<string, (payload?: unknown) => void>;
   onEvent?: () => void;
   onFallback?: () => void | (() => void);
   onOpen?: () => void;
@@ -47,9 +47,9 @@ export function useLanLiveState(
             Object.fromEntries(
               Object.entries(handlers).map(([eventName, handler]) => [
                 eventName,
-                () => {
+                (payload?: unknown) => {
                   setLiveState("live");
-                  handler();
+                  handler(payload);
                 }
               ])
             ),

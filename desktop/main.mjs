@@ -1,15 +1,20 @@
 import { app, BrowserWindow, dialog } from "electron";
+import https from "node:https";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createApp } from "../dist/server/app.js";
+import { ensureLocalHttpsCertificate } from "../dist/server/https.js";
+import { getSessionHosts } from "../dist/server/network.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDevelopment = !app.isPackaged;
 const desktopPort = Number.parseInt(process.env.PORT ?? "8787", 10);
+const desktopHttpsPort = Number.parseInt(process.env.HTTPS_PORT ?? String(desktopPort + 1), 10);
 const desktopHost = "0.0.0.0";
 
 let mainWindow = null;
 let activeServer = null;
+let activeSecureServer = null;
 let activeApp = null;
 
 async function startRouteroomServer() {
@@ -19,9 +24,13 @@ async function startRouteroomServer() {
 
   const staticDir = path.resolve(__dirname, "../dist/client");
   const storageRoot = path.join(app.getPath("userData"), "storage");
+  const httpsRoot = path.join(app.getPath("userData"), "https");
+  const { certificateHosts } = getSessionHosts();
+  const tlsCertificate = await ensureLocalHttpsCertificate(httpsRoot, certificateHosts);
 
   const created = await createApp({
     port: desktopPort,
+    httpsPort: desktopHttpsPort,
     seedDemo: true,
     staticDir,
     storageRoot,
@@ -37,23 +46,57 @@ async function startRouteroomServer() {
 
     server.on("error", reject);
   });
+
+  await new Promise((resolve, reject) => {
+    const secureServer = https.createServer(
+      {
+        key: tlsCertificate.key,
+        cert: tlsCertificate.cert
+      },
+      created.app
+    );
+
+    secureServer.listen(desktopHttpsPort, desktopHost, () => {
+      activeSecureServer = secureServer;
+      resolve();
+    });
+
+    secureServer.on("error", reject);
+  });
 }
 
 async function stopRouteroomServer() {
   activeApp?.close();
 
-  if (!activeServer) {
+  if (!activeServer && !activeSecureServer) {
     activeApp = null;
     return;
   }
 
   const server = activeServer;
+  const secureServer = activeSecureServer;
   activeServer = null;
+  activeSecureServer = null;
   activeApp = null;
 
-  await new Promise((resolve) => {
-    server.close(() => resolve());
-  });
+  await Promise.all([
+    new Promise((resolve) => {
+      if (!server) {
+        resolve();
+        return;
+      }
+
+      server.close(() => resolve());
+    }),
+    new Promise((resolve) => {
+      if (!secureServer) {
+        resolve();
+        return;
+      }
+
+      secureServer.close(() => resolve());
+    })
+  ]);
 }
 
 async function createMainWindow() {
@@ -117,13 +160,13 @@ app.on("before-quit", () => {
     return;
   }
 
-  if (activeApp || activeServer) {
+  if (activeApp || activeServer || activeSecureServer) {
     app.exitCode = 0;
   }
 });
 
 app.on("will-quit", (event) => {
-  if (!activeApp && !activeServer) {
+  if (!activeApp && !activeServer && !activeSecureServer) {
     return;
   }
 

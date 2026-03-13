@@ -50,6 +50,7 @@ import {
   uploadFiles
 } from "../lib/api";
 import { formatBytes } from "../lib/format";
+import { createLanShareUrl, resolvePreferredSessionUrl } from "../lib/share-url";
 import { useLanLiveState } from "../lib/useLanLiveState";
 
 type FilterValue = "all" | Exclude<LibraryKind, "folder">;
@@ -92,14 +93,7 @@ function buildFolderPath(items: LibraryItem[], currentFolderId: string | null) {
 }
 
 function buildPreviewShareUrl(lanUrl: string, itemId: string) {
-  const browserUrl = new URL(window.location.href);
-  const sessionUrl = new URL(lanUrl);
-  const shareUrl = new URL(browserUrl.href);
-
-  if (browserUrl.hostname === "localhost" || browserUrl.hostname === "127.0.0.1") {
-    shareUrl.protocol = sessionUrl.protocol;
-    shareUrl.hostname = sessionUrl.hostname;
-  }
+  const shareUrl = createLanShareUrl(lanUrl);
 
   shareUrl.pathname = "/app";
   shareUrl.search = "";
@@ -110,14 +104,7 @@ function buildPreviewShareUrl(lanUrl: string, itemId: string) {
 }
 
 function buildVideoPlayerUrl(lanUrl: string, itemId: string) {
-  const browserUrl = new URL(window.location.href);
-  const sessionUrl = new URL(lanUrl);
-  const shareUrl = new URL(browserUrl.href);
-
-  if (browserUrl.hostname === "localhost" || browserUrl.hostname === "127.0.0.1") {
-    shareUrl.protocol = sessionUrl.protocol;
-    shareUrl.hostname = sessionUrl.hostname;
-  }
+  const shareUrl = createLanShareUrl(lanUrl);
 
   shareUrl.pathname = `/player/${itemId}`;
   shareUrl.search = "";
@@ -150,21 +137,6 @@ function fallbackCopyText(value: string) {
   }
 }
 
-function splitLanUrl(value: string) {
-  try {
-    const parsed = new URL(value);
-    return {
-      protocol: `${parsed.protocol}//`,
-      remainder: `${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}`
-    };
-  } catch {
-    return {
-      protocol: "",
-      remainder: value
-    };
-  }
-}
-
 export function AppPage() {
   const [searchParams] = useSearchParams();
   const initialLinkedItemId = searchParams.get("item");
@@ -188,7 +160,8 @@ export function AppPage() {
   const layoutMode: LibraryLayoutMode = isMobile ? "minimal" : "compact";
   const detailPanelRef = useRef<HTMLDivElement | null>(null);
   const appliedDeepLinkRef = useRef<string | null>(null);
-  const lanUrlParts = session ? splitLanUrl(session.lanUrl) : null;
+  const preferredLanUrl = session ? resolvePreferredSessionUrl(session) : null;
+  const hostShareUrl = session ? createLanShareUrl(preferredLanUrl).origin : null;
 
   function applyLinkedSelection(nextItems: LibraryItem[]) {
     const linkedItemId = searchParams.get("item");
@@ -252,11 +225,11 @@ export function AppPage() {
   }, []);
 
   useEffect(() => {
-    if (!session?.lanUrl) {
+    if (!hostShareUrl) {
       return;
     }
 
-    void QRCode.toDataURL(session.lanUrl, {
+    void QRCode.toDataURL(hostShareUrl, {
       margin: 1,
       width: 192,
       color: {
@@ -264,7 +237,7 @@ export function AppPage() {
         light: "#ffffff"
       }
     }).then(setQrCodeDataUrl);
-  }, [session?.lanUrl]);
+  }, [hostShareUrl]);
 
   useEffect(() => {
     if (!qrItemTarget) {
@@ -449,7 +422,7 @@ export function AppPage() {
   }
 
   function handleShowQrCode(item: LibraryItem) {
-    if (!session?.lanUrl) {
+    if (!preferredLanUrl) {
       setSnackbar("URL LAN non ancora disponibile.");
       return;
     }
@@ -458,8 +431,8 @@ export function AppPage() {
       item,
       url:
         item.kind === "video"
-          ? buildVideoPlayerUrl(session.lanUrl, item.id)
-          : buildPreviewShareUrl(session.lanUrl, item.id)
+          ? buildVideoPlayerUrl(preferredLanUrl, item.id)
+          : buildPreviewShareUrl(preferredLanUrl, item.id)
     });
   }
 
@@ -503,11 +476,16 @@ export function AppPage() {
                         <Stack direction="row" spacing={1.25} alignItems="center" justifyContent="space-between">
                           <Box sx={{ minWidth: 0, flex: 1 }}>
                             <Typography variant="body2" color="text.secondary">
-                              URL LAN
+                              {session.secureLanUrl ? "URL LAN sicuro" : "URL LAN"}
                             </Typography>
                             <Typography variant="h6" sx={{ mt: 0.75, wordBreak: "break-word" }}>
-                              {session.lanUrl}
+                              {hostShareUrl}
                             </Typography>
+                            {session.secureLanUrl ? (
+                              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, display: "block" }}>
+                                Alla prima apertura il browser potrebbe chiedere di accettare il certificato locale HTTPS.
+                              </Typography>
+                            ) : null}
                           </Box>
 
                           {isMobile && qrCodeDataUrl ? (
@@ -767,7 +745,7 @@ export function AppPage() {
             </Box>
             {session ? (
               <Typography color="text.secondary" variant="body2" sx={{ alignSelf: "stretch", wordBreak: "break-word" }}>
-                {session.lanUrl}
+                {hostShareUrl}
               </Typography>
             ) : null}
           </Stack>
@@ -784,7 +762,9 @@ export function AppPage() {
             <Button
               startIcon={<ContentCopyRoundedIcon />}
               onClick={() => {
-                void copyText(session.lanUrl, "URL LAN copiato negli appunti.");
+                if (hostShareUrl) {
+                  void copyText(hostShareUrl, "URL LAN copiato negli appunti.");
+                }
               }}
             >
               Copia URL
