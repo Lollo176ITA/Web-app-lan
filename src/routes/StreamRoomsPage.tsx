@@ -1,8 +1,7 @@
-import { startTransition, useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import MeetingRoomRoundedIcon from "@mui/icons-material/MeetingRoomRounded";
-import MovieRoundedIcon from "@mui/icons-material/MovieRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import {
@@ -14,10 +13,6 @@ import {
   CardContent,
   Chip,
   Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   IconButton,
   Snackbar,
   Stack,
@@ -25,12 +20,14 @@ import {
   Typography
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import QRCode from "qrcode";
 import { Link as RouterLink } from "react-router-dom";
-import type { LibraryItem, StreamRoomSummary } from "../../shared/types";
+import type { StreamRoomSummary } from "../../shared/types";
 import { PageHeader } from "../components/PageHeader";
+import { QrCodeDialog } from "../components/QrCodeDialog";
 import { copyTextToClipboard } from "../lib/clipboard";
-import { createStreamRoom, deleteStreamRoom, fetchItems, fetchSession, fetchStreamRooms } from "../lib/api";
+import { buildStreamRoomShareUrl } from "../lib/share-links";
+import { useQrCodeDataUrl } from "../lib/useQrCodeDataUrl";
+import { createStreamRoom, deleteStreamRoom, fetchSession, fetchStreamRooms } from "../lib/api";
 import { useLanLiveState } from "../lib/useLanLiveState";
 
 function formatRoomTime(value: string) {
@@ -42,29 +39,8 @@ function formatRoomTime(value: string) {
   }).format(new Date(value));
 }
 
-function buildRoomShareUrl(roomId: string, lanUrl?: string | null) {
-  const browserUrl = new URL(window.location.href);
-  const shareUrl = new URL(browserUrl.href);
-
-  if (lanUrl) {
-    const sessionUrl = new URL(lanUrl);
-
-    if (browserUrl.hostname === "localhost" || browserUrl.hostname === "127.0.0.1") {
-      shareUrl.protocol = sessionUrl.protocol;
-      shareUrl.hostname = sessionUrl.hostname;
-    }
-  }
-
-  shareUrl.pathname = `/stream/room/${roomId}`;
-  shareUrl.search = "";
-  shareUrl.hash = "";
-
-  return shareUrl.toString();
-}
-
 export function StreamRoomsPage() {
   const [rooms, setRooms] = useState<StreamRoomSummary[]>([]);
-  const [items, setItems] = useState<LibraryItem[]>([]);
   const [roomName, setRoomName] = useState("");
   const [loading, setLoading] = useState(true);
   const [creatingRoom, setCreatingRoom] = useState(false);
@@ -72,9 +48,8 @@ export function StreamRoomsPage() {
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [sessionLanUrl, setSessionLanUrl] = useState<string | null>(null);
   const [qrRoomTarget, setQrRoomTarget] = useState<StreamRoomSummary | null>(null);
-  const [qrRoomDataUrl, setQrRoomDataUrl] = useState("");
-
-  const videoItems = useMemo(() => items.filter((item) => item.kind === "video"), [items]);
+  const qrRoomShareUrl = qrRoomTarget ? buildStreamRoomShareUrl(qrRoomTarget.id, sessionLanUrl) : null;
+  const qrCodeDataUrl = useQrCodeDataUrl(qrRoomShareUrl, { width: 256 });
 
   const liveState = useLanLiveState({
     handlers: {
@@ -103,31 +78,14 @@ export function StreamRoomsPage() {
   });
 
   async function syncData() {
-    const [roomsResponse, allItems, session] = await Promise.all([fetchStreamRooms(), fetchItems(), fetchSession()]);
+    const [roomsResponse, session] = await Promise.all([fetchStreamRooms(), fetchSession()]);
 
     startTransition(() => {
       setRooms(roomsResponse.rooms);
-      setItems(allItems);
       setSessionLanUrl(session.lanUrl);
       setLoading(false);
     });
   }
-
-  useEffect(() => {
-    if (!qrRoomTarget) {
-      setQrRoomDataUrl("");
-      return;
-    }
-
-    void QRCode.toDataURL(buildRoomShareUrl(qrRoomTarget.id, sessionLanUrl), {
-      margin: 1,
-      width: 256,
-      color: {
-        dark: "#10273a",
-        light: "#ffffff"
-      }
-    }).then(setQrRoomDataUrl);
-  }, [qrRoomTarget, sessionLanUrl]);
 
   useEffect(() => {
     void syncData();
@@ -355,74 +313,31 @@ export function StreamRoomsPage() {
         message={snackbar}
       />
 
-      <Dialog
+      <QrCodeDialog
         open={Boolean(qrRoomTarget)}
         onClose={() => {
           setQrRoomTarget(null);
         }}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>QR code stanza</DialogTitle>
-        <DialogContent>
-          {qrRoomTarget ? (
-            <Stack spacing={2} sx={{ pt: 1, alignItems: "center" }}>
-              <Typography color="text.secondary" variant="body2" sx={{ alignSelf: "stretch" }}>
-                Inquadra questo codice dalla stessa LAN per aprire subito la stanza.
-              </Typography>
-              <Box
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  bgcolor: "#ffffff",
-                  border: `1px solid ${alpha("#1769aa", 0.16)}`
-                }}
-              >
-                {qrRoomDataUrl ? (
-                  <Box
-                    component="img"
-                    src={qrRoomDataUrl}
-                    alt={`QR code ${qrRoomTarget.name}`}
-                    sx={{ width: 224, height: 224, display: "block" }}
-                  />
-                ) : null}
-              </Box>
-              <Typography variant="subtitle1" sx={{ alignSelf: "stretch", wordBreak: "break-word" }}>
-                {qrRoomTarget.name}
-              </Typography>
-              <Typography color="text.secondary" variant="body2" sx={{ alignSelf: "stretch", wordBreak: "break-word" }}>
-                {buildRoomShareUrl(qrRoomTarget.id, sessionLanUrl)}
-              </Typography>
-            </Stack>
-          ) : null}
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setQrRoomTarget(null);
-            }}
-          >
-            Chiudi
-          </Button>
-          <Button
-            onClick={() => {
-              if (!qrRoomTarget) {
-                return;
+        title="QR code stanza"
+        description="Inquadra questo codice dalla stessa LAN per aprire subito la stanza."
+        qrCodeAlt={`QR code ${qrRoomTarget?.name ?? "stanza streaming"}`}
+        qrCodeDataUrl={qrCodeDataUrl}
+        subject={qrRoomTarget?.name}
+        url={qrRoomShareUrl}
+        onCopy={
+          qrRoomShareUrl
+            ? () => {
+                void copyTextToClipboard(qrRoomShareUrl)
+                  .then(() => {
+                    setSnackbar("Link stanza copiato.");
+                  })
+                  .catch(() => {
+                    setSnackbar("Copia link non disponibile.");
+                  });
               }
-
-              void copyTextToClipboard(buildRoomShareUrl(qrRoomTarget.id, sessionLanUrl))
-                .then(() => {
-                  setSnackbar("Link stanza copiato.");
-                })
-                .catch(() => {
-                  setSnackbar("Copia link non disponibile.");
-                });
-            }}
-          >
-            Copia link
-          </Button>
-        </DialogActions>
-      </Dialog>
+            : undefined
+        }
+      />
     </Box>
   );
 }

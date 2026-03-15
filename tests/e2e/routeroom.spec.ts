@@ -5,11 +5,14 @@ const fixturesDirectory = path.resolve(process.cwd(), "tests", "fixtures");
 
 test("landing and library manager handle folder uploads, previews, layouts, and delete", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("textbox", { name: "Nickname" }).fill("Marta");
+  await page.getByRole("button", { name: "Salva" }).click();
+  await expect(page.getByRole("dialog", { name: "Benvenuto nella LAN" })).toHaveCount(0);
 
-  await expect(page.getByRole("heading", { name: /Trasferisci file e guarda media/i })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Apri la LAN" }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Condividi file, player e streaming in tutta la LAN/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Apri la libreria" }).first()).toBeVisible();
 
-  await page.getByRole("link", { name: "Apri la LAN" }).first().click();
+  await page.getByRole("link", { name: "Apri la libreria" }).first().click();
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByRole("heading", { name: "Libreria locale" })).toBeVisible();
 

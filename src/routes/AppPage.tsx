@@ -1,47 +1,33 @@
 import { startTransition, useEffect, useRef, useState } from "react";
-import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import CreateNewFolderRoundedIcon from "@mui/icons-material/CreateNewFolderRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
-import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
 import {
-  Alert,
-  Avatar,
   Box,
   Button,
   Card,
   CardContent,
-  CardHeader,
   Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
-  IconButton,
   Snackbar,
   Stack,
-  Tab,
-  Tabs,
-  TextField,
   Typography,
   useMediaQuery
 } from "@mui/material";
-import { alpha, useTheme } from "@mui/material/styles";
-import QRCode from "qrcode";
+import { useTheme } from "@mui/material/styles";
 import { useSearchParams } from "react-router-dom";
-import type {
-  ArchiveFormat,
-  LibraryItem,
-  LibraryKind,
-  LibraryLayoutMode,
-  SessionInfo
-} from "../../shared/types";
+import type { ArchiveFormat, LibraryItem, LibraryLayoutMode, SessionInfo } from "../../shared/types";
 import { FolderExplorer } from "../components/FolderExplorer";
 import { LibraryGrid } from "../components/LibraryGrid";
 import { MediaDetail } from "../components/MediaDetail";
 import { PageHeader } from "../components/PageHeader";
+import { QrCodeDialog } from "../components/QrCodeDialog";
 import { UploadSurface } from "../components/UploadSurface";
+import { CreateFolderDialog } from "../features/library/CreateFolderDialog";
+import { type FilterValue } from "../features/library/constants";
+import { HostSessionCard } from "../features/library/HostSessionCard";
+import { LibraryFilters } from "../features/library/LibraryFilters";
+import { buildFolderPath, sortFolderContents } from "../features/library/utils";
 import {
   createArchive,
   createFolder,
@@ -49,121 +35,10 @@ import {
   fetchSnapshot,
   uploadFiles
 } from "../lib/api";
-import { formatBytes } from "../lib/format";
+import { copyTextToClipboard } from "../lib/clipboard";
+import { buildLibraryPreviewShareUrl, buildVideoPlayerShareUrl } from "../lib/share-links";
 import { useLanLiveState } from "../lib/useLanLiveState";
-
-type FilterValue = "all" | Exclude<LibraryKind, "folder">;
-
-const filters: Array<{ label: string; value: FilterValue }> = [
-  { label: "Tutti", value: "all" },
-  { label: "Video", value: "video" },
-  { label: "Immagini", value: "image" },
-  { label: "Audio", value: "audio" },
-  { label: "Documenti", value: "document" },
-  { label: "Archivi", value: "archive" },
-  { label: "Altro", value: "other" }
-];
-
-function sortFolderContents(items: LibraryItem[]) {
-  return [...items].sort((left, right) => {
-    if (left.kind === "folder" && right.kind !== "folder") {
-      return -1;
-    }
-
-    if (left.kind !== "folder" && right.kind === "folder") {
-      return 1;
-    }
-
-    return right.createdAt.localeCompare(left.createdAt);
-  });
-}
-
-function buildFolderPath(items: LibraryItem[], currentFolderId: string | null) {
-  const byId = new Map(items.map((item) => [item.id, item]));
-  const path: LibraryItem[] = [];
-  let cursor = currentFolderId ? byId.get(currentFolderId) : undefined;
-
-  while (cursor && cursor.kind === "folder") {
-    path.unshift(cursor);
-    cursor = cursor.parentId ? byId.get(cursor.parentId) : undefined;
-  }
-
-  return path;
-}
-
-function buildPreviewShareUrl(lanUrl: string, itemId: string) {
-  const browserUrl = new URL(window.location.href);
-  const sessionUrl = new URL(lanUrl);
-  const shareUrl = new URL(browserUrl.href);
-
-  if (browserUrl.hostname === "localhost" || browserUrl.hostname === "127.0.0.1") {
-    shareUrl.protocol = sessionUrl.protocol;
-    shareUrl.hostname = sessionUrl.hostname;
-  }
-
-  shareUrl.pathname = "/app";
-  shareUrl.search = "";
-  shareUrl.searchParams.set("item", itemId);
-  shareUrl.hash = "";
-
-  return shareUrl.toString();
-}
-
-function buildVideoPlayerUrl(lanUrl: string, itemId: string) {
-  const browserUrl = new URL(window.location.href);
-  const sessionUrl = new URL(lanUrl);
-  const shareUrl = new URL(browserUrl.href);
-
-  if (browserUrl.hostname === "localhost" || browserUrl.hostname === "127.0.0.1") {
-    shareUrl.protocol = sessionUrl.protocol;
-    shareUrl.hostname = sessionUrl.hostname;
-  }
-
-  shareUrl.pathname = `/player/${itemId}`;
-  shareUrl.search = "";
-  shareUrl.hash = "";
-
-  return shareUrl.toString();
-}
-
-function formatLibraryCount(count: number) {
-  return `${count} ${count === 1 ? "elemento" : "elementi"}`;
-}
-
-function fallbackCopyText(value: string) {
-  const textarea = document.createElement("textarea");
-  textarea.value = value;
-  textarea.setAttribute("readonly", "");
-  textarea.style.position = "absolute";
-  textarea.style.opacity = "0";
-  textarea.style.pointerEvents = "none";
-  textarea.style.left = "-9999px";
-  document.body.appendChild(textarea);
-  textarea.select();
-  textarea.setSelectionRange(0, textarea.value.length);
-
-  const copied = typeof document.execCommand === "function" && document.execCommand("copy");
-  document.body.removeChild(textarea);
-
-  if (!copied) {
-    throw new Error("Clipboard fallback unavailable");
-  }
-}
-
-function splitLanUrl(value: string) {
-  try {
-    const parsed = new URL(value);
-    return {
-      protocol: `${parsed.protocol}//`,
-      remainder: `${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}`
-    };
-  } catch {
-    return {
-      protocol: "",
-      remainder: value
-    };
-  }
-}
+import { useQrCodeDataUrl } from "../lib/useQrCodeDataUrl";
 
 export function AppPage() {
   const [searchParams] = useSearchParams();
@@ -176,19 +51,17 @@ export function AppPage() {
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [hostQrDialogOpen, setHostQrDialogOpen] = useState(false);
   const [folderName, setFolderName] = useState("");
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [qrItemTarget, setQrItemTarget] = useState<{ item: LibraryItem; url: string } | null>(null);
-  const [qrItemDataUrl, setQrItemDataUrl] = useState("");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isDark = theme.palette.mode === "dark";
   const layoutMode: LibraryLayoutMode = isMobile ? "minimal" : "compact";
   const detailPanelRef = useRef<HTMLDivElement | null>(null);
   const appliedDeepLinkRef = useRef<string | null>(null);
-  const lanUrlParts = session ? splitLanUrl(session.lanUrl) : null;
+  const hostQrCodeDataUrl = useQrCodeDataUrl(session?.lanUrl ?? null, { width: 192 });
+  const qrItemDataUrl = useQrCodeDataUrl(qrItemTarget?.url ?? null, { width: 256 });
 
   function applyLinkedSelection(nextItems: LibraryItem[]) {
     const linkedItemId = searchParams.get("item");
@@ -250,37 +123,6 @@ export function AppPage() {
   useEffect(() => {
     void syncSnapshot();
   }, []);
-
-  useEffect(() => {
-    if (!session?.lanUrl) {
-      return;
-    }
-
-    void QRCode.toDataURL(session.lanUrl, {
-      margin: 1,
-      width: 192,
-      color: {
-        dark: "#10273a",
-        light: "#ffffff"
-      }
-    }).then(setQrCodeDataUrl);
-  }, [session?.lanUrl]);
-
-  useEffect(() => {
-    if (!qrItemTarget) {
-      setQrItemDataUrl("");
-      return;
-    }
-
-    void QRCode.toDataURL(qrItemTarget.url, {
-      margin: 1,
-      width: 256,
-      color: {
-        dark: "#10273a",
-        light: "#ffffff"
-      }
-    }).then(setQrItemDataUrl);
-  }, [qrItemTarget]);
 
   useEffect(() => {
     if (!currentFolderId) {
@@ -431,20 +273,10 @@ export function AppPage() {
 
   async function copyText(value: string, successMessage = "Link copiato negli appunti.") {
     try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(value);
-      } else {
-        fallbackCopyText(value);
-      }
-
+      await copyTextToClipboard(value);
       setSnackbar(successMessage);
     } catch {
-      try {
-        fallbackCopyText(value);
-        setSnackbar(successMessage);
-      } catch {
-        setSnackbar("Copia non disponibile su questo browser.");
-      }
+      setSnackbar("Copia non disponibile su questo browser.");
     }
   }
 
@@ -458,8 +290,8 @@ export function AppPage() {
       item,
       url:
         item.kind === "video"
-          ? buildVideoPlayerUrl(session.lanUrl, item.id)
-          : buildPreviewShareUrl(session.lanUrl, item.id)
+          ? buildVideoPlayerShareUrl(session.lanUrl, item.id)
+          : buildLibraryPreviewShareUrl(session.lanUrl, item.id)
     });
   }
 
@@ -477,120 +309,15 @@ export function AppPage() {
               gridTemplateColumns: { xs: "1fr", xl: "0.84fr 1.16fr" }
             }}
           >
-            <Card>
-              <CardHeader
-                title="Sessione host"
-                subheader="Condividi questo indirizzo nella stessa rete"
-              />
-              <CardContent sx={{ pt: 0 }}>
-                {loading || !session ? (
-                  <Typography color="text.secondary">Caricamento informazioni host...</Typography>
-                ) : (
-                  <Stack spacing={2.25}>
-                    <Box
-                      sx={{
-                        p: { xs: 2, md: 2.25 },
-                        display: "grid",
-                        gap: 2,
-                        alignItems: "center",
-                        gridTemplateColumns: { xs: "1fr", sm: "minmax(0, 1fr) auto" },
-                        borderRadius: "24px",
-                        bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.05),
-                        border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
-                      }}
-                    >
-                      <Stack spacing={2}>
-                        <Stack direction="row" spacing={1.25} alignItems="center" justifyContent="space-between">
-                          <Box sx={{ minWidth: 0, flex: 1 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              URL LAN
-                            </Typography>
-                            <Typography variant="h6" sx={{ mt: 0.75, wordBreak: "break-word" }}>
-                              {session.lanUrl}
-                            </Typography>
-                          </Box>
-
-                          {isMobile && qrCodeDataUrl ? (
-                            <IconButton
-                              aria-label="Apri QR code URL LAN"
-                              onClick={() => {
-                                setHostQrDialogOpen(true);
-                              }}
-                              sx={{
-                                flexShrink: 0,
-                                borderRadius: 2.5,
-                                bgcolor: alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08),
-                                color: isDark ? theme.palette.primary.light : "primary.main",
-                                border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.24 : 0.12)}`
-                              }}
-                            >
-                              <QrCode2RoundedIcon />
-                            </IconButton>
-                          ) : null}
-                        </Stack>
-                      </Stack>
-
-                      {!isMobile && qrCodeDataUrl ? (
-                        <Box
-                          sx={{
-                            p: 1.25,
-                            justifySelf: { xs: "flex-start", sm: "end" },
-                            borderRadius: "20px",
-                            bgcolor: "#ffffff",
-                            border: `1px solid ${alpha("#1769aa", 0.16)}`
-                          }}
-                        >
-                          <Box
-                            component="img"
-                            src={qrCodeDataUrl}
-                            alt="QR code URL LAN"
-                            sx={{ width: { xs: 132, sm: 148 }, height: { xs: 132, sm: 148 }, display: "block" }}
-                          />
-                        </Box>
-                      ) : null}
-                    </Box>
-
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gap: 1.5
-                      }}
-                    >
-                      <Card variant="outlined">
-                        <CardContent sx={{ p: 2.25 }}>
-                          <Stack
-                            direction={{ xs: "column", sm: "row" }}
-                            spacing={2}
-                            alignItems={{ xs: "flex-start", sm: "center" }}
-                          >
-                            <Box sx={{ minWidth: 0 }}>
-                              <Typography
-                                variant="h6"
-                                sx={{
-                                  display: "flex",
-                                  flexWrap: "wrap",
-                                  alignItems: "baseline",
-                                  gap: 1
-                                }}
-                              >
-                                <Box component="span">{formatBytes(session.totalBytes)} in {formatLibraryCount(session.itemCount)}</Box>
-                              </Typography>
-                              <Typography
-                                color="text.secondary"
-                                variant="body2"
-                                sx={{ mt: 1, wordBreak: "break-word" }}
-                              >
-                                {session.storagePath}
-                              </Typography>
-                            </Box>
-                          </Stack>
-                        </CardContent>
-                      </Card>
-                    </Box>
-                  </Stack>
-                )}
-              </CardContent>
-            </Card>
+            <HostSessionCard
+              isMobile={isMobile}
+              loading={loading}
+              onOpenQrCode={() => {
+                setHostQrDialogOpen(true);
+              }}
+              qrCodeDataUrl={hostQrCodeDataUrl}
+              session={session}
+            />
 
             <Stack spacing={2.5}>
               <UploadSurface
@@ -645,50 +372,7 @@ export function AppPage() {
                 />
 
                 {!isMobile ? (
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gap: 1.25,
-                      gridTemplateColumns: "1fr",
-                      alignItems: "center"
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        p: 0.75,
-                        borderRadius: 4,
-                        bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.05),
-                        border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
-                      }}
-                    >
-                      <Tabs
-                        value={filter}
-                        onChange={(_event, nextValue: FilterValue) => {
-                          setFilter(nextValue);
-                        }}
-                        variant="scrollable"
-                        scrollButtons={false}
-                        sx={{
-                          minHeight: 0,
-                          "& .MuiTabs-flexContainer": {
-                            gap: 0.5
-                          },
-                          "& .MuiTab-root": {
-                            color: "text.secondary"
-                          },
-                          "& .MuiTab-root.Mui-selected": {
-                            bgcolor: "background.paper",
-                            color: "primary.main",
-                            boxShadow: isDark ? "0 10px 24px rgba(0, 0, 0, 0.3)" : "0 8px 18px rgba(16, 39, 58, 0.08)"
-                          }
-                        }}
-                      >
-                        {filters.map((entry) => (
-                          <Tab key={entry.value} label={entry.label} value={entry.value} />
-                        ))}
-                      </Tabs>
-                    </Box>
-                  </Box>
+                  <LibraryFilters value={filter} onChange={setFilter} />
                 ) : null}
               </Stack>
             </CardContent>
@@ -734,188 +418,68 @@ export function AppPage() {
         </Stack>
       </Container>
 
-      <Dialog
+      <QrCodeDialog
         open={hostQrDialogOpen}
         onClose={() => {
           setHostQrDialogOpen(false);
         }}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>QR code URL LAN</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1, alignItems: "center" }}>
-            <Typography color="text.secondary" variant="body2" sx={{ alignSelf: "stretch" }}>
-              Inquadra questo codice dalla stessa LAN per aprire subito Routy sul device.
-            </Typography>
-            <Box
-              sx={{
-                p: 1.5,
-                borderRadius: 2,
-                bgcolor: "#ffffff",
-                border: `1px solid ${alpha("#1769aa", 0.16)}`
-              }}
-            >
-              {qrCodeDataUrl ? (
-                <Box
-                  component="img"
-                  src={qrCodeDataUrl}
-                  alt="QR code URL LAN"
-                  sx={{ width: 224, height: 224, display: "block" }}
-                />
-              ) : null}
-            </Box>
-            {session ? (
-              <Typography color="text.secondary" variant="body2" sx={{ alignSelf: "stretch", wordBreak: "break-word" }}>
-                {session.lanUrl}
-              </Typography>
-            ) : null}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setHostQrDialogOpen(false);
-            }}
-          >
-            Chiudi
-          </Button>
-          {session ? (
-            <Button
-              startIcon={<ContentCopyRoundedIcon />}
-              onClick={() => {
+        title="QR code URL LAN"
+        description="Inquadra questo codice dalla stessa LAN per aprire subito Routy sul device."
+        qrCodeAlt="QR code URL LAN"
+        qrCodeDataUrl={hostQrCodeDataUrl}
+        url={session?.lanUrl}
+        copyLabel="Copia URL"
+        onCopy={
+          session
+            ? () => {
                 void copyText(session.lanUrl, "URL LAN copiato negli appunti.");
-              }}
-            >
-              Copia URL
-            </Button>
-          ) : null}
-        </DialogActions>
-      </Dialog>
+              }
+            : undefined
+        }
+      />
 
-      <Dialog
+      <QrCodeDialog
         open={Boolean(qrItemTarget)}
         onClose={() => {
           setQrItemTarget(null);
         }}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>
-          {qrItemTarget?.item.kind === "video" ? "QR code player video" : "QR code anteprima"}
-        </DialogTitle>
-        <DialogContent>
-          {qrItemTarget ? (
-            <Stack spacing={2} sx={{ pt: 1, alignItems: "center" }}>
-              <Typography color="text.secondary" variant="body2" sx={{ alignSelf: "stretch" }}>
-                {qrItemTarget.item.kind === "video"
-                  ? "Inquadra questo codice dalla stessa LAN per aprire subito il player del video."
-                  : "Inquadra questo codice dalla stessa LAN per aprire direttamente l’anteprima del file."}
-              </Typography>
-              <Box
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  bgcolor: "#ffffff",
-                  border: `1px solid ${alpha("#1769aa", 0.16)}`
-                }}
-              >
-                {qrItemDataUrl ? (
-                  <Box
-                    component="img"
-                    src={qrItemDataUrl}
-                    alt={`QR code ${qrItemTarget.item.name}`}
-                    sx={{ width: 224, height: 224, display: "block" }}
-                  />
-                ) : null}
-              </Box>
-              <Typography variant="subtitle1" sx={{ alignSelf: "stretch", wordBreak: "break-word" }}>
-                {qrItemTarget.item.name}
-              </Typography>
-              <Typography color="text.secondary" variant="body2" sx={{ alignSelf: "stretch", wordBreak: "break-word" }}>
-                {qrItemTarget.url}
-              </Typography>
-            </Stack>
-          ) : null}
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setQrItemTarget(null);
-            }}
-          >
-            Chiudi
-          </Button>
-          <Button
-            startIcon={<ContentCopyRoundedIcon />}
-            onClick={() => {
-              if (qrItemTarget) {
+        title={qrItemTarget?.item.kind === "video" ? "QR code player video" : "QR code anteprima"}
+        description={
+          qrItemTarget?.item.kind === "video"
+            ? "Inquadra questo codice dalla stessa LAN per aprire subito il player del video."
+            : "Inquadra questo codice dalla stessa LAN per aprire direttamente l'anteprima del file."
+        }
+        qrCodeAlt={`QR code ${qrItemTarget?.item.name ?? "contenuto condiviso"}`}
+        qrCodeDataUrl={qrItemDataUrl}
+        subject={qrItemTarget?.item.name}
+        url={qrItemTarget?.url}
+        onCopy={
+          qrItemTarget
+            ? () => {
                 void copyText(qrItemTarget.url);
               }
-            }}
-          >
-            Copia link
-          </Button>
-          {qrItemTarget ? (
-            <Button
-              component="a"
-              href={qrItemTarget.url}
-              variant="contained"
-              startIcon={qrItemTarget.item.kind === "video" ? <QrCode2RoundedIcon /> : <OpenInNewRoundedIcon />}
-              onClick={() => {
-                setQrItemTarget(null);
-              }}
-            >
-              {qrItemTarget.item.kind === "video" ? "Apri player" : "Apri anteprima"}
-            </Button>
-          ) : null}
-        </DialogActions>
-      </Dialog>
+            : undefined
+        }
+        actionHref={qrItemTarget?.url}
+        actionLabel={qrItemTarget ? (qrItemTarget.item.kind === "video" ? "Apri player" : "Apri anteprima") : undefined}
+        actionIcon={qrItemTarget?.item.kind === "video" ? <QrCode2RoundedIcon /> : <OpenInNewRoundedIcon />}
+        onAction={() => {
+          setQrItemTarget(null);
+        }}
+      />
 
-      <Dialog
+      <CreateFolderDialog
         open={folderDialogOpen}
+        currentFolderName={currentFolder?.name ?? "Radice LAN"}
+        folderName={folderName}
         onClose={() => {
           setFolderDialogOpen(false);
         }}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>Nuova cartella</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            <Typography color="text.secondary" variant="body2">
-              La cartella verra creata in {currentFolder?.name ?? "Radice LAN"}.
-            </Typography>
-            <TextField
-              autoFocus
-              fullWidth
-              label="Nome cartella"
-              value={folderName}
-              onChange={(event) => {
-                setFolderName(event.target.value);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  void handleCreateFolder();
-                }
-              }}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setFolderDialogOpen(false);
-            }}
-          >
-            Annulla
-          </Button>
-          <Button variant="contained" onClick={() => void handleCreateFolder()}>
-            Crea
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onFolderNameChange={setFolderName}
+        onSubmit={() => {
+          void handleCreateFolder();
+        }}
+      />
 
       <Snackbar
         open={Boolean(snackbar)}

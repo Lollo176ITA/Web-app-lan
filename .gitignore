@@ -11,3 +11,5 @@ test*
 desktop/*
 !desktop/main.mjs
 release/
+output/
+tests/
