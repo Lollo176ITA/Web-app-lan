@@ -1,14 +1,7 @@
 import { useEffect, useState } from "react";
 import CircularProgress from "@mui/material/CircularProgress";
-import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
-import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
-import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
-import LanRoundedIcon from "@mui/icons-material/LanRounded";
-import MovieRoundedIcon from "@mui/icons-material/MovieRounded";
-import MusicNoteRoundedIcon from "@mui/icons-material/MusicNoteRounded";
-import SourceRoundedIcon from "@mui/icons-material/SourceRounded";
 import {
   Avatar,
   Box,
@@ -17,7 +10,6 @@ import {
   CardActions,
   CardContent,
   CardHeader,
-  Chip,
   Divider,
   Stack,
   Typography,
@@ -27,31 +19,12 @@ import { alpha, useTheme } from "@mui/material/styles";
 import type { ItemPreview, LibraryItem } from "../../shared/types";
 import { fetchItemPreview } from "../lib/api";
 import { formatBytes, formatDate } from "../lib/format";
+import { getLibraryItemMeta } from "../lib/library-item-meta";
 
 interface MediaDetailProps {
   item: LibraryItem | null;
   onCopyLink: (url: string) => Promise<void>;
 }
-
-const detailIcons = {
-  folder: FolderRoundedIcon,
-  video: MovieRoundedIcon,
-  image: ImageRoundedIcon,
-  audio: MusicNoteRoundedIcon,
-  document: DescriptionRoundedIcon,
-  archive: SourceRoundedIcon,
-  other: SourceRoundedIcon
-} as const;
-
-const detailAccent = {
-  folder: "#1769aa",
-  video: "#1769aa",
-  image: "#0f9d94",
-  audio: "#4553c7",
-  document: "#c47917",
-  archive: "#8b4fcf",
-  other: "#5a7184"
-} as const;
 
 function DocumentPreview({
   item,
@@ -197,9 +170,8 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
     );
   }
 
-  const Icon = detailIcons[item.kind];
-  const accent = detailAccent[item.kind];
-  const shareUrl = item.downloadUrl ?? item.contentUrl ?? "";
+  const meta = getLibraryItemMeta(theme, item.kind);
+  const Icon = meta.icon;
 
   return (
     <Card sx={{ minWidth: 0 }}>
@@ -212,7 +184,7 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
           }
         }}
         avatar={
-          <Avatar sx={{ bgcolor: alpha(accent, 0.14), color: accent }}>
+          <Avatar sx={{ bgcolor: meta.tone.soft, color: meta.tone.main }}>
             <Icon />
           </Avatar>
         }
@@ -261,7 +233,7 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
               display: "grid",
               placeItems: item.kind === "video" ? "stretch" : "center",
               p: item.kind === "document" ? 1.5 : 0,
-              bgcolor: alpha(accent, isDark ? 0.14 : 0.08)
+              bgcolor: meta.tone.soft
             }}
           >
             {item.kind === "video" ? (
@@ -298,7 +270,7 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
 
             {item.kind === "folder" ? (
               <Stack spacing={1.5} alignItems="center" sx={{ px: 3 }}>
-                <Avatar sx={{ width: 72, height: 72, bgcolor: alpha(accent, 0.14), color: accent }}>
+                <Avatar sx={{ width: 72, height: 72, bgcolor: meta.tone.soft, color: meta.tone.main }}>
                   <FolderRoundedIcon sx={{ fontSize: 36 }} />
                 </Avatar>
                 <Typography variant="h6">Cartella attiva</Typography>
@@ -316,7 +288,7 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
 
             {!["video", "image", "audio", "document", "folder"].includes(item.kind) ? (
               <Stack spacing={1.5} alignItems="center" sx={{ px: 3 }}>
-                <Avatar sx={{ width: 64, height: 64, bgcolor: alpha(accent, 0.14), color: accent }}>
+                <Avatar sx={{ width: 64, height: 64, bgcolor: meta.tone.soft, color: meta.tone.main }}>
                   <Icon />
                 </Avatar>
                 <Typography variant="h6">Download locale pronto</Typography>

@@ -1,11 +1,6 @@
 import { useEffect, useRef } from "react";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
-import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
-import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
-import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
-import MovieRoundedIcon from "@mui/icons-material/MovieRounded";
-import MusicNoteRoundedIcon from "@mui/icons-material/MusicNoteRounded";
 import {
   Avatar,
   Box,
@@ -21,6 +16,7 @@ import {
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import type { ArchiveFormat, LibraryItem } from "../../shared/types";
+import { getLibraryItemMeta } from "../lib/library-item-meta";
 import { ItemActionsMenu } from "./ItemActionsMenu";
 
 interface FolderExplorerProps {
@@ -35,26 +31,6 @@ interface FolderExplorerProps {
   onSelectItem: (itemId: string) => void;
   onShowQrCode: (item: LibraryItem) => void | Promise<void>;
 }
-
-const itemIcons = {
-  folder: FolderRoundedIcon,
-  video: MovieRoundedIcon,
-  image: ImageRoundedIcon,
-  audio: MusicNoteRoundedIcon,
-  document: DescriptionRoundedIcon,
-  archive: DescriptionRoundedIcon,
-  other: DescriptionRoundedIcon
-} as const;
-
-const itemAccents = {
-  folder: "#1769aa",
-  video: "#1769aa",
-  image: "#0f9d94",
-  audio: "#4553c7",
-  document: "#c47917",
-  archive: "#8b4fcf",
-  other: "#5a7184"
-} as const;
 
 function sortExplorerItems(items: LibraryItem[]) {
   return [...items].sort((left, right) => {
@@ -202,8 +178,8 @@ export function FolderExplorer({
                 ) : null}
 
                 {column.items.map((item) => {
-                  const Icon = itemIcons[item.kind];
-                  const accent = itemAccents[item.kind];
+                  const meta = getLibraryItemMeta(theme, item.kind);
+                  const Icon = meta.icon;
                   const isCurrentFolder = item.kind === "folder" && item.id === currentFolderId;
                   const isPathFolder = item.kind === "folder" && pathFolderIds.has(item.id);
                   const isSelectedFile = item.kind !== "folder" && item.id === selectedId;
@@ -226,18 +202,18 @@ export function FolderExplorer({
                         alignItems: "center",
                         borderLeft:
                           isCurrentFolder || isSelectedFile || isPathFolder
-                            ? `3px solid ${accent}`
+                            ? `3px solid ${meta.tone.main}`
                             : "3px solid transparent",
                         bgcolor: isCurrentFolder
-                          ? alpha(accent, isDark ? 0.22 : 0.14)
+                          ? meta.tone.soft
                           : isPathFolder
-                            ? alpha(accent, isDark ? 0.14 : 0.08)
+                            ? alpha(meta.tone.main, isDark ? 0.14 : 0.08)
                             : undefined,
                         "&:hover": {
                           bgcolor: isCurrentFolder
-                            ? alpha(accent, isDark ? 0.28 : 0.18)
+                            ? alpha(meta.tone.main, isDark ? 0.28 : 0.18)
                             : isPathFolder
-                              ? alpha(accent, isDark ? 0.18 : 0.12)
+                              ? alpha(meta.tone.main, isDark ? 0.18 : 0.12)
                               : undefined
                         }
                       }}
@@ -246,8 +222,8 @@ export function FolderExplorer({
                         sx={{
                           width: 36,
                           height: 36,
-                          bgcolor: alpha(accent, 0.12),
-                          color: accent
+                          bgcolor: meta.tone.soft,
+                          color: meta.tone.main
                         }}
                       >
                         <Icon fontSize="small" />

@@ -46,7 +46,7 @@ export function HostSessionCard({
                 gap: 2,
                 alignItems: "center",
                 gridTemplateColumns: { xs: "1fr", sm: "minmax(0, 1fr) auto" },
-                borderRadius: "24px",
+                borderRadius: "14px",
                 bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.05),
                 border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
               }}
@@ -85,7 +85,7 @@ export function HostSessionCard({
                   sx={{
                     p: 1.25,
                     justifySelf: { xs: "flex-start", sm: "end" },
-                    borderRadius: "20px",
+                    borderRadius: "12px",
                     bgcolor: "#ffffff",
                     border: `1px solid ${alpha("#1769aa", 0.16)}`
                   }}

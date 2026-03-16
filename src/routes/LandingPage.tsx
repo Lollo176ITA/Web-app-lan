@@ -13,17 +13,18 @@ import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import {
   Box,
   Button,
-  ButtonBase,
-  Card,
   CardContent,
   CardMedia,
   Container,
   Stack,
+  Tab,
+  Tabs,
   Typography
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import { Link as RouterLink } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
+import { SurfaceCard } from "../components/ui/SurfaceCard";
 import { useLanLiveState } from "../lib/useLanLiveState";
 
 const featureCards = [
@@ -92,14 +93,12 @@ export function LandingPage() {
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
         <PageHeader title="Routy" subtitle="media relay locale" networkState={liveState} />
 
-        <Card
+        <SurfaceCard
           sx={{
             mt: 3,
             overflow: "hidden",
             position: "relative",
-            background: isDark
-              ? "linear-gradient(180deg, rgba(8, 19, 29, 0.96) 0%, rgba(7, 17, 26, 0.98) 100%)"
-              : "linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(246, 251, 255, 0.92) 100%)"
+            background: theme.app.gradients.hero
           }}
         >
           <Box
@@ -167,7 +166,7 @@ export function LandingPage() {
               </Stack>
 
               <Stack spacing={2}>
-                <Card
+                <SurfaceCard
                   variant="outlined"
                   sx={{
                     overflow: "hidden",
@@ -181,12 +180,12 @@ export function LandingPage() {
                     alt="Visual Routy con dashboard locale, device e collegamenti di rete"
                     sx={{ display: "block", width: "100%", objectFit: "cover" }}
                   />
-                </Card>
+                </SurfaceCard>
               </Stack>
             </Box>
           </CardContent>
-        </Card>
-        <Card sx={{ mt: { xs: 4, md: 5 } }}>
+        </SurfaceCard>
+        <SurfaceCard sx={{ mt: { xs: 4, md: 5 } }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Stack spacing={2.5}>
               <Box>
@@ -195,52 +194,31 @@ export function LandingPage() {
                 </Typography>
                 <Typography variant="h3">10 motivi semplici ma efficaci</Typography>
               </Box>
-              <Box
-                sx={{
-                  display: "grid",
-                  gap: { xs: 1, md: 1.25 },
-                  gridTemplateColumns: { xs: "repeat(5, minmax(0, 1fr))", lg: "repeat(10, minmax(0, 1fr))" },
-                  alignItems: "center"
+              <Tabs
+                value={selectedFeatureIndex}
+                onChange={(_event, nextValue: number) => {
+                  setSelectedFeatureIndex(nextValue);
                 }}
+                variant="scrollable"
+                scrollButtons={false}
+                aria-label="Perché Routy"
               >
-                {featureCards.map(({ icon: Icon, title }, index) => {
-                  const isSelected = index === selectedFeatureIndex;
+                {featureCards.map(({ icon: Icon, title }, index) => (
+                  <Tab
+                    key={title}
+                    icon={<Icon />}
+                    iconPosition="start"
+                    label={title}
+                    value={index}
+                    sx={{
+                      alignItems: "flex-start",
+                      textAlign: "left"
+                    }}
+                  />
+                ))}
+              </Tabs>
 
-                  return (
-                    <ButtonBase
-                      key={title}
-                      onClick={() => {
-                        setSelectedFeatureIndex(index);
-                      }}
-                      aria-label={title}
-                      aria-pressed={isSelected}
-                      sx={{
-                        minWidth: 0,
-                        p: { xs: 0.4, md: 0.55 },
-                        justifyContent: "center",
-                        color: isSelected ? "secondary.main" : "text.secondary",
-                        opacity: isSelected ? 1 : 0.52,
-                        transition: "transform 160ms ease, color 160ms ease, opacity 160ms ease",
-                        "&:hover": {
-                          transform: "translateY(-2px)",
-                          color: isSelected ? "secondary.main" : "text.primary",
-                          opacity: 0.82
-                        }
-                      }}
-                    >
-                      <Icon
-                        sx={{
-                          fontSize: { xs: 28, md: 34 },
-                          transform: isSelected ? "scale(1.08)" : "scale(1)",
-                          transition: "transform 160ms ease"
-                        }}
-                      />
-                    </ButtonBase>
-                  );
-                })}
-              </Box>
-
-              <Card
+              <SurfaceCard
                 variant="outlined"
                 sx={{
                   background: isDark
@@ -255,10 +233,10 @@ export function LandingPage() {
                     <Typography color="text.secondary">{selectedFeature.body}</Typography>
                   </Stack>
                 </CardContent>
-              </Card>
+              </SurfaceCard>
             </Stack>
           </CardContent>
-        </Card>
+        </SurfaceCard>
       </Container>
     </Box>
   );

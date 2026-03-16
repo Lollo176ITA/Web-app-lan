@@ -1,22 +1,23 @@
 import { useState, type ReactNode } from "react";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
-import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import {
+  AppBar,
   Avatar,
   Box,
   Button,
-  ButtonBase,
+  Chip,
+  Container,
   Drawer,
   IconButton,
   List,
   ListItemButton,
   ListItemText,
-  Paper,
   Stack,
+  Toolbar,
   Typography,
   useMediaQuery
 } from "@mui/material";
@@ -28,9 +29,9 @@ import { useIdentity } from "../lib/identity-context";
 type NetworkState = "live" | "fallback" | "connecting";
 
 interface PageHeaderProps {
-  title: string;
-  subtitle?: string;
   networkState?: NetworkState;
+  subtitle?: string;
+  title: string;
   trailing?: ReactNode;
   trailingLinkTo?: string;
 }
@@ -42,244 +43,160 @@ const navItems = [
   { label: "Streaming", to: "/stream", matches: (pathname: string) => pathname.startsWith("/stream") }
 ];
 
+function getNetworkChipLabel(networkState: NetworkState) {
+  switch (networkState) {
+    case "live":
+      return "Live";
+    case "fallback":
+      return "Polling";
+    default:
+      return "Connessione";
+  }
+}
+
 export function PageHeader({ title, subtitle, networkState, trailing, trailingLinkTo }: PageHeaderProps) {
   const location = useLocation();
   const theme = useTheme();
   const { mode, toggleColorMode } = useColorMode();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isDark = mode === "dark";
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { identity } = useIdentity();
   const profilePath = identity ? `/utente/${identity.id}` : null;
   const profileInitial = identity?.nickname.trim().charAt(0).toUpperCase() ?? "?";
-  const trailingContent =
+  const diagnosticsLink = trailingLinkTo ?? (networkState ? "/diagnostics" : undefined);
+  const shellActions =
     trailing ??
     (networkState ? (
-      <Avatar
+      <Chip
+        component={diagnosticsLink ? RouterLink : "div"}
+        to={diagnosticsLink}
+        clickable={Boolean(diagnosticsLink)}
+        icon={networkState === "live" ? <WifiRoundedIcon /> : <AutorenewRoundedIcon />}
+        label={getNetworkChipLabel(networkState)}
         sx={{
-          width: 40,
-          height: 40,
-          bgcolor:
-            networkState === "live"
-              ? alpha(theme.palette.secondary.main, isDark ? 0.28 : 0.18)
-              : alpha(theme.palette.text.primary, isDark ? 0.16 : 0.08),
-          color: networkState === "live" ? "secondary.main" : "text.secondary"
+          color: networkState === "live" ? "secondary.main" : "text.secondary",
+          bgcolor: networkState === "live" ? theme.app.kind.image.soft : alpha(theme.palette.text.primary, 0.08),
+          border: `1px solid ${
+            networkState === "live" ? theme.app.kind.image.border : alpha(theme.palette.text.primary, 0.12)
+          }`
         }}
-      >
-        {networkState === "live" ? <WifiRoundedIcon /> : <AutorenewRoundedIcon />}
-      </Avatar>
+      />
     ) : null);
-  const trailingDestination = trailing ? trailingLinkTo : networkState ? trailingLinkTo ?? "/diagnostics" : trailingLinkTo;
-  const mobileMenuItems = [
-    ...navItems.map((item) => ({
-      label: item.label,
-      to: item.to,
-      selected: item.matches(location.pathname)
-    })),
-    ...(trailingDestination
-      ? [
-          {
-            label: "Diagnostica",
-            to: trailingDestination,
-            selected: location.pathname.startsWith("/diagnostics")
-          }
-        ]
-      : []),
-    ...(profilePath
-      ? [
-          {
-            label: "Profilo",
-            to: profilePath,
-            selected: location.pathname.startsWith("/utente/")
-          }
-        ]
-      : [])
-  ];
-  const panelBackground = isDark
-    ? `linear-gradient(180deg, ${alpha(theme.palette.background.paper, 0.9)} 0%, ${alpha("#08131d", 0.86)} 100%)`
-    : "rgba(255,255,255,0.78)";
-
-  function toggleMobileMenu() {
-    setMobileMenuOpen((currentValue) => !currentValue);
-  }
-
-  function renderThemeToggleButton() {
-    return (
-      <IconButton
-        aria-label={isDark ? "Attiva modalità chiara" : "Attiva modalità scura"}
-        onClick={toggleColorMode}
-        sx={{
-          flexShrink: 0,
-          borderRadius: 2.5,
-          bgcolor: alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08),
-          color: isDark ? theme.palette.primary.light : "primary.main",
-          border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.24 : 0.12)}`
-        }}
-      >
-        {isDark ? <LightModeRoundedIcon /> : <DarkModeRoundedIcon />}
-      </IconButton>
-    );
-  }
-
-  function getProfileAvatarStyles() {
-    const profileActive = location.pathname.startsWith("/utente/");
-
-    return {
-      width: { xs: 38, md: 42 },
-      height: { xs: 38, md: 42 },
-      bgcolor: profileActive
-        ? alpha(theme.palette.primary.main, isDark ? 0.24 : 0.16)
-        : alpha(theme.palette.text.primary, isDark ? 0.16 : 0.08),
-      color: profileActive ? (isDark ? theme.palette.primary.light : "primary.main") : "text.primary",
-      fontWeight: 700
-    };
-  }
 
   return (
     <>
-      <Paper
-        elevation={0}
-        sx={{
-          position: "sticky",
-          top: { xs: 8, md: 12 },
-          zIndex: theme.zIndex.appBar,
-          px: { xs: 1, md: 2 },
-          py: { xs: 1, md: 1.5 },
-          borderRadius: { xs: 3, md: 4 },
-          bgcolor: alpha(theme.palette.background.paper, isDark ? 0.84 : 0.78),
-          background: panelBackground,
-          backdropFilter: "blur(20px)",
-          borderColor: alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)
-        }}
-      >
-        <Stack direction="row" spacing={{ xs: 1, md: 2 }} alignItems="center" justifyContent="space-between">
-          <Stack direction="row" spacing={{ xs: 0.9, md: 1.25 }} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
-            <Avatar
-              sx={{
-                width: { xs: 36, md: 40 },
-                height: { xs: 36, md: 40 },
-                bgcolor: "transparent",
-                boxShadow: isDark ? "0 14px 28px rgba(0, 0, 0, 0.32)" : "0 12px 26px rgba(30, 136, 229, 0.2)"
-              }}
-            >
-              <Box
-                component="img"
-                src="/brand/routy-mark.svg"
-                alt="Routy"
-                sx={{ width: "100%", height: "100%", display: "block" }}
-              />
-            </Avatar>
-            <Box sx={{ minWidth: 0, flex: 1 }}>
-              {subtitle ? (
-                <Typography
-                  variant="overline"
+      <AppBar position="sticky" color="transparent" sx={{ top: { xs: 8, md: 12 }, borderRadius: 4 }}>
+        <Container maxWidth="xl" disableGutters>
+          <Toolbar sx={{ px: { xs: 1.5, md: 2.5 }, gap: { xs: 1, md: 2 } }}>
+            <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
+              <Avatar
+                variant="rounded"
+                sx={{
+                  width: { xs: 42, md: 48 },
+                  height: { xs: 42, md: 48 },
+                  bgcolor: "transparent",
+                  boxShadow: theme.palette.mode === "dark"
+                    ? "0 14px 28px rgba(0, 0, 0, 0.32)"
+                    : "0 12px 26px rgba(30, 136, 229, 0.2)"
+                }}
+              >
+                <Box component="img" src="/brand/routy-mark.svg" alt="Routy" sx={{ width: "100%", height: "100%" }} />
+              </Avatar>
+
+              <Box sx={{ minWidth: 0 }}>
+                {subtitle ? (
+                  <Typography variant="overline" color="secondary.main" sx={{ display: "block", lineHeight: 1.1 }}>
+                    {subtitle}
+                  </Typography>
+                ) : null}
+                <Typography variant="h4" sx={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {title}
+                </Typography>
+              </Box>
+            </Stack>
+
+            {isMobile ? (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <IconButton
+                  aria-label={mode === "dark" ? "Attiva modalità chiara" : "Attiva modalità scura"}
+                  onClick={toggleColorMode}
                   sx={{
-                    display: { xs: "none", sm: "block" },
-                    color: "secondary.main",
-                    lineHeight: 1.1
+                    bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.18 : 0.08),
+                    border: `1px solid ${theme.app.outlines.soft}`
                   }}
                 >
-                  {subtitle}
-                </Typography>
-              ) : null}
-              <Typography
-                variant="h4"
-                sx={{
-                  fontSize: { xs: "1.15rem", sm: "1.3rem", md: "clamp(1.4rem, 2vw, 2.2rem)" },
-                  lineHeight: 1.1,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis"
-                }}
-              >
-                {title}
-              </Typography>
-            </Box>
-          </Stack>
+                  {mode === "dark" ? <LightModeRoundedIcon /> : <DarkModeRoundedIcon />}
+                </IconButton>
+                <IconButton
+                  aria-label={mobileMenuOpen ? "Chiudi menu" : "Apri menu"}
+                  onClick={() => {
+                    setMobileMenuOpen((currentValue) => !currentValue);
+                  }}
+                  sx={{
+                    bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.18 : 0.08),
+                    border: `1px solid ${theme.app.outlines.soft}`
+                  }}
+                >
+                  <MenuRoundedIcon />
+                </IconButton>
+              </Stack>
+            ) : (
+              <Stack direction="row" spacing={1.25} alignItems="center" sx={{ flexShrink: 0 }}>
+                <Stack direction="row" spacing={0.75} sx={{ flexShrink: 0 }}>
+                  {navItems.map((item) => {
+                    const active = item.matches(location.pathname);
 
-          {isMobile ? (
-            <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
-              {renderThemeToggleButton()}
-              <IconButton
-                aria-label={mobileMenuOpen ? "Chiudi menu" : "Apri menu"}
-                onClick={toggleMobileMenu}
-                sx={{
-                  flexShrink: 0,
-                  borderRadius: 2.5,
-                  bgcolor: alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08),
-                  color: isDark ? theme.palette.primary.light : "primary.main",
-                  border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.24 : 0.12)}`
-                }}
-              >
-                {mobileMenuOpen ? <CloseRoundedIcon /> : <MenuRoundedIcon />}
-              </IconButton>
-            </Stack>
-          ) : (
-            <Stack direction="row" spacing={{ xs: 0.5, sm: 1 }} alignItems="center" sx={{ flexShrink: 0 }}>
-              <Stack direction="row" spacing={{ xs: 0.25, sm: 0.75 }} sx={{ flexWrap: "nowrap" }}>
-                {navItems.map((item) => {
-                  const isActive = item.matches(location.pathname);
+                    return (
+                      <Button
+                        key={item.to}
+                        component={RouterLink}
+                        to={item.to}
+                        variant={active ? "contained" : "text"}
+                        color={active ? "primary" : "inherit"}
+                        sx={{
+                          color: active ? undefined : "text.secondary",
+                          bgcolor: active ? alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.18 : 0.1) : "transparent"
+                        }}
+                      >
+                        {item.label}
+                      </Button>
+                    );
+                  })}
+                </Stack>
 
-                  return (
-                    <Button
-                      key={item.to}
-                      component={RouterLink}
-                      to={item.to}
-                      color="inherit"
-                      variant={isActive ? "contained" : "text"}
+                {shellActions}
+
+                <IconButton
+                  aria-label={mode === "dark" ? "Attiva modalità chiara" : "Attiva modalità scura"}
+                  onClick={toggleColorMode}
+                  sx={{
+                    bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.18 : 0.08),
+                    border: `1px solid ${theme.app.outlines.soft}`
+                  }}
+                >
+                  {mode === "dark" ? <LightModeRoundedIcon /> : <DarkModeRoundedIcon />}
+                </IconButton>
+
+                {profilePath ? (
+                  <IconButton component={RouterLink} to={profilePath} aria-label={identity?.nickname ?? "Profilo"}>
+                    <Avatar
                       sx={{
-                        minWidth: 0,
-                        minHeight: { xs: 34, sm: 40 },
-                        px: { xs: 1, sm: 1.75 },
-                        fontSize: { xs: "0.8rem", sm: "0.875rem" },
-                        bgcolor: isActive ? alpha(theme.palette.primary.main, isDark ? 0.2 : 0.12) : "transparent",
-                        color: isActive ? (isDark ? theme.palette.primary.light : "primary.main") : "text.secondary",
-                        "&:hover": {
-                          bgcolor: alpha(theme.palette.primary.main, isDark ? 0.14 : 0.08)
-                        }
+                        width: 40,
+                        height: 40,
+                        bgcolor: alpha(theme.palette.primary.main, location.pathname.startsWith("/utente/") ? 0.2 : 0.1),
+                        color: location.pathname.startsWith("/utente/") ? "primary.main" : "text.primary",
+                        fontWeight: 700
                       }}
                     >
-                      {item.label}
-                    </Button>
-                  );
-                })}
+                      {profileInitial}
+                    </Avatar>
+                  </IconButton>
+                ) : null}
               </Stack>
-
-              {renderThemeToggleButton()}
-
-              {trailingContent ? (
-                trailingDestination ? (
-                  <ButtonBase
-                    component={RouterLink}
-                    to={trailingDestination}
-                    sx={{
-                      borderRadius: 2,
-                      overflow: "hidden"
-                    }}
-                  >
-                    <Box sx={{ flexShrink: 0 }}>{trailingContent}</Box>
-                  </ButtonBase>
-                ) : (
-                  <Box sx={{ flexShrink: 0 }}>{trailingContent}</Box>
-                )
-              ) : null}
-
-              {profilePath ? (
-                <ButtonBase
-                  component={RouterLink}
-                  to={profilePath}
-                  sx={{
-                    borderRadius: 2,
-                    overflow: "hidden"
-                  }}
-                >
-                  <Avatar sx={getProfileAvatarStyles()}>{profileInitial}</Avatar>
-                </ButtonBase>
-              ) : null}
-            </Stack>
-          )}
-        </Stack>
-      </Paper>
+            )}
+          </Toolbar>
+        </Container>
+      </AppBar>
 
       <Drawer
         anchor="right"
@@ -289,69 +206,61 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
         }}
         PaperProps={{
           sx: {
-            width: "min(82vw, 320px)",
-            p: 1.5
+            width: "min(88vw, 360px)",
+            px: 1,
+            py: 1.5
           }
         }}
       >
         <Stack spacing={1.5}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-            <Stack direction="row" spacing={1.25} alignItems="center">
-              <Box
-                component="img"
-                src="/brand/routy-mark.svg"
-                alt="Routy"
-                sx={{ width: 34, height: 34, display: "block", flexShrink: 0 }}
-              />
-              <Box>
-                <Typography variant="overline" color="secondary.main">
-                  Navigazione
-                </Typography>
-              </Box>
-            </Stack>
-            <IconButton
-              aria-label="Chiudi menu"
-              onClick={() => {
-                setMobileMenuOpen(false);
-              }}
-              sx={{
-                flexShrink: 0,
-                borderRadius: 2.5,
-                bgcolor: alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08),
-                color: isDark ? theme.palette.primary.light : "primary.main",
-                border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.24 : 0.12)}`
-              }}
-            >
-              <CloseRoundedIcon />
-            </IconButton>
-          </Stack>
+          <Box sx={{ px: 1.5 }}>
+            <Typography variant="overline" color="secondary.main">
+              Navigazione
+            </Typography>
+            <Typography variant="h5">{title}</Typography>
+          </Box>
 
-          <List sx={{ py: 0 }}>
-            {mobileMenuItems.map((item) => (
+          <List disablePadding>
+            {navItems.map((item) => (
               <ListItemButton
                 key={item.to}
                 component={RouterLink}
                 to={item.to}
-                selected={item.selected}
+                selected={item.matches(location.pathname)}
                 onClick={() => {
                   setMobileMenuOpen(false);
-                }}
-                sx={{
-                  borderRadius: 2.5,
-                  mb: 0.5,
-                  "&.Mui-selected": {
-                    bgcolor: alpha(theme.palette.primary.main, isDark ? 0.2 : 0.12),
-                    color: isDark ? theme.palette.primary.light : "primary.main"
-                  },
-                  "&.Mui-selected:hover": {
-                    bgcolor: alpha(theme.palette.primary.main, isDark ? 0.26 : 0.16)
-                  }
                 }}
               >
                 <ListItemText primary={item.label} />
               </ListItemButton>
             ))}
+            {diagnosticsLink ? (
+              <ListItemButton
+                component={RouterLink}
+                to={diagnosticsLink}
+                selected={location.pathname.startsWith("/diagnostics")}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                }}
+              >
+                <ListItemText primary="Diagnostica" />
+              </ListItemButton>
+            ) : null}
+            {profilePath ? (
+              <ListItemButton
+                component={RouterLink}
+                to={profilePath}
+                selected={location.pathname.startsWith("/utente/")}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                }}
+              >
+                <ListItemText primary="Profilo" />
+              </ListItemButton>
+            ) : null}
           </List>
+
+          {shellActions ? <Box sx={{ px: 1 }}>{shellActions}</Box> : null}
         </Stack>
       </Drawer>
     </>

@@ -39,6 +39,8 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.2",
     "@mui/material": "^7.3.2",
+    "@mui/x-data-grid": "^8.27.5",
+    "@mui/x-tree-view": "^8.27.2",
     "@playwright/test": "^1.55.0",
     "@types/express": "^5.0.3",
     "@types/mime-types": "^3.0.1",

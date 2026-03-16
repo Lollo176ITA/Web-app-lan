@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
-import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
+import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
 import TerminalRoundedIcon from "@mui/icons-material/TerminalRounded";
 import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import {
@@ -10,16 +10,19 @@ import {
   Avatar,
   Box,
   Button,
-  Card,
-  CardContent,
   Container,
   Snackbar,
   Stack,
-  Typography
+  Typography,
+  useMediaQuery
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
+import { DataGrid, type GridColDef, type GridRenderCellParams } from "@mui/x-data-grid";
 import type { HostDiagnosticCheck, HostDiagnosticCommand, HostDiagnosticsResponse } from "../../shared/types";
 import { PageHeader } from "../components/PageHeader";
+import { SectionHeader } from "../components/ui/SectionHeader";
+import { StatusBadge } from "../components/ui/StatusBadge";
+import { SurfaceCard } from "../components/ui/SurfaceCard";
 import { fetchDiagnostics } from "../lib/api";
 import { copyTextToClipboard } from "../lib/clipboard";
 import { useLanLiveState } from "../lib/useLanLiveState";
@@ -39,27 +42,28 @@ function getCommandsForCheck(checkId: string, commands: HostDiagnosticCommand[])
   }
 }
 
-function getCheckTone(check: HostDiagnosticCheck, isDark: boolean) {
-  if (check.status === "pass") {
-    return {
-      accent: "#2e7d32",
-      soft: alpha("#2e7d32", isDark ? 0.16 : 0.08),
-      border: alpha("#2e7d32", isDark ? 0.26 : 0.18),
-      label: "OK"
-    };
+function getStatusTone(status: HostDiagnosticCheck["status"]) {
+  switch (status) {
+    case "pass":
+      return "pass";
+    case "warn":
+      return "warn";
+    case "fail":
+      return "fail";
+    default:
+      return "info";
   }
+}
 
-  return {
-    accent: "#c62828",
-    soft: alpha("#c62828", isDark ? 0.16 : 0.08),
-    border: alpha("#c62828", isDark ? 0.26 : 0.18),
-    label: check.status === "warn" ? "Da verificare" : "Errore"
-  };
+interface DiagnosticRow {
+  check: HostDiagnosticCheck;
+  command: HostDiagnosticCommand | null;
+  id: string;
 }
 
 export function DiagnosticsPage() {
   const theme = useTheme();
-  const isDark = theme.palette.mode === "dark";
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [diagnostics, setDiagnostics] = useState<HostDiagnosticsResponse | null>(null);
   const [state, setState] = useState<DiagnosticsState>("loading");
   const [snackbar, setSnackbar] = useState<string | null>(null);
@@ -83,180 +87,249 @@ export function DiagnosticsPage() {
     void refreshDiagnostics();
   }, []);
 
+  const diagnosticRows = useMemo<DiagnosticRow[]>(
+    () =>
+      diagnostics?.checks.map((check) => ({
+        id: check.id,
+        check,
+        command: getCommandsForCheck(check.id, diagnostics.commands)[0] ?? null
+      })) ?? [],
+    [diagnostics]
+  );
+
+  const columns: GridColDef<DiagnosticRow>[] = [
+    {
+      field: "label",
+      headerName: "Controllo",
+      minWidth: 240,
+      flex: 0.8,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams<DiagnosticRow>) => (
+        <Stack spacing={0.25} justifyContent="center" sx={{ minWidth: 0 }}>
+          <Typography fontWeight={700} noWrap>
+            {params.row.check.label}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" noWrap>
+            {params.row.command ? params.row.command.label : "Nessun comando richiesto"}
+          </Typography>
+        </Stack>
+      )
+    },
+    {
+      field: "status",
+      headerName: "Stato",
+      width: 150,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams<DiagnosticRow>) => (
+        <StatusBadge
+          status={getStatusTone(params.row.check.status)}
+          label={theme.app.status[getStatusTone(params.row.check.status)].label}
+          icon={params.row.check.status === "pass" ? <CheckCircleRoundedIcon /> : <ErrorOutlineRoundedIcon />}
+        />
+      )
+    },
+    {
+      field: "message",
+      headerName: "Dettaglio",
+      minWidth: 360,
+      flex: 1.3,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams<DiagnosticRow>) => (
+        <Typography variant="body2" color="text.secondary">
+          {params.row.check.message}
+        </Typography>
+      )
+    },
+    {
+      field: "command",
+      headerName: "Comando",
+      minWidth: 220,
+      flex: 1.1,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams<DiagnosticRow>) => (
+        <Typography
+          component="code"
+          sx={{
+            fontFamily: '"Roboto Mono", "SFMono-Regular", monospace',
+            fontSize: "0.78rem",
+            color: "text.secondary",
+            whiteSpace: "normal"
+          }}
+        >
+          {params.row.command?.command ?? "Nessuna azione necessaria"}
+        </Typography>
+      )
+    },
+    {
+      field: "copy",
+      headerName: "",
+      width: 120,
+      sortable: false,
+      disableColumnMenu: true,
+      align: "right",
+      renderCell: (params: GridRenderCellParams<DiagnosticRow>) =>
+        params.row.command ? (
+          <Button
+            size="small"
+            startIcon={<ContentCopyRoundedIcon />}
+            onClick={() => {
+              void copyTextToClipboard(params.row.command!.command)
+                .then(() => {
+                  setSnackbar("Comando copiato negli appunti.");
+                })
+                .catch(() => {
+                  setSnackbar("Copia del comando non riuscita.");
+                });
+            }}
+          >
+            Copia
+          </Button>
+        ) : null
+    }
+  ];
+
   return (
     <Box sx={{ pb: 7 }}>
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
         <PageHeader title="Diagnostica LAN" subtitle="Host self-test" networkState={liveState} />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
-          <Card sx={{ borderRadius: 2.5 }}>
-            <CardContent>
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                spacing={2}
-                alignItems={{ xs: "flex-start", sm: "center" }}
-                justifyContent="space-between"
-              >
-                <Stack direction="row" spacing={1.5} alignItems="center">
-                  <Avatar sx={{ bgcolor: alpha("#1769aa", 0.12), color: "primary.main" }}>
-                    <WifiRoundedIcon />
-                  </Avatar>
-                  <Box>
-                    <Typography variant="h5">Controlli host</Typography>
-                    <Typography color="text.secondary" variant="body2">
-                      Verifica bind, raggiungibilita LAN, profilo rete e firewall.
-                    </Typography>
-                  </Box>
-                </Stack>
-
-                <Button
-                  variant="outlined"
-                  startIcon={<AutorenewRoundedIcon />}
-                  onClick={() => {
-                    void refreshDiagnostics();
-                  }}
-                  disabled={state === "loading"}
-                >
-                  {state === "loading" ? "Controllo..." : "Aggiorna"}
-                </Button>
-              </Stack>
-            </CardContent>
-          </Card>
+          <SurfaceCard>
+            <Box sx={{ p: { xs: 2.25, md: 3 } }}>
+              <SectionHeader
+                eyebrow="Operazioni host"
+                title="Controlli host"
+                description="Verifica bind, raggiungibilità LAN, profilo rete e firewall."
+                actions={
+                  <Button
+                    variant="outlined"
+                    startIcon={<AutorenewRoundedIcon />}
+                    onClick={() => {
+                      void refreshDiagnostics();
+                    }}
+                    disabled={state === "loading"}
+                  >
+                    {state === "loading" ? "Controllo..." : "Aggiorna"}
+                  </Button>
+                }
+              />
+            </Box>
+          </SurfaceCard>
 
           {diagnostics ? (
-            <>
+            isMobile ? (
               <Box
                 sx={{
                   display: "grid",
                   gap: 2,
-                  gridTemplateColumns: { xs: "1fr", lg: "repeat(2, minmax(0, 1fr))" }
+                  gridTemplateColumns: { xs: "1fr" }
                 }}
               >
-                {diagnostics.checks.map((check) => {
-                  const tone = getCheckTone(check, isDark);
-                  const suggestedCommands = check.status === "pass" ? [] : getCommandsForCheck(check.id, diagnostics.commands);
+                {diagnosticRows.map(({ check, command }) => {
+                  const statusTone = getStatusTone(check.status);
 
                   return (
-                    <Card
+                    <SurfaceCard
                       key={check.id}
+                      tone="sunken"
                       sx={{
-                        borderRadius: 2.5,
-                        border: `1px solid ${tone.border}`,
-                        bgcolor: tone.soft
+                        borderColor: theme.app.status[statusTone].border,
+                        bgcolor: theme.app.status[statusTone].soft
                       }}
                     >
-                      <CardContent>
+                      <Box sx={{ p: 2.25 }}>
                         <Stack spacing={2}>
                           <Stack direction="row" spacing={1.5} alignItems="flex-start">
                             <Avatar
                               sx={{
                                 width: 42,
                                 height: 42,
-                                bgcolor: alpha(tone.accent, 0.12),
-                                color: tone.accent
+                                bgcolor: alpha(theme.app.status[statusTone].main, 0.12),
+                                color: theme.app.status[statusTone].main
                               }}
                             >
-                              {check.status === "pass" ? <CheckCircleRoundedIcon /> : <CloseRoundedIcon />}
+                              {statusTone === "pass" ? <CheckCircleRoundedIcon /> : <ErrorOutlineRoundedIcon />}
                             </Avatar>
-
                             <Box sx={{ flex: 1 }}>
                               <Typography variant="h6">{check.label}</Typography>
-                              <Typography variant="body2" sx={{ color: tone.accent, fontWeight: 700 }}>
-                                {tone.label}
-                              </Typography>
+                              <Box sx={{ mt: 0.5 }}>
+                                <StatusBadge
+                                  status={statusTone}
+                                  label={theme.app.status[statusTone].label}
+                                  icon={statusTone === "pass" ? <CheckCircleRoundedIcon /> : <ErrorOutlineRoundedIcon />}
+                                />
+                              </Box>
                             </Box>
                           </Stack>
 
-                          <Box>
-                            <Typography variant="overline" color="secondary.main">
-                              Cosa significa
-                            </Typography>
-                            <Typography color="text.secondary">{check.message}</Typography>
-                          </Box>
+                          <Typography color="text.secondary">{check.message}</Typography>
 
-                          {suggestedCommands.length > 0 ? (
-                            <Stack spacing={1.5}>
-                              <Typography variant="overline" color="secondary.main">
-                                Comando suggerito
-                              </Typography>
-
-                              {suggestedCommands.map((command) => (
-                                <Box
-                                  key={command.id}
-                                  sx={{
-                                    p: 1.5,
-                                    borderRadius: 2,
-                                    bgcolor: "background.paper",
-                                    border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
-                                  }}
-                                >
-                                  <Stack spacing={1.25}>
-                                    <Stack direction="row" spacing={1} alignItems="center">
-                                      <Avatar
-                                        sx={{
-                                          width: 34,
-                                          height: 34,
-                                          bgcolor: alpha("#1769aa", 0.12),
-                                          color: "primary.main"
-                                        }}
-                                      >
-                                        <TerminalRoundedIcon sx={{ fontSize: 18 }} />
-                                      </Avatar>
-                                      <Box>
-                                        <Typography variant="subtitle1">{command.label}</Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                          {command.reason}
-                                        </Typography>
-                                      </Box>
-                                    </Stack>
-
-                                    <Typography
-                                      component="code"
-                                      sx={{
-                                        display: "block",
-                                        p: 1.25,
-                                        borderRadius: 2,
-                                        bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.03),
-                                        border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`,
-                                        fontSize: "0.85rem",
-                                        wordBreak: "break-word"
-                                      }}
-                                    >
-                                      {command.command}
-                                    </Typography>
-
-                                    <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }}>
+                          {command ? (
+                            <SurfaceCard tone="overlay">
+                              <Box sx={{ p: 1.75 }}>
+                                <Stack spacing={1.25}>
+                                  <Stack direction="row" spacing={1} alignItems="center">
+                                    <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.12), color: "primary.main" }}>
+                                      <TerminalRoundedIcon sx={{ fontSize: 18 }} />
+                                    </Avatar>
+                                    <Box>
+                                      <Typography variant="subtitle1">{command.label}</Typography>
                                       <Typography variant="body2" color="text.secondary">
-                                        Shell: {command.shell}
+                                        {command.reason}
                                       </Typography>
-                                      <Button
-                                        size="small"
-                                        startIcon={<ContentCopyRoundedIcon />}
-                                        onClick={() => {
-                                          void copyTextToClipboard(command.command)
-                                            .then(() => {
-                                              setSnackbar("Comando copiato negli appunti.");
-                                            })
-                                            .catch(() => {
-                                              setSnackbar("Copia del comando non riuscita.");
-                                            });
-                                        }}
-                                      >
-                                        Copia comando
-                                      </Button>
-                                    </Stack>
+                                    </Box>
                                   </Stack>
-                                </Box>
-                              ))}
-                            </Stack>
+                                  <Typography
+                                    component="code"
+                                    sx={{
+                                      display: "block",
+                                      fontSize: "0.85rem",
+                                      wordBreak: "break-word"
+                                    }}
+                                  >
+                                    {command.command}
+                                  </Typography>
+                                  <Button
+                                    startIcon={<ContentCopyRoundedIcon />}
+                                    onClick={() => {
+                                      void copyTextToClipboard(command.command)
+                                        .then(() => {
+                                          setSnackbar("Comando copiato negli appunti.");
+                                        })
+                                        .catch(() => {
+                                          setSnackbar("Copia del comando non riuscita.");
+                                        });
+                                    }}
+                                  >
+                                    Copia comando
+                                  </Button>
+                                </Stack>
+                              </Box>
+                            </SurfaceCard>
                           ) : null}
                         </Stack>
-                      </CardContent>
-                    </Card>
+                      </Box>
+                    </SurfaceCard>
                   );
                 })}
               </Box>
-            </>
+            ) : (
+              <SurfaceCard tone="sunken">
+                <Box sx={{ height: 440 }}>
+                  <DataGrid
+                    aria-label="Tabella diagnostica host"
+                    rows={diagnosticRows}
+                    columns={columns}
+                    getRowHeight={() => 88}
+                    hideFooter
+                    disableColumnMenu
+                    disableRowSelectionOnClick
+                    rowSelection={false}
+                    sx={{ border: "none" }}
+                  />
+                </Box>
+              </SurfaceCard>
+            )
           ) : (
             <Alert severity="warning" variant="outlined">
               Non sono riuscito a caricare la diagnostica host.

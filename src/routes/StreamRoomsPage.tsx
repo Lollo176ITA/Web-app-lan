@@ -2,6 +2,7 @@ import { startTransition, useEffect, useState } from "react";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import MeetingRoomRoundedIcon from "@mui/icons-material/MeetingRoomRounded";
+import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import {
@@ -9,21 +10,23 @@ import {
   Avatar,
   Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
   Container,
   IconButton,
   Snackbar,
   Stack,
   TextField,
-  Typography
+  Typography,
+  useMediaQuery
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
+import { DataGrid, type GridColDef, type GridRenderCellParams } from "@mui/x-data-grid";
 import { Link as RouterLink } from "react-router-dom";
 import type { StreamRoomSummary } from "../../shared/types";
 import { PageHeader } from "../components/PageHeader";
 import { QrCodeDialog } from "../components/QrCodeDialog";
+import { SectionHeader } from "../components/ui/SectionHeader";
+import { StatusBadge } from "../components/ui/StatusBadge";
+import { SurfaceCard } from "../components/ui/SurfaceCard";
 import { copyTextToClipboard } from "../lib/clipboard";
 import { buildStreamRoomShareUrl } from "../lib/share-links";
 import { useQrCodeDataUrl } from "../lib/useQrCodeDataUrl";
@@ -40,6 +43,8 @@ function formatRoomTime(value: string) {
 }
 
 export function StreamRoomsPage() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [rooms, setRooms] = useState<StreamRoomSummary[]>([]);
   const [roomName, setRoomName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -126,99 +131,195 @@ export function StreamRoomsPage() {
     }
   }
 
+  const columns: GridColDef<StreamRoomSummary>[] = [
+    {
+      field: "name",
+      headerName: "Stanza",
+      minWidth: 220,
+      flex: 1.1,
+      renderCell: (params: GridRenderCellParams<StreamRoomSummary>) => (
+        <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+          <Avatar sx={{ bgcolor: theme.app.kind.folder.soft, color: "primary.main" }}>
+            <MeetingRoomRoundedIcon />
+          </Avatar>
+          <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+            <Typography fontWeight={700} noWrap>
+              {params.row.name}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" noWrap>
+              Aggiornata {formatRoomTime(params.row.updatedAt)}
+            </Typography>
+          </Stack>
+        </Stack>
+      )
+    },
+    {
+      field: "currentVideoName",
+      headerName: "Video corrente",
+      minWidth: 220,
+      flex: 1,
+      renderCell: (params: GridRenderCellParams<StreamRoomSummary>) => (
+        <Typography variant="body2" color="text.secondary">
+          {params.row.currentVideoName ?? "Nessun video selezionato"}
+        </Typography>
+      )
+    },
+    {
+      field: "messageCount",
+      headerName: "Chat",
+      width: 120,
+      renderCell: (params: GridRenderCellParams<StreamRoomSummary>) => (
+        <Typography variant="body2">
+          {params.row.messageCount === 1 ? "1 messaggio" : `${params.row.messageCount} messaggi`}
+        </Typography>
+      )
+    },
+    {
+      field: "playback",
+      headerName: "Playback",
+      width: 170,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams<StreamRoomSummary>) => (
+        <StatusBadge
+          status={params.row.playback.status === "playing" ? "pass" : "info"}
+          label={params.row.playback.status === "playing" ? "In riproduzione" : "In pausa"}
+        />
+      )
+    },
+    {
+      field: "actions",
+      headerName: "Azioni",
+      minWidth: 250,
+      flex: 0.9,
+      sortable: false,
+      disableColumnMenu: true,
+      renderCell: (params: GridRenderCellParams<StreamRoomSummary>) => (
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          <IconButton
+            size="small"
+            aria-label={`Mostra QR code stanza ${params.row.name}`}
+            onClick={() => {
+              setQrRoomTarget(params.row);
+            }}
+          >
+            <QrCode2RoundedIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            aria-label={`Elimina stanza ${params.row.name}`}
+            disabled={deletingRoomId === params.row.id}
+            onClick={() => {
+              void handleDeleteRoom(params.row.id);
+            }}
+          >
+            <CloseRoundedIcon fontSize="small" />
+          </IconButton>
+          <Button
+            component={RouterLink}
+            to={`/stream/room/${params.row.id}`}
+            size="small"
+            variant="contained"
+            startIcon={<OpenInNewRoundedIcon />}
+          >
+            Apri
+          </Button>
+        </Stack>
+      )
+    }
+  ];
+
   return (
     <Box sx={{ pb: 7 }}>
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
         <PageHeader title="Stanze Streaming" subtitle="Watch party locale" networkState={liveState} />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
-          <Box
-            sx={{
-              display: "grid",
-              gap: 2.5,
-              alignItems: "start",
-              gridTemplateColumns: { xs: "1fr", lg: "0.95fr 1.05fr" }
-            }}
-          >
-            <Card>
-              <CardContent>
-                <Stack spacing={2}>
-                  <Typography variant="h5">Nuova stanza pubblica</Typography>
-                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
-                    <TextField
-                      fullWidth
-                      label="Nome stanza"
-                      value={roomName}
-                      onChange={(event) => {
-                        setRoomName(event.target.value);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          void handleCreateRoom();
-                        }
-                      }}
-                    />
-                    <Button
-                      variant="contained"
-                      startIcon={<AddRoundedIcon />}
-                      disabled={creatingRoom || roomName.trim().length === 0}
-                      onClick={() => {
-                        void handleCreateRoom();
-                      }}
-                    >
-                      Crea stanza
-                    </Button>
-                  </Stack>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Box>
+          <SurfaceCard>
+            <Box sx={{ p: { xs: 2.25, md: 3 } }}>
+              <SectionHeader
+                eyebrow="Nuova room"
+                title="Nuova stanza pubblica"
+                description="Crea una watch room e condividila subito con gli altri device nella LAN."
+              />
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} sx={{ mt: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Nome stanza"
+                  value={roomName}
+                  onChange={(event) => {
+                    setRoomName(event.target.value);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void handleCreateRoom();
+                    }
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  startIcon={<AddRoundedIcon />}
+                  disabled={creatingRoom || roomName.trim().length === 0}
+                  onClick={() => {
+                    void handleCreateRoom();
+                  }}
+                >
+                  Crea stanza
+                </Button>
+              </Stack>
+            </Box>
+          </SurfaceCard>
 
           {liveState === "fallback" ? (
             <Alert severity="warning">Connessione live non disponibile. Sto aggiornando l’elenco con polling.</Alert>
           ) : null}
 
-          <Card>
-            <CardContent>
-              <Stack spacing={2}>
-                <Typography variant="h5">Elenco stanze</Typography>
-                {loading ? (
-                  <Typography color="text.secondary">Caricamento stanze...</Typography>
-                ) : rooms.length === 0 ? (
-                  <Typography color="text.secondary">Nessuna stanza attiva. Crea la prima watch room.</Typography>
-                ) : (
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gap: 1.25,
-                      gridTemplateColumns: {
-                        xs: "1fr",
-                        sm: "repeat(2, minmax(0, 1fr))",
-                        md: "repeat(3, minmax(0, 1fr))",
-                        lg: "repeat(4, minmax(0, 1fr))"
-                      }
-                    }}
-                  >
-                    {rooms.map((room) => (
-                      <Card
-                        key={room.id}
-                        variant="outlined"
-                        sx={{
-                          position: "relative",
-                          minWidth: 0
-                        }}
-                      >
-                        <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
-                          <Stack
-                            direction="row"
-                            spacing={0.25}
-                            sx={{
-                              position: "absolute",
-                              top: 6,
-                              right: 6
-                            }}
-                          >
+          <SurfaceCard tone="sunken">
+            <Box sx={{ p: { xs: 2.25, md: 3 } }}>
+              <SectionHeader
+                eyebrow="Rooms"
+                title="Elenco stanze"
+                description="Apri una stanza esistente, condividi il QR o rimuovi una watch room non più necessaria."
+              />
+            </Box>
+
+            {loading ? (
+              <Box sx={{ px: 3, pb: 3 }}>
+                <Typography color="text.secondary">Caricamento stanze...</Typography>
+              </Box>
+            ) : rooms.length === 0 ? (
+              <Box sx={{ px: 3, pb: 3 }}>
+                <Typography color="text.secondary">Nessuna stanza attiva. Crea la prima watch room.</Typography>
+              </Box>
+            ) : isMobile ? (
+              <Box
+                sx={{
+                  px: 2.25,
+                  pb: 2.25,
+                  display: "grid",
+                  gap: 1.25,
+                  gridTemplateColumns: "1fr"
+                }}
+              >
+                {rooms.map((room) => (
+                  <SurfaceCard key={room.id} tone="overlay">
+                    <Box sx={{ p: 2 }}>
+                      <Stack spacing={1.25}>
+                        <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                          <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                            <Avatar sx={{ bgcolor: alpha("#1769aa", 0.12), color: "primary.main" }}>
+                              <MeetingRoomRoundedIcon />
+                            </Avatar>
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography variant="subtitle1" sx={{ wordBreak: "break-word", lineHeight: 1.2 }}>
+                                {room.name}
+                              </Typography>
+                              <Typography color="text.secondary" variant="caption">
+                                Aggiornata {formatRoomTime(room.updatedAt)}
+                              </Typography>
+                            </Box>
+                          </Stack>
+                          <Stack direction="row" spacing={0.25}>
                             <IconButton
                               size="small"
                               aria-label={`Mostra QR code stanza ${room.name}`}
@@ -239,68 +340,53 @@ export function StreamRoomsPage() {
                               <CloseRoundedIcon fontSize="small" />
                             </IconButton>
                           </Stack>
+                        </Stack>
 
-                          <Stack spacing={1.25}>
-                            <Stack direction="row" spacing={1} alignItems="center" sx={{ pr: 3 }}>
-                              <Avatar
-                                sx={{
-                                  width: 36,
-                                  height: 36,
-                                  bgcolor: alpha("#1769aa", 0.12),
-                                  color: "primary.main"
-                                }}
-                              >
-                                <MeetingRoomRoundedIcon />
-                              </Avatar>
-                              <Box sx={{ minWidth: 0 }}>
-                                <Typography variant="subtitle1" sx={{ wordBreak: "break-word", lineHeight: 1.2 }}>
-                                  {room.name}
-                                </Typography>
-                                <Typography color="text.secondary" variant="caption">
-                                  Aggiornata {formatRoomTime(room.updatedAt)}
-                                </Typography>
-                              </Box>
-                            </Stack>
+                        <Typography variant="body2" color="text.secondary">
+                          {room.currentVideoName ?? "Nessun video selezionato"}
+                        </Typography>
 
-                            <Stack spacing={0.25}>
-                              <Typography color="text.secondary" variant="caption">
-                                Video corrente
-                              </Typography>
-                              <Typography variant="body2" sx={{ wordBreak: "break-word" }}>
-                                {room.currentVideoName ?? "Nessun video selezionato"}
-                              </Typography>
-                            </Stack>
+                        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                          <StatusBadge
+                            status={room.playback.status === "playing" ? "pass" : "info"}
+                            label={room.playback.status === "playing" ? "In riproduzione" : "In pausa"}
+                          />
+                          <StatusBadge
+                            status="info"
+                            label={room.messageCount === 1 ? "1 messaggio" : `${room.messageCount} messaggi`}
+                          />
+                        </Stack>
 
-                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                              <Chip
-                                size="small"
-                                label={room.messageCount === 1 ? "1 messaggio" : `${room.messageCount} messaggi`}
-                              />
-                              <Chip
-                                size="small"
-                                label={room.playback.status === "playing" ? "In riproduzione" : "In pausa"}
-                              />
-                            </Stack>
-
-                            <Button
-                              component={RouterLink}
-                              to={`/stream/room/${room.id}`}
-                              variant="contained"
-                              startIcon={<PlayArrowRoundedIcon />}
-                              size="small"
-                              fullWidth
-                            >
-                              Apri stanza
-                            </Button>
-                          </Stack>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </Box>
-                )}
-              </Stack>
-            </CardContent>
-          </Card>
+                        <Button
+                          component={RouterLink}
+                          to={`/stream/room/${room.id}`}
+                          variant="contained"
+                          startIcon={<PlayArrowRoundedIcon />}
+                          fullWidth
+                        >
+                          Apri stanza
+                        </Button>
+                      </Stack>
+                    </Box>
+                  </SurfaceCard>
+                ))}
+              </Box>
+            ) : (
+              <Box sx={{ height: 460, px: 2, pb: 2 }}>
+                <DataGrid
+                  aria-label="Tabella stanze streaming"
+                  rows={rooms}
+                  columns={columns}
+                  getRowHeight={() => 82}
+                  hideFooter
+                  disableColumnMenu
+                  disableRowSelectionOnClick
+                  rowSelection={false}
+                  sx={{ border: "none" }}
+                />
+              </Box>
+            )}
+          </SurfaceCard>
         </Stack>
       </Container>
 
@@ -318,9 +404,9 @@ export function StreamRoomsPage() {
         onClose={() => {
           setQrRoomTarget(null);
         }}
-        title="QR code stanza"
-        description="Inquadra questo codice dalla stessa LAN per aprire subito la stanza."
-        qrCodeAlt={`QR code ${qrRoomTarget?.name ?? "stanza streaming"}`}
+        title="QR code stanza streaming"
+        description="Condividi questo codice nella stessa LAN per aprire direttamente la watch room."
+        qrCodeAlt={`QR code stanza ${qrRoomTarget?.name ?? ""}`}
         qrCodeDataUrl={qrCodeDataUrl}
         subject={qrRoomTarget?.name}
         url={qrRoomShareUrl}
@@ -337,6 +423,12 @@ export function StreamRoomsPage() {
               }
             : undefined
         }
+        actionHref={qrRoomShareUrl ?? undefined}
+        actionLabel={qrRoomTarget ? "Apri stanza" : undefined}
+        actionIcon={<OpenInNewRoundedIcon />}
+        onAction={() => {
+          setQrRoomTarget(null);
+        }}
       />
     </Box>
   );

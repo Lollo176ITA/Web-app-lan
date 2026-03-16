@@ -5,24 +5,25 @@ import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   Container,
-  Divider,
   Snackbar,
   Stack,
-  Typography,
   useMediaQuery
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useSearchParams } from "react-router-dom";
 import type { ArchiveFormat, LibraryItem, LibraryLayoutMode, SessionInfo } from "../../shared/types";
 import { FolderExplorer } from "../components/FolderExplorer";
+import { LibraryItemsDataGrid } from "../components/LibraryItemsDataGrid";
 import { LibraryGrid } from "../components/LibraryGrid";
+import { LibraryTreePanel } from "../components/LibraryTreePanel";
 import { MediaDetail } from "../components/MediaDetail";
 import { PageHeader } from "../components/PageHeader";
 import { QrCodeDialog } from "../components/QrCodeDialog";
 import { UploadSurface } from "../components/UploadSurface";
+import { EmptyState } from "../components/ui/EmptyState";
+import { SectionHeader } from "../components/ui/SectionHeader";
+import { SurfaceCard } from "../components/ui/SurfaceCard";
 import { CreateFolderDialog } from "../features/library/CreateFolderDialog";
 import { type FilterValue } from "../features/library/constants";
 import { HostSessionCard } from "../features/library/HostSessionCard";
@@ -328,21 +329,16 @@ export function AppPage() {
             </Stack>
           </Box>
 
-          <Card id="libreria">
-            <CardContent sx={{ pb: 0 }}>
+          <SurfaceCard id="libreria">
+            <Box sx={{ p: { xs: 2, md: 3 } }}>
               <Stack spacing={2.5}>
-                <Stack
-                  direction={{ xs: "column", lg: "row" }}
-                  spacing={1.5}
-                  alignItems={{ xs: "flex-start", lg: "center" }}
-                  justifyContent="space-between"
-                >
-                  <Box>
-                    <Typography variant="h5">Libreria locale</Typography>
-                  </Box>
-
-                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} flexWrap="wrap" useFlexGap>
+                <SectionHeader
+                  eyebrow="Library"
+                  title="Libreria locale"
+                  description="Esplora la gerarchia cartelle, filtra i contenuti e apri subito il pannello di dettaglio."
+                  actions={
                     <Button
+                      fullWidth={isMobile}
                       variant="outlined"
                       startIcon={<CreateNewFolderRoundedIcon />}
                       onClick={() => {
@@ -351,70 +347,140 @@ export function AppPage() {
                     >
                       Nuova cartella
                     </Button>
-                  </Stack>
-                </Stack>
-
-                <FolderExplorer
-                  availableArchiveFormats={availableArchiveFormats}
-                  currentFolderId={currentFolderId}
-                  items={items}
-                  selectedId={selectedId}
-                  onCreateArchive={(item, format) => {
-                    void handleCreateArchive(item, format);
-                  }}
-                  onDeleteItem={(item) => {
-                    void handleDelete(item);
-                  }}
-                  onDownloadItem={handleDownload}
-                  onOpenFolder={setCurrentFolderId}
-                  onSelectItem={setSelectedId}
-                  onShowQrCode={handleShowQrCode}
+                  }
                 />
 
-                {!isMobile ? (
-                  <LibraryFilters value={filter} onChange={setFilter} />
-                ) : null}
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  <Button
+                    variant={currentFolderId === null ? "contained" : folderPath.length > 0 ? "outlined" : "text"}
+                    onClick={() => {
+                      setCurrentFolderId(null);
+                    }}
+                  >
+                    Radice
+                  </Button>
+                  {folderPath.map((folder) => (
+                    <Button
+                      key={folder.id}
+                      variant={folder.id === currentFolderId ? "contained" : "outlined"}
+                      onClick={() => {
+                        setCurrentFolderId(folder.id);
+                      }}
+                    >
+                      {folder.name}
+                    </Button>
+                  ))}
+                </Stack>
+
+                {isMobile ? (
+                  <>
+                    <FolderExplorer
+                      availableArchiveFormats={availableArchiveFormats}
+                      currentFolderId={currentFolderId}
+                      items={items}
+                      selectedId={selectedId}
+                      onCreateArchive={(item, format) => {
+                        void handleCreateArchive(item, format);
+                      }}
+                      onDeleteItem={(item) => {
+                        void handleDelete(item);
+                      }}
+                      onDownloadItem={handleDownload}
+                      onOpenFolder={setCurrentFolderId}
+                      onSelectItem={setSelectedId}
+                      onShowQrCode={handleShowQrCode}
+                    />
+
+                    <LibraryFilters value={filter} onChange={setFilter} />
+
+                    <LibraryGrid
+                      availableArchiveFormats={availableArchiveFormats}
+                      items={filteredItems}
+                      layoutMode={layoutMode}
+                      selectedId={selectedId}
+                      onCreateArchive={(item, format) => {
+                        void handleCreateArchive(item, format);
+                      }}
+                      onDelete={(item) => {
+                        void handleDelete(item);
+                      }}
+                      onDownload={handleDownload}
+                      onOpenFolder={setCurrentFolderId}
+                      onSelect={setSelectedId}
+                      onShowQrCode={handleShowQrCode}
+                    />
+
+                    <Box ref={detailPanelRef}>
+                      <MediaDetail item={selectedItem} onCopyLink={copyText} />
+                    </Box>
+                  </>
+                ) : (
+                  <>
+                    <LibraryFilters value={filter} onChange={setFilter} />
+
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gap: 2.5,
+                        alignItems: "start",
+                        gridTemplateColumns: {
+                          md: "minmax(250px, 0.3fr) minmax(0, 0.7fr)",
+                          xl: "280px minmax(0, 0.78fr) minmax(380px, 0.52fr)"
+                        },
+                        "& > *": {
+                          minWidth: 0
+                        }
+                      }}
+                    >
+                      <LibraryTreePanel
+                        currentFolderId={currentFolderId}
+                        items={items}
+                        onOpenFolder={setCurrentFolderId}
+                      />
+
+                      <LibraryItemsDataGrid
+                        availableArchiveFormats={availableArchiveFormats}
+                        items={filteredItems}
+                        selectedId={selectedId}
+                        onCreateArchive={(item, format) => {
+                          void handleCreateArchive(item, format);
+                        }}
+                        onDelete={(item) => {
+                          void handleDelete(item);
+                        }}
+                        onDownload={handleDownload}
+                        onOpenFolder={setCurrentFolderId}
+                        onSelect={setSelectedId}
+                        onShowQrCode={handleShowQrCode}
+                      />
+
+                      <Box
+                        ref={detailPanelRef}
+                        sx={{
+                          display: { md: "none", xl: "block" }
+                        }}
+                      >
+                        <MediaDetail item={selectedItem} onCopyLink={copyText} />
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ display: { md: "block", xl: "none" } }} ref={detailPanelRef}>
+                      {selectedItem ? (
+                        <MediaDetail item={selectedItem} onCopyLink={copyText} />
+                      ) : (
+                        <SurfaceCard tone="sunken">
+                          <EmptyState
+                            title="Seleziona un contenuto"
+                            description="Il pannello dettaglio compare qui sotto la griglia quando scegli un file o una cartella."
+                          />
+                        </SurfaceCard>
+                      )}
+                    </Box>
+                  </>
+                )}
               </Stack>
-            </CardContent>
-
-            <Divider sx={{ mt: 2.5 }} />
-
-            <CardContent>
-              <Box
-                sx={{
-                  display: "grid",
-                  gap: 2.5,
-                  alignItems: "start",
-                  gridTemplateColumns: { xs: "1fr", xl: "minmax(0, 0.92fr) minmax(0, 1.08fr)" },
-                  "& > *": {
-                    minWidth: 0
-                  }
-                }}
-              >
-                {!isMobile ? (
-                  <LibraryGrid
-                    availableArchiveFormats={availableArchiveFormats}
-                    items={filteredItems}
-                    layoutMode={layoutMode}
-                    selectedId={selectedId}
-                    onCreateArchive={(item, format) => {
-                      void handleCreateArchive(item, format);
-                    }}
-                    onDelete={(item) => {
-                      void handleDelete(item);
-                    }}
-                    onDownload={handleDownload}
-                    onOpenFolder={setCurrentFolderId}
-                    onSelect={setSelectedId}
-                    onShowQrCode={handleShowQrCode}
-                  />
-                ) : null}
-                <Box ref={detailPanelRef}>
-                  <MediaDetail item={selectedItem} onCopyLink={copyText} />
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
+            </Box>
+          </SurfaceCard>
         </Stack>
       </Container>
 
