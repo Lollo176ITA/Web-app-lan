@@ -90,6 +90,189 @@ describe("Routeroom API", () => {
     close();
   });
 
+  it("registers android sync devices and keeps sync uploads additive", async () => {
+    const storageRoot = await createTemporaryStorage();
+    const { app, close } = await createApp({ storageRoot });
+
+    const pairingResponse = await request(app).post("/api/sync/pairing-code").expect(201);
+    const registerResponse = await request(app)
+      .post("/api/sync/register")
+      .send({
+        pairingCode: pairingResponse.body.code,
+        deviceName: "Pixel 9",
+        platform: "android"
+      })
+      .expect(201);
+    const authToken = registerResponse.body.authToken as string;
+
+    const configResponse = await request(app)
+      .put("/api/sync/device/config")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        approvedSsids: ["Home WiFi"],
+        mappings: [{ sourceName: "Camera" }]
+      })
+      .expect(200);
+    const mappingId = configResponse.body.device.mappings[0]?.id as string;
+
+    const itemsAfterConfig = (await request(app).get("/api/items").expect(200)).body as Array<{
+      id: string;
+      name: string;
+      kind: string;
+      parentId: string | null;
+    }>;
+    const syncRoot = itemsAfterConfig.find((item) => item.kind === "folder" && item.parentId === null && item.name === "Sync");
+    const deviceFolder = itemsAfterConfig.find(
+      (item) => item.kind === "folder" && item.parentId === syncRoot?.id && item.name === "Pixel 9"
+    );
+    const mappingFolder = itemsAfterConfig.find(
+      (item) => item.kind === "folder" && item.parentId === deviceFolder?.id && item.name === "Camera"
+    );
+
+    expect(syncRoot).toBeTruthy();
+    expect(deviceFolder).toBeTruthy();
+    expect(mappingFolder).toBeTruthy();
+
+    const planNewFile = await request(app)
+      .post(`/api/sync/mappings/${mappingId}/plan`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        entries: [
+          {
+            relativePath: "2026/photo.jpg",
+            sizeBytes: 4,
+            modifiedAtMs: 111
+          }
+        ]
+      })
+      .expect(200);
+
+    expect(planNewFile.body.uploadCount).toBe(1);
+    expect(planNewFile.body.decisions[0]).toMatchObject({
+      relativePath: "2026/photo.jpg",
+      action: "upload",
+      reason: "new"
+    });
+
+    const uploadResponse = await request(app)
+      .post(`/api/sync/mappings/${mappingId}/upload`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .field("relativePaths", "2026/photo.jpg")
+      .field("modifiedAtMs", "111")
+      .attach("files", Buffer.from("img0"), {
+        filename: "photo.jpg",
+        contentType: "image/jpeg"
+      })
+      .expect(201);
+
+    expect(uploadResponse.body.uploadedCount).toBe(1);
+    expect(uploadResponse.body.skippedCount).toBe(0);
+    expect(uploadResponse.body.failedCount).toBe(0);
+
+    const unchangedPlan = await request(app)
+      .post(`/api/sync/mappings/${mappingId}/plan`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        entries: [
+          {
+            relativePath: "2026/photo.jpg",
+            sizeBytes: 4,
+            modifiedAtMs: 111
+          }
+        ]
+      })
+      .expect(200);
+
+    expect(unchangedPlan.body.uploadCount).toBe(0);
+    expect(unchangedPlan.body.skippedCount).toBe(1);
+    expect(unchangedPlan.body.decisions[0]).toMatchObject({
+      action: "skip",
+      reason: "unchanged"
+    });
+
+    const skippedUpload = await request(app)
+      .post(`/api/sync/mappings/${mappingId}/upload`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .field("relativePaths", "2026/photo.jpg")
+      .field("modifiedAtMs", "111")
+      .attach("files", Buffer.from("img0"), {
+        filename: "photo.jpg",
+        contentType: "image/jpeg"
+      })
+      .expect(201);
+
+    expect(skippedUpload.body.uploadedCount).toBe(0);
+    expect(skippedUpload.body.skippedCount).toBe(1);
+
+    await request(app)
+      .post(`/api/sync/mappings/${mappingId}/plan`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ entries: [] })
+      .expect(200);
+
+    const finalItems = (await request(app).get("/api/items").expect(200)).body as Array<{
+      id: string;
+      name: string;
+      kind: string;
+      parentId: string | null;
+    }>;
+    const yearFolder = finalItems.find(
+      (item) => item.kind === "folder" && item.parentId === mappingFolder?.id && item.name === "2026"
+    );
+    const photoFiles = finalItems.filter(
+      (item) => item.kind === "image" && item.parentId === yearFolder?.id && item.name === "photo.jpg"
+    );
+
+    expect(yearFolder).toBeTruthy();
+    expect(photoFiles).toHaveLength(1);
+    close();
+  });
+
+  it("rejects expired pairing codes and keeps sync overview host-only", async () => {
+    const storageRoot = await createTemporaryStorage();
+    const { app, close, sync } = await createApp({ storageRoot });
+
+    const pairingResponse = await request(app).post("/api/sync/pairing-code").expect(201);
+    (sync as { activePairingCode: { expiresAt: string } | null }).activePairingCode = {
+      ...(sync as { activePairingCode: { code: string; issuedAt: string; expiresAt: string } }).activePairingCode!,
+      expiresAt: new Date(Date.now() - 1_000).toISOString()
+    };
+
+    await request(app)
+      .post("/api/sync/register")
+      .send({
+        pairingCode: pairingResponse.body.code,
+        deviceName: "Telefono",
+        platform: "android"
+      })
+      .expect(400);
+
+    const freshPairingResponse = await request(app).post("/api/sync/pairing-code").expect(201);
+    const registerResponse = await request(app)
+      .post("/api/sync/register")
+      .send({
+        pairingCode: freshPairingResponse.body.code,
+        deviceName: "Telefono",
+        platform: "android"
+      })
+      .expect(201);
+
+    app.set("trust proxy", true);
+
+    await request(app)
+      .get("/api/sync/overview")
+      .set("X-Forwarded-For", "10.10.10.44")
+      .expect(403);
+
+    await request(app).delete(`/api/sync/devices/${registerResponse.body.device.id}`).expect(204);
+    await request(app)
+      .get("/api/sync/device/config")
+      .set("Authorization", `Bearer ${registerResponse.body.authToken as string}`)
+      .expect(401);
+
+    close();
+  });
+
   it("preserves nested folder structure during directory uploads and restores it on restart", async () => {
     const storageRoot = await createTemporaryStorage();
     const { app, close } = await createApp({ storageRoot });

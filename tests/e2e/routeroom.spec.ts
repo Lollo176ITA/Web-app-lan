@@ -100,6 +100,29 @@ test("library updates propagate to a second client through SSE", async ({ browse
   await pageB.close();
 });
 
+test("sync page exposes pairing workflow and live updates across two host tabs", async ({ browser, page }) => {
+  await page.goto("/sync");
+  await page.getByRole("textbox", { name: "Nickname" }).fill("SyncHost");
+  await page.getByRole("button", { name: "Salva" }).click();
+  await expect(page.getByRole("heading", { name: "Sync Host" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Genera pairing code/i })).toBeVisible();
+
+  const secondPage = await browser.newPage();
+  await secondPage.goto("/sync");
+  await secondPage.getByRole("textbox", { name: "Nickname" }).fill("SyncViewer");
+  await secondPage.getByRole("button", { name: "Salva" }).click();
+  await expect(secondPage.getByRole("heading", { name: "Sync Host" })).toBeVisible();
+
+  await page.getByRole("button", { name: /Genera pairing code/i }).click();
+  await expect(page.getByText("Nuovo pairing code generato.")).toBeVisible();
+  await expect(page.getByText(/^\d{6}$/)).toBeVisible();
+  await expect(secondPage.getByText("Code attivo")).toBeVisible();
+  await expect(secondPage.getByRole("button", { name: /Rigenera pairing code/i })).toBeVisible();
+  await expect(page.getByText("Nessun device Android registrato.")).toBeVisible();
+
+  await secondPage.close();
+});
+
 test.describe("mobile layout", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 

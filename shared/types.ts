@@ -281,3 +281,107 @@ export interface UpdateStreamRoomPlaybackRequest {
 export interface UpdateStreamRoomPlaybackResponse {
   room: StreamRoomDetail;
 }
+
+export interface CreatePairingCodeResponse {
+  code: string;
+  issuedAt: string;
+  expiresAt: string;
+}
+
+export interface SyncFolderMapping {
+  id: string;
+  sourceName: string;
+  targetFolderId: string;
+  trackedFileCount: number;
+  lastSyncedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SyncDeviceSummary {
+  id: string;
+  deviceName: string;
+  platform: "android";
+  createdAt: string;
+  lastSeenAt: string | null;
+  lastSyncAt: string | null;
+  approvedSsids: string[];
+  mappings: SyncFolderMapping[];
+}
+
+export interface SyncJobSummary {
+  id: string;
+  deviceId: string;
+  deviceName: string;
+  mappingId: string;
+  mappingSourceName: string;
+  startedAt: string;
+  completedAt: string;
+  uploadedCount: number;
+  skippedCount: number;
+  failedCount: number;
+}
+
+export interface SyncOverviewResponse {
+  activePairingCode: CreatePairingCodeResponse | null;
+  devices: SyncDeviceSummary[];
+  jobs: SyncJobSummary[];
+}
+
+export interface RegisterSyncDeviceRequest {
+  pairingCode: string;
+  deviceName: string;
+  platform: "android";
+}
+
+export interface RegisterSyncDeviceResponse {
+  authToken: string;
+  device: SyncDeviceSummary;
+}
+
+export interface UpdateSyncFoldersRequest {
+  approvedSsids: string[];
+  mappings: Array<{
+    id?: string;
+    sourceName: string;
+  }>;
+}
+
+export interface UpdateSyncFoldersResponse {
+  device: SyncDeviceSummary;
+}
+
+export interface SyncDeviceConfigResponse {
+  device: SyncDeviceSummary;
+}
+
+export interface PlanSyncMappingEntry {
+  relativePath: string;
+  sizeBytes: number;
+  modifiedAtMs: number;
+}
+
+export interface PlanSyncMappingRequest {
+  entries: PlanSyncMappingEntry[];
+}
+
+export interface PlanSyncMappingDecision {
+  relativePath: string;
+  action: "upload" | "skip";
+  reason: "new" | "changed" | "unchanged";
+}
+
+export interface PlanSyncMappingResponse {
+  mapping: SyncFolderMapping;
+  decisions: PlanSyncMappingDecision[];
+  uploadCount: number;
+  skippedCount: number;
+}
+
+export interface SyncUploadResponse {
+  uploadedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  lastSyncedAt: string;
+  mapping: SyncFolderMapping;
+}

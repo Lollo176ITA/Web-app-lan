@@ -320,6 +320,62 @@ export class LibraryStore {
     return this.hydrateItem(nextFolder);
   }
 
+  async ensureFolderPath(folderNames: string[], parentId: string | null = null) {
+    this.assertParentFolder(parentId);
+
+    let currentParentId = parentId;
+    let currentFolder =
+      currentParentId && this.findItemRecord(currentParentId)?.kind === "folder"
+        ? this.findItem(currentParentId) ?? null
+        : null;
+    const createdAt = new Date().toISOString();
+    const createdFolders: StoredLibraryItem[] = [];
+
+    for (const rawName of folderNames) {
+      const folderName = rawName.trim();
+
+      if (!folderName) {
+        continue;
+      }
+
+      const existingItem = this.findChildItemRecordByName(currentParentId, folderName, createdFolders);
+
+      if (existingItem) {
+        if (existingItem.kind !== "folder") {
+          throw new Error("Conflicting file entry");
+        }
+
+        currentParentId = existingItem.id;
+        currentFolder = this.hydrateItem(existingItem);
+        continue;
+      }
+
+      const folder = {
+        id: nanoid(10),
+        name: folderName,
+        storedName: "",
+        mimeType: FOLDER_MIME_TYPE,
+        kind: "folder",
+        sizeBytes: 0,
+        createdAt,
+        parentId: currentParentId
+      } satisfies StoredLibraryItem;
+
+      folder.storedName = this.buildFolderStoredName(folder.id, currentParentId, createdFolders);
+      createdFolders.push(folder);
+      currentParentId = folder.id;
+      currentFolder = this.hydrateItem(folder);
+    }
+
+    if (createdFolders.length > 0) {
+      await this.ensureFolderDirectories(createdFolders);
+      this.items = sortItems([...createdFolders, ...this.items]);
+      await this.persist();
+    }
+
+    return currentFolder;
+  }
+
   async registerGeneratedFile(
     sourcePath: string,
     originalName: string,
@@ -351,6 +407,81 @@ export class LibraryStore {
     await this.persist();
 
     return this.hydrateItem(item);
+  }
+
+  findChildItemByName(parentId: string | null, name: string) {
+    const item = this.findChildItemRecordByName(parentId, name);
+    return item ? this.hydrateItem(item) : undefined;
+  }
+
+  async upsertFileFromPath(
+    sourcePath: string,
+    originalName: string,
+    mimeType: string,
+    parentId: string | null = null
+  ) {
+    this.assertParentFolder(parentId);
+
+    const conflictingFolder = this.items.find(
+      (item) => item.parentId === parentId && item.name === originalName && item.kind === "folder"
+    );
+
+    if (conflictingFolder) {
+      throw new Error("Conflicting folder entry");
+    }
+
+    const existingItem = this.items.find(
+      (item) => item.parentId === parentId && item.name === originalName && item.kind !== "folder"
+    );
+    const fileStats = await fs.stat(sourcePath);
+    const normalizedMimeType = normalizeMimeType(mimeType, originalName);
+    const createdAt = new Date().toISOString();
+
+    if (existingItem) {
+      await fs.mkdir(path.dirname(this.resolveItemPath(existingItem)), { recursive: true });
+      await fs.copyFile(sourcePath, this.resolveItemPath(existingItem));
+
+      const nextItem = {
+        ...existingItem,
+        mimeType: normalizedMimeType,
+        kind: classifyMimeType(normalizedMimeType),
+        sizeBytes: fileStats.size,
+        createdAt
+      } satisfies StoredLibraryItem;
+
+      this.items = sortItems([nextItem, ...this.items.filter((item) => item.id !== existingItem.id)]);
+      await this.persist();
+
+      return {
+        status: "updated" as const,
+        item: this.hydrateItem(nextItem)
+      };
+    }
+
+    const id = nanoid(10);
+    const storedName = this.buildFileStoredName(id, originalName, this.getParentStoredName(parentId));
+    const destinationPath = this.resolveStoredPath(storedName);
+    await fs.mkdir(path.dirname(destinationPath), { recursive: true });
+    await fs.copyFile(sourcePath, destinationPath);
+
+    const item = {
+      id,
+      name: originalName,
+      storedName,
+      mimeType: normalizedMimeType,
+      kind: classifyMimeType(normalizedMimeType),
+      sizeBytes: fileStats.size,
+      createdAt,
+      parentId
+    } satisfies StoredLibraryItem;
+
+    this.items = sortItems([item, ...this.items]);
+    await this.persist();
+
+    return {
+      status: "created" as const,
+      item: this.hydrateItem(item)
+    };
   }
 
   async deleteItem(id: string) {
@@ -392,6 +523,17 @@ export class LibraryStore {
 
   private findItemRecord(id: string) {
     return this.items.find((item) => item.id === id);
+  }
+
+  private findChildItemRecordByName(
+    parentId: string | null,
+    name: string,
+    createdFolders: StoredLibraryItem[] = []
+  ) {
+    return (
+      this.items.find((item) => item.parentId === parentId && item.name === name) ??
+      createdFolders.find((item) => item.parentId === parentId && item.name === name)
+    );
   }
 
   private hydrateItem(item: StoredLibraryItem): LibraryItem {

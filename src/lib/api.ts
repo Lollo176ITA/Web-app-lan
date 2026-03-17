@@ -13,16 +13,26 @@ import type {
   HostRuntimeStatsResponse,
   ItemPreview,
   LanIdentity,
+  CreatePairingCodeResponse,
   LibraryItem,
+  PlanSyncMappingRequest,
+  PlanSyncMappingResponse,
   PostChatMessageRequest,
   PostRoomMessageRequest,
+  RegisterSyncDeviceRequest,
+  RegisterSyncDeviceResponse,
   SendChatMessageResponse,
   SendPrivateChatMessageResponse,
   SendRoomMessageResponse,
   SetStreamRoomVideoResponse,
   SessionInfo,
+  SyncDeviceConfigResponse,
+  SyncOverviewResponse,
+  SyncUploadResponse,
   StreamRoomResponse,
   StreamRoomsResponse,
+  UpdateSyncFoldersRequest,
+  UpdateSyncFoldersResponse,
   UpdateStreamRoomPlaybackResponse,
   UploadResponse
 } from "../../shared/types";
@@ -272,6 +282,97 @@ export function fetchClientProfile() {
   return readJson<ClientProfileResponse>("/api/me");
 }
 
+export function fetchSyncOverview() {
+  return readJson<SyncOverviewResponse>("/api/sync/overview");
+}
+
+export function createSyncPairingCode() {
+  return readJson<CreatePairingCodeResponse>("/api/sync/pairing-code", {
+    method: "POST"
+  });
+}
+
+export function revokeSyncDevice(deviceId: string) {
+  return fetch(`/api/sync/devices/${encodeURIComponent(deviceId)}`, {
+    method: "DELETE"
+  }).then((response) => {
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status}`);
+    }
+  });
+}
+
+export function registerSyncDevice(payload: RegisterSyncDeviceRequest, hostUrl = "") {
+  return readJson<RegisterSyncDeviceResponse>(`${hostUrl}/api/sync/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+export function fetchSyncDeviceConfig(authToken: string, hostUrl = "") {
+  return readJson<SyncDeviceConfigResponse>(`${hostUrl}/api/sync/device/config`, {
+    headers: {
+      Authorization: `Bearer ${authToken}`
+    }
+  });
+}
+
+export function updateSyncDeviceConfig(payload: UpdateSyncFoldersRequest, authToken: string, hostUrl = "") {
+  return readJson<UpdateSyncFoldersResponse>(`${hostUrl}/api/sync/device/config`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+export function planSyncMapping(mappingId: string, payload: PlanSyncMappingRequest, authToken: string, hostUrl = "") {
+  return readJson<PlanSyncMappingResponse>(`${hostUrl}/api/sync/mappings/${encodeURIComponent(mappingId)}/plan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function uploadSyncMapping(
+  mappingId: string,
+  files: File[],
+  relativePaths: string[],
+  modifiedAtMs: number[],
+  authToken: string,
+  hostUrl = ""
+) {
+  const body = new FormData();
+
+  files.forEach((file, index) => {
+    body.append("files", file);
+    body.append("relativePaths", relativePaths[index] ?? file.name);
+    body.append("modifiedAtMs", String(modifiedAtMs[index] ?? 0));
+  });
+
+  const response = await fetch(`${hostUrl}/api/sync/mappings/${encodeURIComponent(mappingId)}/upload`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${authToken}`
+    },
+    body
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  return (await response.json()) as SyncUploadResponse;
+}
+
 export function sendChatMessage(identity: LanIdentity, text: string) {
   const body: PostChatMessageRequest = { identity, text };
 
@@ -486,6 +587,20 @@ export function openLibraryEvents(
   return openLanEvents(
     {
       "library-updated": onUpdate
+    },
+    onFallback,
+    onOpen
+  );
+}
+
+export function openSyncEvents(
+  onUpdate: () => void,
+  onFallback: () => void,
+  onOpen?: () => void
+) {
+  return openLanEvents(
+    {
+      "sync-updated": onUpdate
     },
     onFallback,
     onOpen

@@ -39,7 +39,8 @@ const navItems = [
   { label: "Home", to: "/", matches: (pathname: string) => pathname === "/" },
   { label: "App", to: "/app", matches: (pathname: string) => pathname.startsWith("/app") || pathname.startsWith("/player") },
   { label: "Chat", to: "/chat/globale", matches: (pathname: string) => pathname.startsWith("/chat") },
-  { label: "Streaming", to: "/stream", matches: (pathname: string) => pathname.startsWith("/stream") }
+  { label: "Streaming", to: "/stream", matches: (pathname: string) => pathname.startsWith("/stream") },
+  { label: "Sync", to: "/sync", matches: (pathname: string) => pathname.startsWith("/sync") }
 ];
 
 export function PageHeader({ title, subtitle, networkState, trailing, trailingLinkTo }: PageHeaderProps) {

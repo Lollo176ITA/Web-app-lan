@@ -14,3 +14,5 @@ release/
 output/
 tests/
 .codex/
+
+android/.gradle/

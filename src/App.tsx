@@ -21,6 +21,7 @@ const UserProfilePage = lazy(async () =>
 const DiagnosticsPage = lazy(async () =>
   import("./routes/DiagnosticsPage").then((module) => ({ default: module.DiagnosticsPage }))
 );
+const SyncPage = lazy(async () => import("./routes/SyncPage").then((module) => ({ default: module.SyncPage })));
 
 interface AppUploadState {
   lastUploadedItemId: string | null;
@@ -157,6 +158,7 @@ export default function App() {
           <Route path="/player/:itemId" element={<VideoPlayerPage />} />
           <Route path="/utente/:userId" element={<UserProfilePage />} />
           <Route path="/diagnostics" element={<DiagnosticsPage />} />
+          <Route path="/sync" element={<SyncPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

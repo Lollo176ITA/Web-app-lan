@@ -1,5 +1,5 @@
 import { createReadStream, existsSync } from "node:fs";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import express from "express";
@@ -10,6 +10,7 @@ import { nanoid } from "nanoid";
 import { EventHub } from "./events.js";
 import { getSessionUrls } from "./network.js";
 import { CollaborationStore } from "./realtime.js";
+import { SyncStore } from "./sync.js";
 import { LibraryStore } from "./storage.js";
 import { collectHostDiagnostics, HostRuntimeStatsMonitor } from "./diagnostics.js";
 import type {
@@ -20,6 +21,7 @@ import type {
   DirectChatSnapshotResponse,
   CreateStreamRoomRequest,
   CreateStreamRoomResponse,
+  CreatePairingCodeResponse,
   CreateArchiveRequest,
   CreateArchiveResponse,
   CreateFolderRequest,
@@ -28,13 +30,21 @@ import type {
   HostDiagnosticsResponse,
   HostRuntimeStatsResponse,
   ItemPreview,
+  PlanSyncMappingRequest,
+  PlanSyncMappingResponse,
   PostChatMessageRequest,
   PostRoomMessageRequest,
+  RegisterSyncDeviceRequest,
+  RegisterSyncDeviceResponse,
   SendChatMessageResponse,
   SendPrivateChatMessageResponse,
   SendRoomMessageResponse,
   SetStreamRoomVideoRequest,
   SetStreamRoomVideoResponse,
+  SyncDeviceConfigResponse,
+  SyncOverviewResponse,
+  SyncUploadResponse,
+  UpdateSyncFoldersRequest,
   SessionInfo,
   StreamRoomDetail,
   StreamRoomResponse,
@@ -94,6 +104,16 @@ function normalizeStringArray(value: unknown) {
   }
 
   return typeof value === "string" ? [value] : [];
+}
+
+function normalizeNumberArray(value: unknown) {
+  return normalizeStringArray(value)
+    .map((entry) => Number.parseInt(entry, 10))
+    .filter((entry) => Number.isFinite(entry));
+}
+
+function normalizeRouteParam(value: string | string[] | undefined) {
+  return typeof value === "string" ? value : Array.isArray(value) ? value[0] ?? "" : "";
 }
 
 function normalizeArchiveFormat(value: unknown): ArchiveFormat | null {
@@ -203,10 +223,12 @@ export async function createApp(options: CreateAppOptions = {}) {
   const urls = getSessionUrls(port);
   const store = new LibraryStore(storageRoot);
   const collaboration = new CollaborationStore(storageRoot);
+  const sync = new SyncStore(storageRoot);
   const events = new EventHub();
   const runtimeStats = new HostRuntimeStatsMonitor();
   const availableArchiveFormats = await detectAvailableArchiveFormats();
   const hostIpAddresses = collectHostIpAddresses();
+  const syncUploadStageDir = path.join(storageRoot, ".sync-upload-stage");
   const defaultFolderDownloadFormat =
     availableArchiveFormats.find((format) => format === "zip") ??
     availableArchiveFormats[0] ??
@@ -214,6 +236,8 @@ export async function createApp(options: CreateAppOptions = {}) {
 
   await store.init({ seedDemo: options.seedDemo });
   await collaboration.init();
+  await sync.init();
+  await mkdir(syncUploadStageDir, { recursive: true });
   await collaboration.pruneMissingVideos((videoItemId) => {
     const item = store.findItem(videoItemId);
     return item?.kind === "video";
@@ -232,6 +256,17 @@ export async function createApp(options: CreateAppOptions = {}) {
   });
 
   const app = express();
+
+  const syncUpload = multer({
+    storage: multer.diskStorage({
+      destination: (_request, _file, callback) => {
+        callback(null, syncUploadStageDir);
+      },
+      filename: (_request, file, callback) => {
+        callback(null, `${nanoid(10)}--${file.originalname}`);
+      }
+    })
+  });
 
   async function resolveExistingFile(itemId: string, response: express.Response) {
     const item = store.findItem(itemId);
@@ -350,6 +385,32 @@ export async function createApp(options: CreateAppOptions = {}) {
     });
   }
 
+  function broadcastSyncUpdated() {
+    events.broadcast("sync-updated", {
+      deviceCount: sync.getOverview().devices.length
+    });
+  }
+
+  function readBearerToken(request: express.Request) {
+    const authorization = request.get("authorization") ?? "";
+
+    if (!authorization.startsWith("Bearer ")) {
+      return null;
+    }
+
+    return authorization.slice("Bearer ".length).trim() || null;
+  }
+
+  function requireSyncDevice(request: express.Request) {
+    const token = readBearerToken(request);
+
+    if (!token) {
+      return null;
+    }
+
+    return sync.authenticate(token);
+  }
+
   app.use(runtimeStats.createTrafficMiddleware());
   app.use(express.json());
 
@@ -402,6 +463,200 @@ export async function createApp(options: CreateAppOptions = {}) {
 
     const payload: HostRuntimeStatsResponse = runtimeStats.getSnapshot();
     response.json(payload);
+  });
+
+  app.get("/api/sync/overview", (request, response) => {
+    if (!isHostRequest(request, hostIpAddresses)) {
+      response.status(403).json({ message: "Solo l'host puo gestire la sincronizzazione." });
+      return;
+    }
+
+    const payload: SyncOverviewResponse = sync.getOverview();
+    response.json(payload);
+  });
+
+  app.post("/api/sync/pairing-code", (request, response) => {
+    if (!isHostRequest(request, hostIpAddresses)) {
+      response.status(403).json({ message: "Solo l'host puo generare pairing code." });
+      return;
+    }
+
+    const payload: CreatePairingCodeResponse = sync.createPairingCode();
+    broadcastSyncUpdated();
+    response.status(201).json(payload);
+  });
+
+  app.delete("/api/sync/devices/:deviceId", async (request, response, next) => {
+    if (!isHostRequest(request, hostIpAddresses)) {
+      response.status(403).json({ message: "Solo l'host puo revocare device sync." });
+      return;
+    }
+
+    try {
+      const revoked = await sync.revokeDevice(request.params.deviceId);
+
+      if (!revoked) {
+        response.status(404).json({ message: "Device sync non trovato." });
+        return;
+      }
+
+      broadcastSyncUpdated();
+      response.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/sync/register", async (request, response, next) => {
+    try {
+      const payload = request.body as RegisterSyncDeviceRequest | undefined;
+
+      if (
+        !payload ||
+        typeof payload.pairingCode !== "string" ||
+        typeof payload.deviceName !== "string" ||
+        payload.platform !== "android"
+      ) {
+        response.status(400).json({ message: "Richiesta pairing non valida." });
+        return;
+      }
+
+      const result: RegisterSyncDeviceResponse = await sync.registerDevice(
+        payload.pairingCode,
+        payload.deviceName,
+        payload.platform,
+        store
+      );
+      broadcastSyncUpdated();
+      response.status(201).json(result);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Invalid pairing code") {
+        response.status(400).json({ message: "Pairing code non valido o scaduto." });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
+  app.get("/api/sync/device/config", async (request, response, next) => {
+    const device = requireSyncDevice(request);
+
+    if (!device) {
+      response.status(401).json({ message: "Device sync non autenticato." });
+      return;
+    }
+
+    try {
+      const payload: SyncDeviceConfigResponse = await sync.getDeviceConfig(device.id);
+      response.json(payload);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.put("/api/sync/device/config", async (request, response, next) => {
+    const device = requireSyncDevice(request);
+
+    if (!device) {
+      response.status(401).json({ message: "Device sync non autenticato." });
+      return;
+    }
+
+    try {
+      const payload = request.body as UpdateSyncFoldersRequest | undefined;
+
+      if (!payload || !Array.isArray(payload.approvedSsids) || !Array.isArray(payload.mappings)) {
+        response.status(400).json({ message: "Configurazione sync non valida." });
+        return;
+      }
+
+      const result = await sync.updateDeviceConfig(device.id, payload, store);
+      broadcastSyncUpdated();
+      response.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/sync/mappings/:mappingId/plan", async (request, response, next) => {
+    const device = requireSyncDevice(request);
+
+    if (!device) {
+      response.status(401).json({ message: "Device sync non autenticato." });
+      return;
+    }
+
+    try {
+      const payload = request.body as PlanSyncMappingRequest | undefined;
+
+      if (!payload || !Array.isArray(payload.entries)) {
+        response.status(400).json({ message: "Piano sync non valido." });
+        return;
+      }
+
+      const result: PlanSyncMappingResponse = await sync.planMapping(
+        device.id,
+        normalizeRouteParam(request.params.mappingId),
+        payload.entries
+      );
+      response.json(result);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Invalid relative path") {
+        response.status(400).json({ message: "Percorso relativo non valido." });
+        return;
+      }
+
+      if (error instanceof Error && error.message === "Unknown sync mapping") {
+        response.status(404).json({ message: "Mapping sync non trovato." });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
+  app.post("/api/sync/mappings/:mappingId/upload", syncUpload.array("files"), async (request, response, next) => {
+    const device = requireSyncDevice(request);
+
+    if (!device) {
+      response.status(401).json({ message: "Device sync non autenticato." });
+      return;
+    }
+
+    try {
+      const files = (request.files as Express.Multer.File[] | undefined) ?? [];
+      const relativePaths = normalizeStringArray(request.body.relativePaths);
+      const modifiedAtValues = normalizeNumberArray(request.body.modifiedAtMs);
+
+      if (files.length === 0 || files.length !== relativePaths.length || files.length !== modifiedAtValues.length) {
+        response.status(400).json({ message: "Payload upload sync non valido." });
+        return;
+      }
+
+      const result: SyncUploadResponse = await sync.applyUpload(
+        device.id,
+        normalizeRouteParam(request.params.mappingId),
+        files.map((file, index) => ({
+          relativePath: relativePaths[index] ?? file.originalname,
+          sizeBytes: file.size,
+          modifiedAtMs: modifiedAtValues[index] ?? 0,
+          mimeType: file.mimetype,
+          sourcePath: "path" in file && typeof file.path === "string" ? file.path : path.join(syncUploadStageDir, file.filename)
+        })),
+        store
+      );
+      broadcastLibraryUpdated();
+      broadcastSyncUpdated();
+      response.status(201).json(result);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Unknown sync mapping") {
+        response.status(404).json({ message: "Mapping sync non trovato." });
+        return;
+      }
+
+      next(error);
+    }
   });
 
   app.get("/api/items", (_request, response) => {
@@ -1021,6 +1276,7 @@ export async function createApp(options: CreateAppOptions = {}) {
   return {
     app,
     store,
+    sync,
     urls,
     close() {
       clearInterval(keepAliveInterval);
