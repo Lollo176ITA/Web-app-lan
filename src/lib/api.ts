@@ -26,7 +26,28 @@ import type {
   UploadResponse
 } from "../../shared/types";
 
-const uploadBatchSize = 20;
+const uploadTargetBatchBytes = 24 * 1024 * 1024;
+const uploadLargeFileThresholdBytes = 16 * 1024 * 1024;
+const uploadMaxBatchSize = 60;
+
+interface UploadEntry {
+  file: File;
+  relativePath: string;
+}
+
+export interface UploadProgress {
+  totalFiles: number;
+  completedFiles: number;
+  uploadedBytes: number;
+  totalBytes: number;
+  currentBatchFiles: number;
+  pendingFiles: number;
+  percentage: number;
+}
+
+interface UploadFilesOptions {
+  onProgress?: (progress: UploadProgress) => void;
+}
 
 async function readJson<T>(resource: string, init?: RequestInit) {
   const response = await fetch(resource, init);
@@ -48,7 +69,7 @@ function normalizeUploadRelativePath(relativePath: string, fallbackName: string)
   return pathSegments.join("/") || fallbackName;
 }
 
-function buildUploadEntries(files: File[]) {
+function buildUploadEntries(files: File[]): UploadEntry[] {
   const entries = files.map((file) => ({
     file,
     pathSegments: normalizeUploadRelativePath(file.webkitRelativePath || file.name, file.name).split("/")
@@ -69,11 +90,52 @@ function buildUploadEntries(files: File[]) {
   });
 }
 
+function getUploadEntrySize(file: File) {
+  return Math.max(file.size, 1);
+}
+
+// Keep large payloads isolated while still collapsing many tiny files into fewer requests.
+function takeAdaptiveUploadBatch(entries: UploadEntry[], startIndex: number) {
+  const batch: UploadEntry[] = [];
+  let totalBytes = 0;
+
+  for (let index = startIndex; index < entries.length; index += 1) {
+    const entry = entries[index];
+    const entryBytes = getUploadEntrySize(entry.file);
+
+    if (batch.length === 0) {
+      batch.push(entry);
+      totalBytes += entryBytes;
+
+      if (entryBytes >= uploadLargeFileThresholdBytes) {
+        break;
+      }
+
+      continue;
+    }
+
+    if (entryBytes >= uploadLargeFileThresholdBytes) {
+      break;
+    }
+
+    if (batch.length >= uploadMaxBatchSize || totalBytes + entryBytes > uploadTargetBatchBytes) {
+      break;
+    }
+
+    batch.push(entry);
+    totalBytes += entryBytes;
+  }
+
+  return batch;
+}
+
 async function uploadFileBatch(
-  entries: Array<{ file: File; relativePath: string }>,
-  parentId?: string | null
+  entries: UploadEntry[],
+  parentId?: string | null,
+  onBatchProgress?: (loadedBytes: number) => void
 ) {
   const body = new FormData();
+  const batchBytes = entries.reduce((total, entry) => total + getUploadEntrySize(entry.file), 0);
 
   entries.forEach((entry) => {
     body.append("files", entry.file);
@@ -82,6 +144,43 @@ async function uploadFileBatch(
 
   if (parentId !== null && parentId !== undefined) {
     body.append("parentId", parentId);
+  }
+
+  if (onBatchProgress && typeof XMLHttpRequest !== "undefined") {
+    return new Promise<UploadResponse>((resolve, reject) => {
+      const request = new XMLHttpRequest();
+
+      request.open("POST", "/api/items");
+      request.responseType = "json";
+
+      request.upload.onprogress = (event) => {
+        if (event.lengthComputable && event.total > 0) {
+          onBatchProgress((batchBytes * event.loaded) / event.total);
+          return;
+        }
+
+        onBatchProgress(Math.min(event.loaded, batchBytes));
+      };
+
+      request.onerror = () => {
+        reject(new Error("Network error"));
+      };
+
+      request.onload = () => {
+        if (request.status < 200 || request.status >= 300) {
+          reject(new Error(`Request failed: ${request.status}`));
+          return;
+        }
+
+        const response =
+          typeof request.response === "object" && request.response !== null
+            ? (request.response as UploadResponse)
+            : (JSON.parse(request.responseText) as UploadResponse);
+        resolve(response);
+      };
+
+      request.send(body);
+    });
   }
 
   return readJson<UploadResponse>("/api/items", {
@@ -215,17 +314,55 @@ export function updateStreamRoomPlayback(
   });
 }
 
-export async function uploadFiles(files: File[], parentId?: string | null) {
+export async function uploadFiles(files: File[], parentId?: string | null, options: UploadFilesOptions = {}) {
   if (files.length === 0) {
     return { items: [] } satisfies UploadResponse;
   }
 
   const uploadEntries = buildUploadEntries(files);
   const items: UploadResponse["items"] = [];
+  const totalFiles = uploadEntries.length;
+  const totalBytes = uploadEntries.reduce((total, entry) => total + getUploadEntrySize(entry.file), 0);
+  const emitProgress = (
+    completedFiles: number,
+    uploadedBytes: number,
+    currentBatchFiles: number
+  ) => {
+    options.onProgress?.({
+      totalFiles,
+      completedFiles,
+      uploadedBytes: Math.min(uploadedBytes, totalBytes),
+      totalBytes,
+      currentBatchFiles,
+      pendingFiles: Math.max(totalFiles - completedFiles - currentBatchFiles, 0),
+      percentage: totalBytes > 0 ? Math.min((uploadedBytes / totalBytes) * 100, 100) : 100
+    });
+  };
+  let completedFiles = 0;
+  let uploadedBytes = 0;
 
-  for (let index = 0; index < uploadEntries.length; index += uploadBatchSize) {
-    const response = await uploadFileBatch(uploadEntries.slice(index, index + uploadBatchSize), parentId);
+  emitProgress(0, 0, 0);
+
+  for (let index = 0; index < uploadEntries.length;) {
+    const batch = takeAdaptiveUploadBatch(uploadEntries, index);
+    const batchBytes = batch.reduce((total, entry) => total + getUploadEntrySize(entry.file), 0);
+
+    emitProgress(completedFiles, uploadedBytes, batch.length);
+
+    const response = await uploadFileBatch(
+      batch,
+      parentId,
+      options.onProgress
+        ? (loadedBatchBytes) => {
+            emitProgress(completedFiles, uploadedBytes + loadedBatchBytes, batch.length);
+          }
+        : undefined
+    );
     items.push(...response.items);
+    completedFiles += batch.length;
+    uploadedBytes += batchBytes;
+    emitProgress(completedFiles, uploadedBytes, 0);
+    index += batch.length;
   }
 
   return { items } satisfies UploadResponse;

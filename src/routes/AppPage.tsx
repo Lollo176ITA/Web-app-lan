@@ -22,6 +22,7 @@ import { LibraryGrid } from "../components/LibraryGrid";
 import { MediaDetail } from "../components/MediaDetail";
 import { PageHeader } from "../components/PageHeader";
 import { QrCodeDialog } from "../components/QrCodeDialog";
+import { UploadProgressCard } from "../components/UploadProgressCard";
 import { UploadSurface } from "../components/UploadSurface";
 import { CreateFolderDialog } from "../features/library/CreateFolderDialog";
 import { type FilterValue } from "../features/library/constants";
@@ -33,6 +34,7 @@ import {
   createFolder,
   deleteItem,
   fetchSnapshot,
+  type UploadProgress,
   uploadFiles
 } from "../lib/api";
 import { copyTextToClipboard } from "../lib/clipboard";
@@ -53,6 +55,7 @@ export function AppPage() {
   const [folderName, setFolderName] = useState("");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [qrItemTarget, setQrItemTarget] = useState<{ item: LibraryItem; url: string } | null>(null);
   const theme = useTheme();
@@ -190,19 +193,29 @@ export function AppPage() {
     items.find((item) => item.id === selectedId) ?? currentFolder ?? null;
 
   async function handleUpload(files: File[]) {
+    const destinationLabel = currentFolder?.name ?? "radice LAN";
+    let nextSnackbar: string | null = null;
     setUploading(true);
+    setUploadProgress(null);
 
     try {
-      const response = await uploadFiles(files, currentFolderId);
+      const response = await uploadFiles(files, currentFolderId, {
+        onProgress: setUploadProgress
+      });
       await syncSnapshot();
       setSelectedId(response.items.find((item) => item.kind !== "folder")?.id ?? null);
-      setSnackbar(`${files.length} file caricati in ${currentFolder?.name ?? "radice LAN"}.`);
+      nextSnackbar = `${files.length} file caricati in ${destinationLabel}.`;
     } catch (error) {
       console.error(error);
       await syncSnapshot().catch(() => undefined);
-      setSnackbar("Caricamento interrotto. Alcuni file potrebbero essere gia stati salvati.");
+      nextSnackbar = "Caricamento interrotto. Alcuni file potrebbero essere gia stati salvati.";
     } finally {
       setUploading(false);
+      setUploadProgress(null);
+
+      if (nextSnackbar) {
+        setSnackbar(nextSnackbar);
+      }
     }
   }
 
@@ -329,6 +342,12 @@ export function AppPage() {
                 targetLabel={currentFolder?.name ?? "Radice LAN"}
                 uploading={uploading}
               />
+              {!isMobile && uploadProgress ? (
+                <UploadProgressCard
+                  progress={uploadProgress}
+                  targetLabel={currentFolder?.name ?? "Radice LAN"}
+                />
+              ) : null}
             </Stack>
           </Box>
 
@@ -486,8 +505,30 @@ export function AppPage() {
       />
 
       <Snackbar
+        open={isMobile && Boolean(uploadProgress)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        sx={{
+          bottom: {
+            xs: 18,
+            sm: 24
+          }
+        }}
+      >
+        <Box sx={{ width: "min(calc(100vw - 24px), 540px)" }}>
+          {uploadProgress ? (
+            <UploadProgressCard
+              compact
+              progress={uploadProgress}
+              targetLabel={currentFolder?.name ?? "Radice LAN"}
+            />
+          ) : null}
+        </Box>
+      </Snackbar>
+
+      <Snackbar
         open={Boolean(snackbar)}
         autoHideDuration={2600}
+        anchorOrigin={{ vertical: isMobile ? "top" : "bottom", horizontal: "center" }}
         onClose={() => {
           setSnackbar(null);
         }}

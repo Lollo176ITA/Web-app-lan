@@ -24,8 +24,8 @@ afterEach(async () => {
   );
 });
 
-function createUploadFile(name: string, relativePath?: string) {
-  const file = new File([`payload-${name}`], name, {
+function createUploadFile(name: string, relativePath?: string, sizeBytes?: number) {
+  const file = new File([sizeBytes ? new Uint8Array(sizeBytes) : `payload-${name}`], name, {
     type: "text/plain"
   });
 
@@ -478,7 +478,7 @@ describe("client upload api", () => {
     vi.restoreAllMocks();
   });
 
-  it("splits large directory uploads into batches and drops the shared root folder name", async () => {
+  it("packs many small directory uploads into a single request and drops the shared root folder name", async () => {
     const calls: Array<{ relativePaths: string[]; parentId: FormDataEntryValue | null }> = [];
     const fetchMock = vi.fn(async (_resource: string | URL | Request, init?: RequestInit) => {
       const body = init?.body;
@@ -527,13 +527,64 @@ describe("client upload api", () => {
 
     const response = await uploadFiles(files, "salotto");
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(response.items).toHaveLength(25);
-    expect(calls[0]?.relativePaths).toHaveLength(20);
-    expect(calls[1]?.relativePaths).toHaveLength(5);
+    expect(calls[0]?.relativePaths).toHaveLength(25);
     expect(calls.every((call) => call.parentId === "salotto")).toBe(true);
     expect(calls.flatMap((call) => call.relativePaths)).toContain("Guide/note-0.txt");
     expect(calls.flatMap((call) => call.relativePaths)).toContain("Docs/note-1.txt");
     expect(calls.flatMap((call) => call.relativePaths).every((relativePath) => !relativePath.startsWith("Vacanze LAN lunghissime/"))).toBe(true);
+  });
+
+  it("isolates very large files into smaller requests", async () => {
+    const calls: Array<{ relativePaths: string[]; parentId: FormDataEntryValue | null }> = [];
+    const fetchMock = vi.fn(async (_resource: string | URL | Request, init?: RequestInit) => {
+      const body = init?.body;
+
+      expect(body).toBeInstanceOf(FormData);
+
+      const formData = body as FormData;
+      const relativePaths = formData.getAll("relativePaths").map((entry) => String(entry));
+      calls.push({
+        relativePaths,
+        parentId: formData.get("parentId")
+      });
+
+      return new Response(
+        JSON.stringify({
+          items: relativePaths.map((relativePath, index) => ({
+            id: `large-${calls.length}-${index}`,
+            name: relativePath.split("/").at(-1) ?? relativePath,
+            storedName: `stored-large-${calls.length}-${index}`,
+            mimeType: "video/mp4",
+            kind: "video",
+            sizeBytes: 1,
+            createdAt: "2026-03-17T00:00:00.000Z",
+            parentId: null
+          }))
+        }),
+        {
+          status: 201,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      );
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const files = [
+      createUploadFile("clip-a.mp4", undefined, 18 * 1024 * 1024),
+      createUploadFile("clip-b.mp4", undefined, 20 * 1024 * 1024),
+      createUploadFile("clip-c.mp4", undefined, 22 * 1024 * 1024)
+    ];
+
+    const response = await uploadFiles(files);
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(response.items).toHaveLength(3);
+    expect(calls.map((call) => call.relativePaths)).toEqual([["clip-a.mp4"], ["clip-b.mp4"], ["clip-c.mp4"]]);
+    expect(calls.every((call) => call.parentId === null)).toBe(true);
   });
 });

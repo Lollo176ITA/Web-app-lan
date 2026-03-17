@@ -13,3 +13,4 @@ desktop/*
 release/
 output/
 tests/
+.codex/
