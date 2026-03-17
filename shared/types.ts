@@ -104,6 +104,43 @@ export interface HostDiagnosticsResponse {
   commands: HostDiagnosticCommand[];
 }
 
+export interface HostRuntimeSample {
+  recordedAt: string;
+  hostCpuUsagePercent: number;
+  processCpuUsagePercent: number;
+  hostMemoryUsedBytes: number;
+  memoryTotalBytes: number;
+  processMemoryBytes: number;
+  hostUploadBytesPerSecond: number;
+  hostDownloadBytesPerSecond: number;
+  hostTotalBytesPerSecond: number;
+  processUploadBytesPerSecond: number;
+  processDownloadBytesPerSecond: number;
+  processTotalBytesPerSecond: number;
+}
+
+export interface HostRuntimeStatsPeaks {
+  hostCpuUsagePercent: number;
+  processCpuUsagePercent: number;
+  hostMemoryUsedBytes: number;
+  processMemoryBytes: number;
+  hostUploadBytesPerSecond: number;
+  hostDownloadBytesPerSecond: number;
+  hostTotalBytesPerSecond: number;
+  processUploadBytesPerSecond: number;
+  processDownloadBytesPerSecond: number;
+  processTotalBytesPerSecond: number;
+}
+
+export interface HostRuntimeStatsResponse {
+  sampleIntervalMs: number;
+  historyWindowMs: number;
+  generatedAt: string;
+  current: HostRuntimeSample;
+  history: HostRuntimeSample[];
+  peaks: HostRuntimeStatsPeaks;
+}
+
 export interface UploadResponse {
   items: LibraryItem[];
 }

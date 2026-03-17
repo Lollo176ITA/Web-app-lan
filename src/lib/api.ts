@@ -10,6 +10,7 @@ import type {
   DeleteItemResponse,
   DirectChatSnapshotResponse,
   HostDiagnosticsResponse,
+  HostRuntimeStatsResponse,
   ItemPreview,
   LanIdentity,
   LibraryItem,
@@ -243,6 +244,10 @@ export function fetchSession() {
 
 export function fetchDiagnostics() {
   return readJson<HostDiagnosticsResponse>("/api/diagnostics");
+}
+
+export function fetchDiagnosticsRuntimeStats() {
+  return readJson<HostRuntimeStatsResponse>("/api/diagnostics/stats");
 }
 
 export function fetchItems() {

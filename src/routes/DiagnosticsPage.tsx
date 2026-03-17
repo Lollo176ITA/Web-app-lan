@@ -18,13 +18,20 @@ import {
   Typography
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
-import type { HostDiagnosticCheck, HostDiagnosticCommand, HostDiagnosticsResponse } from "../../shared/types";
+import type {
+  HostDiagnosticCheck,
+  HostDiagnosticCommand,
+  HostDiagnosticsResponse,
+  HostRuntimeStatsResponse
+} from "../../shared/types";
+import { DiagnosticsRealtimePanel } from "../components/DiagnosticsRealtimePanel";
 import { PageHeader } from "../components/PageHeader";
-import { fetchDiagnostics } from "../lib/api";
+import { fetchClientProfile, fetchDiagnostics, fetchDiagnosticsRuntimeStats } from "../lib/api";
 import { copyTextToClipboard } from "../lib/clipboard";
 import { useLanLiveState } from "../lib/useLanLiveState";
 
 type DiagnosticsState = "loading" | "ready";
+type RuntimeState = "idle" | "loading" | "ready" | "error";
 
 function getCommandsForCheck(checkId: string, commands: HostDiagnosticCommand[]) {
   switch (checkId) {
@@ -61,7 +68,10 @@ export function DiagnosticsPage() {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
   const [diagnostics, setDiagnostics] = useState<HostDiagnosticsResponse | null>(null);
+  const [runtimeStats, setRuntimeStats] = useState<HostRuntimeStatsResponse | null>(null);
+  const [isHostClient, setIsHostClient] = useState<boolean | null>(null);
   const [state, setState] = useState<DiagnosticsState>("loading");
+  const [runtimeState, setRuntimeState] = useState<RuntimeState>("idle");
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const liveState = useLanLiveState();
 
@@ -81,7 +91,64 @@ export function DiagnosticsPage() {
 
   useEffect(() => {
     void refreshDiagnostics();
+    void fetchClientProfile()
+      .then((profile) => {
+        setIsHostClient(profile.isHost);
+      })
+      .catch(() => {
+        setIsHostClient(false);
+      });
   }, []);
+
+  useEffect(() => {
+    if (!isHostClient) {
+      setRuntimeStats(null);
+      setRuntimeState("idle");
+      return;
+    }
+
+    let active = true;
+    let pending = false;
+
+    const pollRuntimeStats = async () => {
+      if (pending) {
+        return;
+      }
+
+      pending = true;
+
+      try {
+        const payload = await fetchDiagnosticsRuntimeStats();
+
+        if (!active) {
+          return;
+        }
+
+        setRuntimeStats(payload);
+        setRuntimeState("ready");
+      } catch {
+        if (!active) {
+          return;
+        }
+
+        setRuntimeState("error");
+      } finally {
+        pending = false;
+      }
+    };
+
+    setRuntimeState("loading");
+    void pollRuntimeStats();
+
+    const interval = window.setInterval(() => {
+      void pollRuntimeStats();
+    }, 2000);
+
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [isHostClient]);
 
   return (
     <Box sx={{ pb: 7 }}>
@@ -122,6 +189,14 @@ export function DiagnosticsPage() {
               </Stack>
             </CardContent>
           </Card>
+
+          {isHostClient ? (
+            <DiagnosticsRealtimePanel
+              loading={runtimeState === "loading" && !runtimeStats}
+              stats={runtimeStats}
+              unavailable={runtimeState === "error"}
+            />
+          ) : null}
 
           {diagnostics ? (
             <>

@@ -58,6 +58,38 @@ describe("Routeroom API", () => {
     close();
   });
 
+  it("returns live host stats only to the host client", async () => {
+    const storageRoot = await createTemporaryStorage();
+    const { app, close } = await createApp({ storageRoot });
+
+    await request(app).get("/api/session").expect(200);
+    await delay(1100);
+
+    const hostResponse = await request(app).get("/api/diagnostics/stats").expect(200);
+
+    expect(hostResponse.body.sampleIntervalMs).toBe(1000);
+    expect(hostResponse.body.historyWindowMs).toBeGreaterThan(0);
+    expect(hostResponse.body.history.length).toBeGreaterThan(0);
+    expect(hostResponse.body.current.recordedAt).toEqual(expect.any(String));
+    expect(hostResponse.body.current.hostCpuUsagePercent).toBeGreaterThanOrEqual(0);
+    expect(hostResponse.body.current.processCpuUsagePercent).toBeGreaterThanOrEqual(0);
+    expect(hostResponse.body.current.memoryTotalBytes).toBeGreaterThan(0);
+    expect(hostResponse.body.current.processMemoryBytes).toBeGreaterThan(0);
+    expect(hostResponse.body.current.hostTotalBytesPerSecond).toBeGreaterThanOrEqual(0);
+    expect(hostResponse.body.current.processTotalBytesPerSecond).toBeGreaterThanOrEqual(0);
+    expect(hostResponse.body.peaks.hostTotalBytesPerSecond).toBeGreaterThanOrEqual(0);
+    expect(hostResponse.body.peaks.processTotalBytesPerSecond).toBeGreaterThanOrEqual(0);
+
+    app.set("trust proxy", true);
+
+    await request(app)
+      .get("/api/diagnostics/stats")
+      .set("X-Forwarded-For", "10.10.10.44")
+      .expect(403);
+
+    close();
+  });
+
   it("preserves nested folder structure during directory uploads and restores it on restart", async () => {
     const storageRoot = await createTemporaryStorage();
     const { app, close } = await createApp({ storageRoot });

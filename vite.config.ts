@@ -11,6 +11,10 @@ export default defineConfig({
             return undefined;
           }
 
+          if (id.includes("@mui/x-charts")) {
+            return "mui-x-charts";
+          }
+
           if (id.includes("@mui") || id.includes("@emotion")) {
             return "mui";
           }

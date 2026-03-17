@@ -11,7 +11,7 @@ import { EventHub } from "./events.js";
 import { getSessionUrls } from "./network.js";
 import { CollaborationStore } from "./realtime.js";
 import { LibraryStore } from "./storage.js";
-import { collectHostDiagnostics } from "./diagnostics.js";
+import { collectHostDiagnostics, HostRuntimeStatsMonitor } from "./diagnostics.js";
 import type {
   ArchiveFormat,
   ChatSnapshotResponse,
@@ -26,6 +26,7 @@ import type {
   DeleteStreamRoomResponse,
   DeleteItemResponse,
   HostDiagnosticsResponse,
+  HostRuntimeStatsResponse,
   ItemPreview,
   PostChatMessageRequest,
   PostRoomMessageRequest,
@@ -203,6 +204,7 @@ export async function createApp(options: CreateAppOptions = {}) {
   const store = new LibraryStore(storageRoot);
   const collaboration = new CollaborationStore(storageRoot);
   const events = new EventHub();
+  const runtimeStats = new HostRuntimeStatsMonitor();
   const availableArchiveFormats = await detectAvailableArchiveFormats();
   const hostIpAddresses = collectHostIpAddresses();
   const defaultFolderDownloadFormat =
@@ -348,6 +350,7 @@ export async function createApp(options: CreateAppOptions = {}) {
     });
   }
 
+  app.use(runtimeStats.createTrafficMiddleware());
   app.use(express.json());
 
   app.get("/api/health", (_request, response) => {
@@ -389,6 +392,16 @@ export async function createApp(options: CreateAppOptions = {}) {
     } catch (error) {
       next(error);
     }
+  });
+
+  app.get("/api/diagnostics/stats", (request, response) => {
+    if (!isHostRequest(request, hostIpAddresses)) {
+      response.status(403).json({ message: "Solo l'host puo vedere le metriche live." });
+      return;
+    }
+
+    const payload: HostRuntimeStatsResponse = runtimeStats.getSnapshot();
+    response.json(payload);
   });
 
   app.get("/api/items", (_request, response) => {
@@ -1011,6 +1024,7 @@ export async function createApp(options: CreateAppOptions = {}) {
     urls,
     close() {
       clearInterval(keepAliveInterval);
+      runtimeStats.dispose();
     }
   };
 }
