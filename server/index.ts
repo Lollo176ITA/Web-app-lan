@@ -1,9 +1,14 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createApp } from "./app.js";
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
-const staticDir = path.resolve(currentDirectory, "../client");
+const staticDirCandidates = [
+  path.resolve(process.cwd(), "dist/client"),
+  path.resolve(currentDirectory, "../client")
+];
+const staticDir = staticDirCandidates.find((candidate) => existsSync(candidate)) ?? staticDirCandidates[0];
 const port = Number.parseInt(process.env.PORT ?? "8787", 10);
 const storageRoot = process.env.STORAGE_ROOT;
 

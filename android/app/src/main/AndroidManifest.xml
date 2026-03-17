@@ -12,8 +12,10 @@
     android:name=".RoutySyncApp"
     android:allowBackup="true"
     android:label="Routy Sync"
+    android:networkSecurityConfig="@xml/network_security_config"
     android:supportsRtl="true"
-    android:theme="@style/Theme.RoutySync">
+    android:theme="@style/Theme.RoutySync"
+    android:usesCleartextTraffic="true">
 
     <activity
       android:name=".MainActivity"
