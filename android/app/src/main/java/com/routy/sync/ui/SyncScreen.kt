@@ -17,17 +17,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Sync
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -58,7 +55,6 @@ fun SyncScreen(container: AppContainer) {
   val state by viewModel.uiState.collectAsState()
   val snackbarHostState = remember { SnackbarHostState() }
   val context = LocalContext.current
-  val currentSsid = container.wifiProvider.currentSsidOrNull()
   val folderPicker = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.OpenDocumentTree()
   ) { treeUri ->
@@ -115,14 +111,6 @@ fun SyncScreen(container: AppContainer) {
       }
 
       item {
-        WifiSection(
-          state = state,
-          viewModel = viewModel,
-          currentSsid = currentSsid
-        )
-      }
-
-      item {
         FolderSection(
           state = state,
           onPickFolder = { folderPicker.launch(null) },
@@ -151,7 +139,7 @@ private fun HeadlineSection(state: SyncUiState) {
     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
       Text("Routy Sync", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
       Text(
-        "Onboarding host URL -> pairing code -> cartelle Android. Dopo il pairing, l’autosync parte quando il telefono torna sulla LAN e l’host risponde.",
+        "Onboarding host URL -> pairing code -> cartelle Android. Dopo il pairing, l’autosync parte appena il telefono torna sulla LAN e l’host risponde.",
         style = MaterialTheme.typography.bodyLarge
       )
       if (state.dashboard.isConfigured) {
@@ -213,58 +201,6 @@ private fun PairingSection(state: SyncUiState, viewModel: SyncViewModel, onScanQ
 }
 
 @Composable
-private fun WifiSection(
-  state: SyncUiState,
-  viewModel: SyncViewModel,
-  currentSsid: String?
-) {
-  Card {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-      Text("2. Rete LAN", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-      Text(
-        "L’autosync prova l’host configurato quando il telefono torna su Wi-Fi. Se il server host risponde, parte la sync.",
-        style = MaterialTheme.typography.bodyMedium
-      )
-
-      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilledTonalButton(onClick = { viewModel.addCurrentWifi(currentSsid) }, enabled = !state.busy && currentSsid != null) {
-          Text(currentSsid?.let { "Salva $it (opzionale)" } ?: "Wi-Fi corrente non rilevato")
-        }
-      }
-      if (currentSsid == null) {
-        Text(
-          "Il nome del Wi-Fi ora e facoltativo: serve solo come promemoria e non blocca piu l’autosync.",
-          style = MaterialTheme.typography.bodySmall
-        )
-      }
-
-      OutlinedTextField(
-        value = state.manualSsid,
-        onValueChange = viewModel::updateManualSsid,
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text("SSID manuale") }
-      )
-
-      OutlinedButton(onClick = viewModel::addManualWifi, enabled = !state.busy && state.manualSsid.isNotBlank()) {
-        Icon(Icons.Rounded.Add, contentDescription = null)
-        Spacer(Modifier.width(4.dp))
-        Text("Salva SSID")
-      }
-
-      if (state.dashboard.approvedSsids.isEmpty()) {
-        Text("Nessun SSID salvato.", style = MaterialTheme.typography.bodyMedium)
-      } else {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          state.dashboard.approvedSsids.sorted().forEach { ssid ->
-            AssistChip(onClick = {}, label = { Text(ssid) })
-          }
-        }
-      }
-    }
-  }
-}
-
-@Composable
 private fun FolderSection(
   state: SyncUiState,
   onPickFolder: () -> Unit,
@@ -272,7 +208,7 @@ private fun FolderSection(
 ) {
   Card {
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-      Text("3. Cartelle da sincronizzare", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+      Text("2. Cartelle da sincronizzare", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
       OutlinedButton(onClick = onPickFolder, enabled = !state.busy && state.dashboard.isConfigured) {
         Icon(Icons.Rounded.FolderOpen, contentDescription = null)
         Spacer(Modifier.width(4.dp))
@@ -317,9 +253,9 @@ private fun SyncActionsSection(
 ) {
   Card {
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-      Text("4. Sync", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+      Text("3. Sync", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
       Text(
-        "Il worker automatico prova l’host quando torni sulla LAN. Qui puoi comunque forzare refresh config e sync manuale.",
+        "Quando il telefono torna sul Wi-Fi, l’app prova subito l’host configurato. Il worker periodico resta come fallback, e qui puoi sempre forzare refresh config e sync manuale.",
         style = MaterialTheme.typography.bodyMedium
       )
 

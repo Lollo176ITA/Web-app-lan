@@ -30,7 +30,7 @@ class SyncWorker(
         return Result.success()
       }
 
-      repository.syncAll()
+      repository.trySyncAll()
       Result.success()
     } catch (error: IOException) {
       Result.retry()

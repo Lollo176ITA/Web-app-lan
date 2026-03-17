@@ -305,7 +305,6 @@ export interface SyncDeviceSummary {
   createdAt: string;
   lastSeenAt: string | null;
   lastSyncAt: string | null;
-  approvedSsids: string[];
   mappings: SyncFolderMapping[];
 }
 
@@ -340,7 +339,6 @@ export interface RegisterSyncDeviceResponse {
 }
 
 export interface UpdateSyncFoldersRequest {
-  approvedSsids: string[];
   mappings: Array<{
     id?: string;
     sourceName: string;

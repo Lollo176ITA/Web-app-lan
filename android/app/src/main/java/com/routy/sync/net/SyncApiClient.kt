@@ -27,7 +27,6 @@ data class ApiSyncMapping(
 data class ApiSyncDevice(
   val id: String,
   val deviceName: String,
-  val approvedSsids: List<String>,
   val mappings: List<ApiSyncMapping>
 )
 
@@ -104,7 +103,6 @@ class SyncApiClient(private val contentResolver: ContentResolver) {
   suspend fun updateDeviceConfig(
     hostUrl: String,
     authToken: String,
-    approvedSsids: List<String>,
     mappings: List<Pair<String?, String>>
   ) = withContext(Dispatchers.IO) {
     val mappingArray = JSONArray()
@@ -117,9 +115,7 @@ class SyncApiClient(private val contentResolver: ContentResolver) {
       )
     }
 
-    val payload = JSONObject()
-      .put("approvedSsids", JSONArray(approvedSsids))
-      .put("mappings", mappingArray)
+    val payload = JSONObject().put("mappings", mappingArray)
 
     val response = executeJson(
       Request.Builder()
@@ -224,7 +220,6 @@ class SyncApiClient(private val contentResolver: ContentResolver) {
     ApiSyncDevice(
       id = payload.getString("id"),
       deviceName = payload.getString("deviceName"),
-      approvedSsids = payload.getJSONArray("approvedSsids").mapStrings(),
       mappings = payload.getJSONArray("mappings").mapObjects { mapping ->
         ApiSyncMapping(
           id = mapping.getString("id"),
@@ -249,12 +244,6 @@ class SyncApiClient(private val contentResolver: ContentResolver) {
 
   private fun buildUrl(hostUrl: String, path: String) =
     "${hostUrl.trim().trimEnd('/')}$path"
-
-  private fun JSONArray.mapStrings() = buildList(length()) {
-    for (index in 0 until length()) {
-      add(getString(index))
-    }
-  }
 
   private fun <T> JSONArray.mapObjects(transform: (JSONObject) -> T) = buildList(length()) {
     for (index in 0 until length()) {

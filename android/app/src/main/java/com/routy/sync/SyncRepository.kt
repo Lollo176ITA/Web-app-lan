@@ -12,24 +12,22 @@ import com.routy.sync.data.SyncPreferences
 import com.routy.sync.net.ApiSyncDevice
 import com.routy.sync.net.SyncApiClient
 import com.routy.sync.net.UploadableEntry
-import com.routy.sync.runtime.CurrentWifiProvider
 import java.io.IOException
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 data class LocalRuntimeConfig(
-  val isConfigured: Boolean,
-  val approvedSsids: Set<String>
+  val isConfigured: Boolean
 )
 
 data class SyncDashboardState(
   val hostUrl: String = "",
   val deviceId: String = "",
   val deviceName: String = "",
-  val approvedSsids: Set<String> = emptySet(),
   val mappings: List<SyncMappingEntity> = emptyList(),
-  val currentSsid: String? = null,
   val isConfigured: Boolean = false
 )
 
@@ -38,19 +36,18 @@ class SyncRepository(
   private val database: SyncDatabase,
   private val preferences: SyncPreferences,
   private val tokenStore: SecureTokenStore,
-  private val wifiProvider: CurrentWifiProvider,
   private val apiClient: SyncApiClient,
   private val documentTreePlanner: DocumentTreePlanner
 ) {
+  private val syncMutex = Mutex()
+
   fun observeDashboardState(): Flow<SyncDashboardState> =
     combine(preferences.state, database.mappingDao().observeAll()) { prefs, mappings ->
       SyncDashboardState(
         hostUrl = prefs.hostUrl,
         deviceId = prefs.deviceId,
         deviceName = prefs.deviceName,
-        approvedSsids = prefs.approvedSsids,
         mappings = mappings,
-        currentSsid = wifiProvider.currentSsidOrNull(),
         isConfigured = prefs.isConfigured && tokenStore.readToken().isNotBlank()
       )
     }
@@ -58,8 +55,7 @@ class SyncRepository(
   suspend fun getLocalRuntimeConfig(): LocalRuntimeConfig {
     val state = preferences.getState()
     return LocalRuntimeConfig(
-      isConfigured = state.isConfigured && tokenStore.readToken().isNotBlank(),
-      approvedSsids = state.approvedSsids
+      isConfigured = state.isConfigured && tokenStore.readToken().isNotBlank()
     )
   }
 
@@ -74,22 +70,6 @@ class SyncRepository(
       deviceId = result.device.id,
       deviceName = result.device.deviceName
     )
-
-    val initialSsids = result.device.approvedSsids.toMutableSet()
-    wifiProvider.currentSsidOrNull()?.let(initialSsids::add)
-    preferences.updateApprovedSsids(initialSsids)
-    pushConfig()
-  }
-
-  suspend fun addApprovedSsid(ssid: String) {
-    val trimmed = ssid.trim()
-
-    if (trimmed.isBlank()) {
-      return
-    }
-
-    val current = preferences.getState()
-    preferences.updateApprovedSsids(current.approvedSsids + trimmed)
     pushConfig()
   }
 
@@ -143,6 +123,25 @@ class SyncRepository(
   }
 
   suspend fun syncAll() {
+    syncMutex.withLock {
+      performSyncAll()
+    }
+  }
+
+  suspend fun trySyncAll(): Boolean {
+    if (!syncMutex.tryLock()) {
+      return false
+    }
+
+    return try {
+      performSyncAll()
+      true
+    } finally {
+      syncMutex.unlock()
+    }
+  }
+
+  private suspend fun performSyncAll() {
     val prefs = preferences.getState()
     val authToken = tokenStore.readToken()
 
@@ -150,29 +149,27 @@ class SyncRepository(
       throw IllegalStateException("Sync app is not configured")
     }
 
-    val remoteDevice = pushConfig()
-    val remoteMappings = remoteDevice.mappings.associateBy { it.sourceName }
+    val mappings = ensureRemoteMappings()
 
-    database.mappingDao().getAll().forEach { mapping ->
-      val remoteMapping = remoteMappings[mapping.sourceName] ?: return@forEach
+    mappings.forEach { mapping ->
+      val mappingId = mapping.serverMappingId ?: return@forEach
       val localEntries = documentTreePlanner.buildEntries(Uri.parse(mapping.treeUri))
       val uploadableEntries = localEntries.map { entry -> entry.toUploadableEntry() }
-      val plan = apiClient.planMapping(prefs.hostUrl, authToken, remoteMapping.id, uploadableEntries)
+      val uploadableEntriesByPath = uploadableEntries.associateBy { it.relativePath }
+      val plan = apiClient.planMapping(prefs.hostUrl, authToken, mappingId, uploadableEntries)
       val selectedUploads = plan.decisions
         .filter { decision -> decision.action == "upload" }
-        .mapNotNull { decision ->
-          uploadableEntries.find { entry -> entry.relativePath == decision.relativePath }
-        }
+        .mapNotNull { decision -> uploadableEntriesByPath[decision.relativePath] }
 
       if (selectedUploads.isNotEmpty()) {
-        apiClient.uploadMapping(prefs.hostUrl, authToken, remoteMapping.id, selectedUploads)
+        apiClient.uploadMapping(prefs.hostUrl, authToken, mappingId, selectedUploads)
       }
 
+      val syncedAt = System.currentTimeMillis()
       database.mappingDao().upsert(
         mapping.copy(
-          serverMappingId = remoteMapping.id,
-          lastPlannedAt = System.currentTimeMillis(),
-          lastSyncedAt = System.currentTimeMillis()
+          lastPlannedAt = syncedAt,
+          lastSyncedAt = syncedAt
         )
       )
     }
@@ -190,7 +187,6 @@ class SyncRepository(
     val remoteDevice = apiClient.updateDeviceConfig(
       hostUrl = prefs.hostUrl,
       authToken = authToken,
-      approvedSsids = prefs.approvedSsids.toList().sorted(),
       mappings = localMappings.map { mapping -> mapping.serverMappingId to mapping.sourceName }
     )
 
@@ -208,8 +204,17 @@ class SyncRepository(
     if (nextMappings.isNotEmpty()) {
       database.mappingDao().upsertAll(nextMappings)
     }
+  }
 
-    preferences.updateApprovedSsids(remoteDevice.approvedSsids.toSet())
+  private suspend fun ensureRemoteMappings(): List<SyncMappingEntity> {
+    var mappings = database.mappingDao().getAll()
+
+    if (mappings.any { it.serverMappingId.isNullOrBlank() }) {
+      pushConfig()
+      mappings = database.mappingDao().getAll()
+    }
+
+    return mappings
   }
 
   companion object {

@@ -18,7 +18,6 @@ data class SyncUiState(
   val hostUrl: String = "",
   val pairingCode: String = "",
   val deviceName: String = Build.MODEL ?: "Android",
-  val manualSsid: String = "",
   val dashboard: SyncDashboardState = SyncDashboardState(),
   val busy: Boolean = false,
   val message: String? = null
@@ -82,10 +81,6 @@ class SyncViewModel(private val repository: SyncRepository) : ViewModel() {
     _uiState.update { it.copy(deviceName = value) }
   }
 
-  fun updateManualSsid(value: String) {
-    _uiState.update { it.copy(manualSsid = value) }
-  }
-
   fun dismissMessage() {
     _uiState.update { it.copy(message = null) }
   }
@@ -107,31 +102,6 @@ class SyncViewModel(private val repository: SyncRepository) : ViewModel() {
       )
       repository.refreshRemoteState()
       _uiState.update { current -> current.copy(pairingCode = "") }
-    }
-  }
-
-  fun addCurrentWifi(currentSsid: String?) {
-
-    if (currentSsid.isNullOrBlank()) {
-      _uiState.update { it.copy(message = "Wi-Fi corrente non rilevato. Puoi ignorarlo o salvare l’SSID manualmente.") }
-      return
-    }
-
-    runTask("Wi-Fi approvato aggiunto.") {
-      repository.addApprovedSsid(currentSsid)
-    }
-  }
-
-  fun addManualWifi() {
-    val manualSsid = _uiState.value.manualSsid.trim()
-
-    if (manualSsid.isBlank()) {
-      return
-    }
-
-    runTask("Wi-Fi approvato aggiunto.") {
-      repository.addApprovedSsid(manualSsid)
-      _uiState.update { current -> current.copy(manualSsid = "") }
     }
   }
 

@@ -566,7 +566,7 @@ export async function createApp(options: CreateAppOptions = {}) {
     try {
       const payload = request.body as UpdateSyncFoldersRequest | undefined;
 
-      if (!payload || !Array.isArray(payload.approvedSsids) || !Array.isArray(payload.mappings)) {
+      if (!payload || !Array.isArray(payload.mappings)) {
         response.status(400).json({ message: "Configurazione sync non valida." });
         return;
       }

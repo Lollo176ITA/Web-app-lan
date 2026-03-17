@@ -5,7 +5,6 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Dao
 import androidx.room.Database
@@ -68,8 +67,7 @@ abstract class SyncDatabase : RoomDatabase() {
 data class SyncPreferencesState(
   val hostUrl: String = "",
   val deviceId: String = "",
-  val deviceName: String = "",
-  val approvedSsids: Set<String> = emptySet()
+  val deviceName: String = ""
 ) {
   val isConfigured: Boolean
     get() = hostUrl.isNotBlank() && deviceId.isNotBlank()
@@ -96,8 +94,7 @@ class SyncPreferences(private val context: Context) {
         SyncPreferencesState(
           hostUrl = preferences[HOST_URL] ?: "",
           deviceId = preferences[DEVICE_ID] ?: "",
-          deviceName = preferences[DEVICE_NAME] ?: "",
-          approvedSsids = preferences[APPROVED_SSIDS] ?: emptySet()
+          deviceName = preferences[DEVICE_NAME] ?: ""
         )
       }
 
@@ -111,12 +108,6 @@ class SyncPreferences(private val context: Context) {
     }
   }
 
-  suspend fun updateApprovedSsids(ssids: Set<String>) {
-    dataStore.edit { preferences ->
-      preferences[APPROVED_SSIDS] = ssids
-    }
-  }
-
   suspend fun clearAll() {
     dataStore.edit { preferences ->
       preferences.clear()
@@ -127,7 +118,6 @@ class SyncPreferences(private val context: Context) {
     private val HOST_URL = stringPreferencesKey("host_url")
     private val DEVICE_ID = stringPreferencesKey("device_id")
     private val DEVICE_NAME = stringPreferencesKey("device_name")
-    private val APPROVED_SSIDS = stringSetPreferencesKey("approved_ssids")
   }
 }
 

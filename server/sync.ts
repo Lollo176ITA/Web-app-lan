@@ -44,7 +44,6 @@ interface PersistedSyncDeviceRecord {
   createdAt: string;
   lastSeenAt: string | null;
   lastSyncAt: string | null;
-  approvedSsids: string[];
   mappings: PersistedSyncFolderMappingRecord[];
 }
 
@@ -88,13 +87,6 @@ function normalizeRelativePath(value: string) {
   }
 
   return normalized.join("/");
-}
-
-function dedupeStrings(values: string[]) {
-  return values
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .filter((value, index, items) => items.indexOf(value) === index);
 }
 
 export class SyncStore {
@@ -181,7 +173,6 @@ export class SyncStore {
       createdAt: now,
       lastSeenAt: now,
       lastSyncAt: null,
-      approvedSsids: [],
       mappings: []
     };
 
@@ -264,7 +255,6 @@ export class SyncStore {
       });
     }
 
-    device.approvedSsids = dedupeStrings(request.approvedSsids);
     device.mappings = nextMappings;
     this.markDeviceSeen(device);
     await this.persist();
@@ -442,7 +432,6 @@ export class SyncStore {
       createdAt: device.createdAt,
       lastSeenAt: device.lastSeenAt,
       lastSyncAt: device.lastSyncAt,
-      approvedSsids: [...device.approvedSsids],
       mappings: device.mappings.map((mapping) => this.toMappingSummary(mapping))
     };
   }

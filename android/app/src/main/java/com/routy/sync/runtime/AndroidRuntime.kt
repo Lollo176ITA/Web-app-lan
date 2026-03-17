@@ -1,24 +1,19 @@
 package com.routy.sync.runtime
 
-import android.Manifest
-import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.wifi.WifiInfo
-import android.net.wifi.WifiManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
@@ -31,43 +26,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.io.IOException
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.TimeUnit
 
 class CurrentWifiProvider(private val context: Context) {
   private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-  private val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-
-  fun hasSsidAccessPermission(): Boolean =
-    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
   fun isWifiConnected(): Boolean {
     val capabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork) ?: return false
     return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
   }
-
-  @SuppressLint("MissingPermission")
-  fun currentSsidOrNull(): String? {
-    if (!hasSsidAccessPermission()) {
-      return null
-    }
-
-    val ssid = currentWifiInfoOrNull()?.ssid?.trim()?.removePrefix("\"")?.removeSuffix("\"")
-    return ssid?.takeUnless { it.isBlank() || it == WifiManager.UNKNOWN_SSID }
-  }
-
-  @SuppressLint("MissingPermission")
-  private fun currentWifiInfoOrNull(): WifiInfo? {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-      val capabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
-      return capabilities?.transportInfo as? WifiInfo
-    }
-
-    return legacyWifiInfoOrNull()
-  }
-
-  @Suppress("DEPRECATION")
-  @SuppressLint("MissingPermission")
-  private fun legacyWifiInfoOrNull(): WifiInfo? = wifiManager.connectionInfo
 }
 
 object SyncScheduler {
@@ -83,6 +52,7 @@ object SyncScheduler {
     val request = OneTimeWorkRequestBuilder<SyncWorker>()
       .setInputData(workDataOf("reason" to reason))
       .setConstraints(syncConstraints())
+      .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
       .build()
 
     WorkManager.getInstance(context).enqueueUniqueWork(
@@ -165,6 +135,9 @@ class WifiConnectivityMonitor(
   private val appContext = context.applicationContext
   private val connectivityManager = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+  private val syncInFlight = AtomicBoolean(false)
+  @Volatile
+  private var lastAutoSyncStartedAt = 0L
 
   fun start() {
     connectivityManager.registerDefaultNetworkCallback(
@@ -193,7 +166,35 @@ class WifiConnectivityMonitor(
         return@launch
       }
 
-      SyncScheduler.enqueueImmediate(appContext, "wifi-online")
+      val startedAt = System.currentTimeMillis()
+
+      if (startedAt - lastAutoSyncStartedAt < AUTO_SYNC_DEBOUNCE_MS) {
+        return@launch
+      }
+
+      if (!syncInFlight.compareAndSet(false, true)) {
+        return@launch
+      }
+
+      lastAutoSyncStartedAt = startedAt
+
+      try {
+        if (!repository.isHostReachable()) {
+          return@launch
+        }
+
+        repository.trySyncAll()
+      } catch (_: IOException) {
+        SyncScheduler.enqueueImmediate(appContext, "wifi-online-retry")
+      } catch (_: IllegalStateException) {
+        // App not configured anymore.
+      } finally {
+        syncInFlight.set(false)
+      }
     }
+  }
+
+  companion object {
+    private const val AUTO_SYNC_DEBOUNCE_MS = 10_000L
   }
 }

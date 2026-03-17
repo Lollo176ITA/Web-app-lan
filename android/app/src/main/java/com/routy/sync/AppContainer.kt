@@ -25,7 +25,6 @@ class AppContainer(context: Context) {
       database,
       preferences,
       tokenStore,
-      wifiProvider,
       apiClient,
       documentTreePlanner
     )

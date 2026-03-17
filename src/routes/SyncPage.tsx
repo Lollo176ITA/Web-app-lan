@@ -12,7 +12,6 @@ import {
   Button,
   Card,
   CardContent,
-  Chip,
   Container,
   Snackbar,
   Stack,
@@ -303,107 +302,94 @@ export function SyncPage() {
                 </Card>
               </Box>
 
-              <Card sx={{ borderRadius: 3 }}>
-                <CardContent>
-                  <Stack spacing={2}>
-                    <Stack direction="row" spacing={1.25} alignItems="center">
+                <Card sx={{ borderRadius: 3 }}>
+                  <CardContent>
+                    <Stack spacing={2}>
+                      <Stack direction="row" spacing={1.25} alignItems="center">
                         <Avatar sx={{ bgcolor: alpha("#1769aa", 0.12), color: "primary.main" }}>
                           <PhoneAndroidRoundedIcon />
                         </Avatar>
-                      <Box>
+                        <Box>
                           <Typography variant="h5">Device registrati</Typography>
-                          <Typography color="text.secondary">Config attiva, SSID salvati e mapping delle cartelle.</Typography>
+                          <Typography color="text.secondary">Config attiva e mapping delle cartelle.</Typography>
                         </Box>
                       </Stack>
 
-                    {overview.devices.length === 0 ? (
-                      <Typography color="text.secondary">Nessun device Android registrato.</Typography>
-                    ) : (
-                      <Box
-                        sx={{
-                          display: "grid",
-                          gap: 1.5,
-                          gridTemplateColumns: { xs: "1fr", lg: "repeat(2, minmax(0, 1fr))" }
-                        }}
-                      >
-                        {overview.devices.map((device) => (
-                          <Card key={device.id} variant="outlined" sx={{ borderRadius: 2.5 }}>
-                            <CardContent>
-                              <Stack spacing={1.5}>
-                                <Stack direction="row" justifyContent="space-between" spacing={1.5} alignItems="flex-start">
-                                  <Box sx={{ minWidth: 0 }}>
-                                    <Typography variant="h6" sx={{ wordBreak: "break-word" }}>
-                                      {device.deviceName}
+                      {overview.devices.length === 0 ? (
+                        <Typography color="text.secondary">Nessun device Android registrato.</Typography>
+                      ) : (
+                        <Box
+                          sx={{
+                            display: "grid",
+                            gap: 1.5,
+                            gridTemplateColumns: { xs: "1fr", lg: "repeat(2, minmax(0, 1fr))" }
+                          }}
+                        >
+                          {overview.devices.map((device) => (
+                            <Card key={device.id} variant="outlined" sx={{ borderRadius: 2.5 }}>
+                              <CardContent>
+                                <Stack spacing={1.5}>
+                                  <Stack direction="row" justifyContent="space-between" spacing={1.5} alignItems="flex-start">
+                                    <Box sx={{ minWidth: 0 }}>
+                                      <Typography variant="h6" sx={{ wordBreak: "break-word" }}>
+                                        {device.deviceName}
+                                      </Typography>
+                                      <Typography color="text.secondary">
+                                        {device.platform.toUpperCase()} • visto {formatDateTime(device.lastSeenAt)}
+                                      </Typography>
+                                      <Typography color="text.secondary">
+                                        Ultima sync {formatDateTime(device.lastSyncAt)}
+                                      </Typography>
+                                    </Box>
+
+                                    <Button
+                                      color="error"
+                                      startIcon={<DeleteOutlineRoundedIcon />}
+                                      disabled={revokingDeviceId === device.id}
+                                      onClick={() => {
+                                        void handleRevokeDevice(device.id);
+                                      }}
+                                    >
+                                      Revoca
+                                    </Button>
+                                  </Stack>
+
+                                  <Box>
+                                    <Typography variant="overline" color="secondary.main">
+                                      Mapping attivi
                                     </Typography>
-                                    <Typography color="text.secondary">
-                                      {device.platform.toUpperCase()} • visto {formatDateTime(device.lastSeenAt)}
-                                    </Typography>
-                                    <Typography color="text.secondary">
-                                      Ultima sync {formatDateTime(device.lastSyncAt)}
-                                    </Typography>
+                                    <Stack spacing={0.75} sx={{ mt: 0.75 }}>
+                                      {device.mappings.length > 0 ? (
+                                        device.mappings.map((mapping) => (
+                                          <Box
+                                            key={mapping.id}
+                                            sx={{
+                                              p: 1.2,
+                                              borderRadius: 2,
+                                              bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.04),
+                                              border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
+                                            }}
+                                          >
+                                            <Typography sx={{ fontWeight: 700 }}>{mapping.sourceName}</Typography>
+                                            <Typography color="text.secondary">
+                                              {mapping.trackedFileCount} file tracciati • ultima sync {formatDateTime(mapping.lastSyncedAt)}
+                                            </Typography>
+                                          </Box>
+                                        ))
+                                      ) : (
+                                        <Typography color="text.secondary">Nessuna cartella configurata.</Typography>
+                                      )}
+                                    </Stack>
                                   </Box>
-
-                                  <Button
-                                    color="error"
-                                    startIcon={<DeleteOutlineRoundedIcon />}
-                                    disabled={revokingDeviceId === device.id}
-                                    onClick={() => {
-                                      void handleRevokeDevice(device.id);
-                                    }}
-                                  >
-                                    Revoca
-                                  </Button>
                                 </Stack>
-
-                                <Box>
-                                  <Typography variant="overline" color="secondary.main">
-                                    SSID salvati
-                                  </Typography>
-                                  <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 0.75 }}>
-                                    {device.approvedSsids.length > 0 ? (
-                                      device.approvedSsids.map((ssid) => <Chip key={ssid} label={ssid} size="small" />)
-                                    ) : (
-                                      <Chip label="Nessun SSID salvato" size="small" variant="outlined" />
-                                    )}
-                                  </Stack>
-                                </Box>
-
-                                <Box>
-                                  <Typography variant="overline" color="secondary.main">
-                                    Mapping attivi
-                                  </Typography>
-                                  <Stack spacing={0.75} sx={{ mt: 0.75 }}>
-                                    {device.mappings.length > 0 ? (
-                                      device.mappings.map((mapping) => (
-                                        <Box
-                                          key={mapping.id}
-                                          sx={{
-                                            p: 1.2,
-                                            borderRadius: 2,
-                                            bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.04),
-                                            border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
-                                          }}
-                                        >
-                                          <Typography sx={{ fontWeight: 700 }}>{mapping.sourceName}</Typography>
-                                          <Typography color="text.secondary">
-                                            {mapping.trackedFileCount} file tracciati • ultima sync {formatDateTime(mapping.lastSyncedAt)}
-                                          </Typography>
-                                        </Box>
-                                      ))
-                                    ) : (
-                                      <Typography color="text.secondary">Nessuna cartella configurata.</Typography>
-                                    )}
-                                  </Stack>
-                                </Box>
-                              </Stack>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </Box>
-                    )}
-                  </Stack>
-                </CardContent>
-              </Card>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </Box>
+                      )}
+                    </Stack>
+                  </CardContent>
+                </Card>
 
               <Card sx={{ borderRadius: 3 }}>
                 <CardContent>
