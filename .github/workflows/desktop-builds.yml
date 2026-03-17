@@ -36,6 +36,7 @@ jobs:
     name: ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.runner }}
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
       ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
       ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
     strategy:
