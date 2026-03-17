@@ -587,4 +587,39 @@ describe("client upload api", () => {
     expect(calls.map((call) => call.relativePaths)).toEqual([["clip-a.mp4"], ["clip-b.mp4"], ["clip-c.mp4"]]);
     expect(calls.every((call) => call.parentId === null)).toBe(true);
   });
+
+  it("allows aborting an upload before the current batch completes", async () => {
+    const controller = new AbortController();
+    const fetchMock = vi.fn((_resource: string | URL | Request, init?: RequestInit) => {
+      const signal = init?.signal;
+
+      return new Promise<Response>((_resolve, reject) => {
+        signal?.addEventListener(
+          "abort",
+          () => {
+            const error = new Error("Upload aborted");
+            error.name = "AbortError";
+            reject(error);
+          },
+          { once: true }
+        );
+      });
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const uploadPromise = uploadFiles(
+      [
+        createUploadFile("slow-note.txt", undefined, 4 * 1024 * 1024),
+        createUploadFile("slow-note-2.txt", undefined, 4 * 1024 * 1024)
+      ],
+      "salotto",
+      { signal: controller.signal }
+    );
+
+    controller.abort();
+
+    await expect(uploadPromise).rejects.toMatchObject({ name: "AbortError" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

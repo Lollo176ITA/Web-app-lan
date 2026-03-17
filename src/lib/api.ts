@@ -47,6 +47,13 @@ export interface UploadProgress {
 
 interface UploadFilesOptions {
   onProgress?: (progress: UploadProgress) => void;
+  signal?: AbortSignal;
+}
+
+function createAbortError() {
+  const error = new Error("Upload aborted");
+  error.name = "AbortError";
+  return error;
 }
 
 async function readJson<T>(resource: string, init?: RequestInit) {
@@ -132,7 +139,8 @@ function takeAdaptiveUploadBatch(entries: UploadEntry[], startIndex: number) {
 async function uploadFileBatch(
   entries: UploadEntry[],
   parentId?: string | null,
-  onBatchProgress?: (loadedBytes: number) => void
+  onBatchProgress?: (loadedBytes: number) => void,
+  signal?: AbortSignal
 ) {
   const body = new FormData();
   const batchBytes = entries.reduce((total, entry) => total + getUploadEntrySize(entry.file), 0);
@@ -146,9 +154,43 @@ async function uploadFileBatch(
     body.append("parentId", parentId);
   }
 
+  if (signal?.aborted) {
+    throw createAbortError();
+  }
+
   if (onBatchProgress && typeof XMLHttpRequest !== "undefined") {
     return new Promise<UploadResponse>((resolve, reject) => {
       const request = new XMLHttpRequest();
+      let settled = false;
+
+      const cleanupAbortListener = () => {
+        signal?.removeEventListener("abort", handleAbort);
+      };
+
+      const rejectOnce = (error: Error) => {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        cleanupAbortListener();
+        reject(error);
+      };
+
+      const resolveOnce = (response: UploadResponse) => {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        cleanupAbortListener();
+        resolve(response);
+      };
+
+      const handleAbort = () => {
+        request.abort();
+        rejectOnce(createAbortError());
+      };
 
       request.open("POST", "/api/items");
       request.responseType = "json";
@@ -163,12 +205,16 @@ async function uploadFileBatch(
       };
 
       request.onerror = () => {
-        reject(new Error("Network error"));
+        rejectOnce(new Error("Network error"));
+      };
+
+      request.onabort = () => {
+        rejectOnce(createAbortError());
       };
 
       request.onload = () => {
         if (request.status < 200 || request.status >= 300) {
-          reject(new Error(`Request failed: ${request.status}`));
+          rejectOnce(new Error(`Request failed: ${request.status}`));
           return;
         }
 
@@ -176,16 +222,18 @@ async function uploadFileBatch(
           typeof request.response === "object" && request.response !== null
             ? (request.response as UploadResponse)
             : (JSON.parse(request.responseText) as UploadResponse);
-        resolve(response);
+        resolveOnce(response);
       };
 
+      signal?.addEventListener("abort", handleAbort, { once: true });
       request.send(body);
     });
   }
 
   return readJson<UploadResponse>("/api/items", {
     method: "POST",
-    body
+    body,
+    signal
   });
 }
 
@@ -344,6 +392,10 @@ export async function uploadFiles(files: File[], parentId?: string | null, optio
   emitProgress(0, 0, 0);
 
   for (let index = 0; index < uploadEntries.length;) {
+    if (options.signal?.aborted) {
+      throw createAbortError();
+    }
+
     const batch = takeAdaptiveUploadBatch(uploadEntries, index);
     const batchBytes = batch.reduce((total, entry) => total + getUploadEntrySize(entry.file), 0);
 
@@ -356,7 +408,8 @@ export async function uploadFiles(files: File[], parentId?: string | null, optio
         ? (loadedBatchBytes) => {
             emitProgress(completedFiles, uploadedBytes + loadedBatchBytes, batch.length);
           }
-        : undefined
+        : undefined,
+      options.signal
     );
     items.push(...response.items);
     completedFiles += batch.length;

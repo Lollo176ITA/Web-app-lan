@@ -1,4 +1,5 @@
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import PendingRoundedIcon from "@mui/icons-material/PendingRounded";
 import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
 import {
@@ -6,6 +7,7 @@ import {
   Card,
   CardContent,
   Chip,
+  IconButton,
   LinearProgress,
   Stack,
   Typography
@@ -16,12 +18,14 @@ import { formatBytes } from "../lib/format";
 
 interface UploadProgressCardProps {
   compact?: boolean;
+  onCancel?: () => void;
   progress: UploadProgress;
   targetLabel: string;
 }
 
 export function UploadProgressCard({
   compact = false,
+  onCancel,
   progress,
   targetLabel
 }: UploadProgressCardProps) {
@@ -69,12 +73,29 @@ export function UploadProgressCard({
                 </Typography>
               </Box>
             </Stack>
-            <Chip
-              label={percentageLabel}
-              color="secondary"
-              size={compact ? "small" : "medium"}
-              sx={{ fontWeight: 700, flexShrink: 0 }}
-            />
+            <Stack direction="row" spacing={0.75} alignItems="center" flexShrink={0}>
+              <Chip
+                label={percentageLabel}
+                color="secondary"
+                size={compact ? "small" : "medium"}
+                sx={{ fontWeight: 700, flexShrink: 0 }}
+              />
+              {onCancel ? (
+                <IconButton
+                  size={compact ? "small" : "medium"}
+                  color="inherit"
+                  onClick={onCancel}
+                  aria-label="Interrompi caricamento"
+                  sx={{
+                    border: `1px solid ${alpha(theme.palette.common.white, isDark ? 0.14 : 0.3)}`,
+                    bgcolor: alpha(theme.palette.common.white, isDark ? 0.04 : 0.5),
+                    flexShrink: 0
+                  }}
+                >
+                  <CloseRoundedIcon fontSize={compact ? "small" : "medium"} />
+                </IconButton>
+              ) : null}
+            </Stack>
           </Stack>
 
           <Box>

@@ -63,6 +63,7 @@ export function AppPage() {
   const layoutMode: LibraryLayoutMode = isMobile ? "minimal" : "compact";
   const detailPanelRef = useRef<HTMLDivElement | null>(null);
   const appliedDeepLinkRef = useRef<string | null>(null);
+  const uploadAbortControllerRef = useRef<AbortController | null>(null);
   const hostQrCodeDataUrl = useQrCodeDataUrl(session?.lanUrl ?? null, { width: 192 });
   const qrItemDataUrl = useQrCodeDataUrl(qrItemTarget?.url ?? null, { width: 256 });
 
@@ -194,22 +195,33 @@ export function AppPage() {
 
   async function handleUpload(files: File[]) {
     const destinationLabel = currentFolder?.name ?? "radice LAN";
+    const abortController = new AbortController();
     let nextSnackbar: string | null = null;
+    uploadAbortControllerRef.current = abortController;
     setUploading(true);
     setUploadProgress(null);
 
     try {
       const response = await uploadFiles(files, currentFolderId, {
-        onProgress: setUploadProgress
+        onProgress: setUploadProgress,
+        signal: abortController.signal
       });
       await syncSnapshot();
       setSelectedId(response.items.find((item) => item.kind !== "folder")?.id ?? null);
       nextSnackbar = `${files.length} file caricati in ${destinationLabel}.`;
     } catch (error) {
-      console.error(error);
+      if (error instanceof Error && error.name === "AbortError") {
+        nextSnackbar = "Caricamento interrotto. I file gia ricevuti restano nella libreria.";
+      } else {
+        console.error(error);
+        nextSnackbar = "Caricamento interrotto. Alcuni file potrebbero essere gia stati salvati.";
+      }
       await syncSnapshot().catch(() => undefined);
-      nextSnackbar = "Caricamento interrotto. Alcuni file potrebbero essere gia stati salvati.";
     } finally {
+      if (uploadAbortControllerRef.current === abortController) {
+        uploadAbortControllerRef.current = null;
+      }
+
       setUploading(false);
       setUploadProgress(null);
 
@@ -217,6 +229,10 @@ export function AppPage() {
         setSnackbar(nextSnackbar);
       }
     }
+  }
+
+  function handleCancelUpload() {
+    uploadAbortControllerRef.current?.abort();
   }
 
   async function handleCreateFolder() {
@@ -344,6 +360,7 @@ export function AppPage() {
               />
               {!isMobile && uploadProgress ? (
                 <UploadProgressCard
+                  onCancel={handleCancelUpload}
                   progress={uploadProgress}
                   targetLabel={currentFolder?.name ?? "Radice LAN"}
                 />
@@ -518,6 +535,7 @@ export function AppPage() {
           {uploadProgress ? (
             <UploadProgressCard
               compact
+              onCancel={handleCancelUpload}
               progress={uploadProgress}
               targetLabel={currentFolder?.name ?? "Radice LAN"}
             />

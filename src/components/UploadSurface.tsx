@@ -36,7 +36,7 @@ export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfac
   }, []);
 
   async function handleFiles(fileList: FileList | null) {
-    if (!fileList || fileList.length === 0) {
+    if (uploading || !fileList || fileList.length === 0) {
       return;
     }
 
@@ -61,6 +61,9 @@ export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfac
       onDrop={(event) => {
         event.preventDefault();
         setIsActive(false);
+        if (uploading) {
+          return;
+        }
         void handleFiles(event.dataTransfer.files);
       }}
       sx={{
@@ -113,6 +116,7 @@ export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfac
                 component="label"
                 variant="contained"
                 size="large"
+                disabled={uploading}
                 fullWidth
                 sx={{ minWidth: 0 }}
               >
@@ -131,6 +135,7 @@ export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfac
               <Button
                 variant="outlined"
                 size="large"
+                disabled={uploading}
                 fullWidth
                 sx={{ minWidth: 0 }}
                 onClick={() => {
@@ -145,6 +150,7 @@ export function UploadSurface({ onUpload, targetLabel, uploading }: UploadSurfac
               hidden
               multiple
               type="file"
+              disabled={uploading}
               onChange={(event) => {
                 void handleFiles(event.target.files);
                 event.currentTarget.value = "";
