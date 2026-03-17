@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
@@ -30,7 +29,6 @@ import { fetchClientProfile, fetchDiagnostics, fetchDiagnosticsRuntimeStats } fr
 import { copyTextToClipboard } from "../lib/clipboard";
 import { useLanLiveState } from "../lib/useLanLiveState";
 
-type DiagnosticsState = "loading" | "ready";
 type RuntimeState = "idle" | "loading" | "ready" | "error";
 
 function getCommandsForCheck(checkId: string, commands: HostDiagnosticCommand[]) {
@@ -70,27 +68,19 @@ export function DiagnosticsPage() {
   const [diagnostics, setDiagnostics] = useState<HostDiagnosticsResponse | null>(null);
   const [runtimeStats, setRuntimeStats] = useState<HostRuntimeStatsResponse | null>(null);
   const [isHostClient, setIsHostClient] = useState<boolean | null>(null);
-  const [state, setState] = useState<DiagnosticsState>("loading");
   const [runtimeState, setRuntimeState] = useState<RuntimeState>("idle");
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const liveState = useLanLiveState();
 
-  async function refreshDiagnostics() {
-    setState("loading");
-
-    try {
-      const payload = await fetchDiagnostics();
-      setDiagnostics(payload);
-    } catch {
-      setDiagnostics(null);
-      setSnackbar("Diagnostica non disponibile al momento.");
-    } finally {
-      setState("ready");
-    }
-  }
-
   useEffect(() => {
-    void refreshDiagnostics();
+    void fetchDiagnostics()
+      .then((payload) => {
+        setDiagnostics(payload);
+      })
+      .catch(() => {
+        setDiagnostics(null);
+        setSnackbar("Diagnostica non disponibile al momento.");
+      });
     void fetchClientProfile()
       .then((profile) => {
         setIsHostClient(profile.isHost);
@@ -156,40 +146,6 @@ export function DiagnosticsPage() {
         <PageHeader title="Diagnostica LAN" subtitle="Host self-test" networkState={liveState} />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
-          <Card sx={{ borderRadius: 2.5 }}>
-            <CardContent>
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                spacing={2}
-                alignItems={{ xs: "flex-start", sm: "center" }}
-                justifyContent="space-between"
-              >
-                <Stack direction="row" spacing={1.5} alignItems="center">
-                  <Avatar sx={{ bgcolor: alpha("#1769aa", 0.12), color: "primary.main" }}>
-                    <WifiRoundedIcon />
-                  </Avatar>
-                  <Box>
-                    <Typography variant="h5">Controlli host</Typography>
-                    <Typography color="text.secondary" variant="body2">
-                      Verifica bind, raggiungibilita LAN, profilo rete e firewall.
-                    </Typography>
-                  </Box>
-                </Stack>
-
-                <Button
-                  variant="outlined"
-                  startIcon={<AutorenewRoundedIcon />}
-                  onClick={() => {
-                    void refreshDiagnostics();
-                  }}
-                  disabled={state === "loading"}
-                >
-                  {state === "loading" ? "Controllo..." : "Aggiorna"}
-                </Button>
-              </Stack>
-            </CardContent>
-          </Card>
-
           {isHostClient ? (
             <DiagnosticsRealtimePanel
               loading={runtimeState === "loading" && !runtimeStats}

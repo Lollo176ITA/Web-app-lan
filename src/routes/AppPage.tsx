@@ -22,7 +22,6 @@ import { LibraryGrid } from "../components/LibraryGrid";
 import { MediaDetail } from "../components/MediaDetail";
 import { PageHeader } from "../components/PageHeader";
 import { QrCodeDialog } from "../components/QrCodeDialog";
-import { UploadProgressCard } from "../components/UploadProgressCard";
 import { UploadSurface } from "../components/UploadSurface";
 import { CreateFolderDialog } from "../features/library/CreateFolderDialog";
 import { type FilterValue } from "../features/library/constants";
@@ -33,16 +32,26 @@ import {
   createArchive,
   createFolder,
   deleteItem,
-  fetchSnapshot,
-  type UploadProgress,
-  uploadFiles
+  fetchSnapshot
 } from "../lib/api";
 import { copyTextToClipboard } from "../lib/clipboard";
 import { buildLibraryPreviewShareUrl, buildVideoPlayerShareUrl } from "../lib/share-links";
 import { useLanLiveState } from "../lib/useLanLiveState";
 import { useQrCodeDataUrl } from "../lib/useQrCodeDataUrl";
 
-export function AppPage() {
+interface AppPageProps {
+  lastUploadSettledAt: number;
+  lastUploadedItemId: string | null;
+  onStartUpload: (files: File[], parentId?: string | null, targetLabel?: string) => Promise<void>;
+  uploading: boolean;
+}
+
+export function AppPage({
+  lastUploadSettledAt,
+  lastUploadedItemId,
+  onStartUpload,
+  uploading
+}: AppPageProps) {
   const [searchParams] = useSearchParams();
   const initialLinkedItemId = searchParams.get("item");
   const [session, setSession] = useState<SessionInfo | null>(null);
@@ -54,8 +63,6 @@ export function AppPage() {
   const [hostQrDialogOpen, setHostQrDialogOpen] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [qrItemTarget, setQrItemTarget] = useState<{ item: LibraryItem; url: string } | null>(null);
   const theme = useTheme();
@@ -63,7 +70,7 @@ export function AppPage() {
   const layoutMode: LibraryLayoutMode = isMobile ? "minimal" : "compact";
   const detailPanelRef = useRef<HTMLDivElement | null>(null);
   const appliedDeepLinkRef = useRef<string | null>(null);
-  const uploadAbortControllerRef = useRef<AbortController | null>(null);
+  const handledUploadSettlementRef = useRef(lastUploadSettledAt);
   const hostQrCodeDataUrl = useQrCodeDataUrl(session?.lanUrl ?? null, { width: 192 });
   const qrItemDataUrl = useQrCodeDataUrl(qrItemTarget?.url ?? null, { width: 256 });
 
@@ -127,6 +134,20 @@ export function AppPage() {
   useEffect(() => {
     void syncSnapshot();
   }, []);
+
+  useEffect(() => {
+    if (lastUploadSettledAt === 0 || handledUploadSettlementRef.current === lastUploadSettledAt) {
+      return;
+    }
+
+    handledUploadSettlementRef.current = lastUploadSettledAt;
+
+    void syncSnapshot().then(() => {
+      if (lastUploadedItemId) {
+        setSelectedId(lastUploadedItemId);
+      }
+    });
+  }, [lastUploadedItemId, lastUploadSettledAt]);
 
   useEffect(() => {
     if (!currentFolderId) {
@@ -194,45 +215,7 @@ export function AppPage() {
     items.find((item) => item.id === selectedId) ?? currentFolder ?? null;
 
   async function handleUpload(files: File[]) {
-    const destinationLabel = currentFolder?.name ?? "radice LAN";
-    const abortController = new AbortController();
-    let nextSnackbar: string | null = null;
-    uploadAbortControllerRef.current = abortController;
-    setUploading(true);
-    setUploadProgress(null);
-
-    try {
-      const response = await uploadFiles(files, currentFolderId, {
-        onProgress: setUploadProgress,
-        signal: abortController.signal
-      });
-      await syncSnapshot();
-      setSelectedId(response.items.find((item) => item.kind !== "folder")?.id ?? null);
-      nextSnackbar = `${files.length} file caricati in ${destinationLabel}.`;
-    } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") {
-        nextSnackbar = "Caricamento interrotto. I file gia ricevuti restano nella libreria.";
-      } else {
-        console.error(error);
-        nextSnackbar = "Caricamento interrotto. Alcuni file potrebbero essere gia stati salvati.";
-      }
-      await syncSnapshot().catch(() => undefined);
-    } finally {
-      if (uploadAbortControllerRef.current === abortController) {
-        uploadAbortControllerRef.current = null;
-      }
-
-      setUploading(false);
-      setUploadProgress(null);
-
-      if (nextSnackbar) {
-        setSnackbar(nextSnackbar);
-      }
-    }
-  }
-
-  function handleCancelUpload() {
-    uploadAbortControllerRef.current?.abort();
+    await onStartUpload(files, currentFolderId, currentFolder?.name ?? "Radice LAN");
   }
 
   async function handleCreateFolder() {
@@ -358,13 +341,6 @@ export function AppPage() {
                 targetLabel={currentFolder?.name ?? "Radice LAN"}
                 uploading={uploading}
               />
-              {!isMobile && uploadProgress ? (
-                <UploadProgressCard
-                  onCancel={handleCancelUpload}
-                  progress={uploadProgress}
-                  targetLabel={currentFolder?.name ?? "Radice LAN"}
-                />
-              ) : null}
             </Stack>
           </Box>
 
@@ -520,28 +496,6 @@ export function AppPage() {
           void handleCreateFolder();
         }}
       />
-
-      <Snackbar
-        open={isMobile && Boolean(uploadProgress)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-        sx={{
-          bottom: {
-            xs: 18,
-            sm: 24
-          }
-        }}
-      >
-        <Box sx={{ width: "min(calc(100vw - 24px), 540px)" }}>
-          {uploadProgress ? (
-            <UploadProgressCard
-              compact
-              onCancel={handleCancelUpload}
-              progress={uploadProgress}
-              targetLabel={currentFolder?.name ?? "Radice LAN"}
-            />
-          ) : null}
-        </Box>
-      </Snackbar>
 
       <Snackbar
         open={Boolean(snackbar)}
