@@ -21,7 +21,6 @@ import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -36,7 +35,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -100,14 +98,6 @@ fun SyncScreen(container: AppContainer) {
   }
 
   Scaffold(
-    topBar = {
-      CenterAlignedTopAppBar(
-        title = { Text("Routy Sync") },
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-          containerColor = MaterialTheme.colorScheme.surface
-        )
-      )
-    },
     snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
   ) { innerPadding ->
     LazyColumn(
@@ -117,6 +107,10 @@ fun SyncScreen(container: AppContainer) {
       contentPadding = PaddingValues(16.dp),
       verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+      item {
+        Text("Routy Sync", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+      }
+
       item {
         QrSection(
           state = state,
