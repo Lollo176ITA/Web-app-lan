@@ -261,4 +261,3 @@ class SyncApiClient(private val contentResolver: ContentResolver) {
     private val JSON_MEDIA_TYPE = "application/json".toMediaTypeOrNull()
   }
 }
-}
