@@ -45,7 +45,8 @@ import type {
 import {
   createFolderArchive,
   detectAvailableArchiveFormats,
-  getArchiveMimeType
+  getArchiveMimeType,
+  streamFolderArchiveAsZip
 } from "./archive.js";
 
 interface CreateAppOptions {
@@ -267,8 +268,8 @@ export async function createApp(options: CreateAppOptions = {}) {
   }
 
   async function createTemporaryArchive(folderId: string, folderName: string, format: ArchiveFormat) {
-    const tempDir = await mkdtemp(path.join(os.tmpdir(), `routeroom-archive-${format}-`));
-    const safeFilename = folderName.replace(/[\\/]+/g, "-") || "cartella";
+    const tempDir = await mkdtemp(path.join(store.rootDir, `routeroom-archive-${format}-`));
+    const safeFilename = folderName.replace(/[\\/]+/g, "-").slice(0, 80) || "cartella";
     const archivePath = path.join(tempDir, `${safeFilename}.${format}`);
     await createFolderArchive(store, folderId, format, archivePath);
     return { archivePath, tempDir };
@@ -790,6 +791,20 @@ export async function createApp(options: CreateAppOptions = {}) {
         );
 
         if (!format) {
+          return;
+        }
+
+        if (format === "zip") {
+          response.setHeader("Content-Type", getArchiveMimeType(format));
+          response.attachment(`${item.name}.${format}`);
+          const archive = streamFolderArchiveAsZip(store, item.id, response);
+
+          response.on("close", () => {
+            if (!response.writableFinished) {
+              archive.abort();
+            }
+          });
+
           return;
         }
 

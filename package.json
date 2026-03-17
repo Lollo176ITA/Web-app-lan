@@ -1,6 +1,6 @@
 {
   "name": "routy",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "license": "UNLICENSED",
   "private": true,
   "type": "module",
@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@fontsource/titillium-web": "^5.2.8",
+    "archiver": "^7.0.1",
     "express": "^5.1.0",
     "mammoth": "^1.11.0",
     "mime-types": "^3.0.1",
@@ -40,6 +41,7 @@
     "@mui/icons-material": "^7.3.2",
     "@mui/material": "^7.3.2",
     "@playwright/test": "^1.55.0",
+    "@types/archiver": "^7.0.0",
     "@types/express": "^5.0.3",
     "@types/mime-types": "^3.0.1",
     "@types/multer": "^2.0.0",

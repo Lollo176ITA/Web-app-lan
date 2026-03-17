@@ -197,6 +197,10 @@ export function AppPage() {
       await syncSnapshot();
       setSelectedId(response.items.find((item) => item.kind !== "folder")?.id ?? null);
       setSnackbar(`${files.length} file caricati in ${currentFolder?.name ?? "radice LAN"}.`);
+    } catch (error) {
+      console.error(error);
+      await syncSnapshot().catch(() => undefined);
+      setSnackbar("Caricamento interrotto. Alcuni file potrebbero essere gia stati salvati.");
     } finally {
       setUploading(false);
     }

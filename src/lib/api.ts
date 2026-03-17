@@ -26,6 +26,8 @@ import type {
   UploadResponse
 } from "../../shared/types";
 
+const uploadBatchSize = 20;
+
 async function readJson<T>(resource: string, init?: RequestInit) {
   const response = await fetch(resource, init);
 
@@ -34,6 +36,58 @@ async function readJson<T>(resource: string, init?: RequestInit) {
   }
 
   return (await response.json()) as T;
+}
+
+function normalizeUploadRelativePath(relativePath: string, fallbackName: string) {
+  const pathSegments = relativePath
+    .replace(/\\/g, "/")
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  return pathSegments.join("/") || fallbackName;
+}
+
+function buildUploadEntries(files: File[]) {
+  const entries = files.map((file) => ({
+    file,
+    pathSegments: normalizeUploadRelativePath(file.webkitRelativePath || file.name, file.name).split("/")
+  }));
+  const sharedRootFolder =
+    entries.length > 0 &&
+    entries.every((entry) => entry.pathSegments.length > 1 && entry.pathSegments[0] === entries[0]?.pathSegments[0])
+      ? entries[0]?.pathSegments[0] ?? null
+      : null;
+
+  return entries.map((entry) => {
+    const relativePath = sharedRootFolder ? entry.pathSegments.slice(1).join("/") : entry.pathSegments.join("/");
+
+    return {
+      file: entry.file,
+      relativePath: relativePath || entry.file.name
+    };
+  });
+}
+
+async function uploadFileBatch(
+  entries: Array<{ file: File; relativePath: string }>,
+  parentId?: string | null
+) {
+  const body = new FormData();
+
+  entries.forEach((entry) => {
+    body.append("files", entry.file);
+    body.append("relativePaths", entry.relativePath);
+  });
+
+  if (parentId !== null && parentId !== undefined) {
+    body.append("parentId", parentId);
+  }
+
+  return readJson<UploadResponse>("/api/items", {
+    method: "POST",
+    body
+  });
 }
 
 export function fetchSession() {
@@ -162,19 +216,19 @@ export function updateStreamRoomPlayback(
 }
 
 export async function uploadFiles(files: File[], parentId?: string | null) {
-  const body = new FormData();
-  files.forEach((file) => {
-    body.append("files", file);
-    body.append("relativePaths", file.webkitRelativePath || file.name);
-  });
-  if (parentId) {
-    body.append("parentId", parentId);
+  if (files.length === 0) {
+    return { items: [] } satisfies UploadResponse;
   }
 
-  return readJson<UploadResponse>("/api/items", {
-    method: "POST",
-    body
-  });
+  const uploadEntries = buildUploadEntries(files);
+  const items: UploadResponse["items"] = [];
+
+  for (let index = 0; index < uploadEntries.length; index += uploadBatchSize) {
+    const response = await uploadFileBatch(uploadEntries.slice(index, index + uploadBatchSize), parentId);
+    items.push(...response.items);
+  }
+
+  return { items } satisfies UploadResponse;
 }
 
 export function createArchive(itemId: string, format: ArchiveFormat) {

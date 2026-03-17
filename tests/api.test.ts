@@ -2,9 +2,10 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../server/app";
+import { uploadFiles } from "../src/lib/api";
 
 const temporaryDirectories: string[] = [];
 const fixturesDirectory = path.resolve(process.cwd(), "tests", "fixtures");
@@ -22,6 +23,21 @@ afterEach(async () => {
     )
   );
 });
+
+function createUploadFile(name: string, relativePath?: string) {
+  const file = new File([`payload-${name}`], name, {
+    type: "text/plain"
+  });
+
+  if (relativePath) {
+    Object.defineProperty(file, "webkitRelativePath", {
+      configurable: true,
+      value: relativePath
+    });
+  }
+
+  return file;
+}
 
 describe("Routeroom API", () => {
   it("returns session details with LAN metadata", async () => {
@@ -176,6 +192,9 @@ describe("Routeroom API", () => {
       .expect(200);
 
     expect(downloadResponse.headers["content-disposition"]).toContain("Pacchetto.zip");
+    expect(downloadResponse.headers["content-type"]).toContain("application/zip");
+    expect(downloadResponse.headers["content-length"]).toBeUndefined();
+    expect(downloadResponse.headers["transfer-encoding"]).toBe("chunked");
     expect(downloadResponse.body.length).toBeGreaterThan(0);
 
     const zipArchiveResponse = await request(app)
@@ -451,5 +470,70 @@ describe("Routeroom API", () => {
     await request(app).get("/api/items/does-not-exist/download").expect(404);
     await request(app).get("/api/items/%2e%2e%2fetc%2fpasswd/download").expect(404);
     close();
+  });
+});
+
+describe("client upload api", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("splits large directory uploads into batches and drops the shared root folder name", async () => {
+    const calls: Array<{ relativePaths: string[]; parentId: FormDataEntryValue | null }> = [];
+    const fetchMock = vi.fn(async (_resource: string | URL | Request, init?: RequestInit) => {
+      const body = init?.body;
+
+      expect(body).toBeInstanceOf(FormData);
+
+      const formData = body as FormData;
+      const relativePaths = formData.getAll("relativePaths").map((entry) => String(entry));
+      calls.push({
+        relativePaths,
+        parentId: formData.get("parentId")
+      });
+
+      return new Response(
+        JSON.stringify({
+          items: relativePaths.map((relativePath, index) => ({
+            id: `item-${calls.length}-${index}`,
+            name: relativePath.split("/").at(-1) ?? relativePath,
+            storedName: `stored-${calls.length}-${index}`,
+            mimeType: "text/plain",
+            kind: "document",
+            sizeBytes: 1,
+            createdAt: "2026-03-17T00:00:00.000Z",
+            parentId: "salotto"
+          }))
+        }),
+        {
+          status: 201,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      );
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const files = Array.from({ length: 25 }, (_, index) =>
+      createUploadFile(
+        `note-${index}.txt`,
+        index % 2 === 0
+          ? `Vacanze LAN lunghissime/Guide/note-${index}.txt`
+          : `Vacanze LAN lunghissime/Docs/note-${index}.txt`
+      )
+    );
+
+    const response = await uploadFiles(files, "salotto");
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(response.items).toHaveLength(25);
+    expect(calls[0]?.relativePaths).toHaveLength(20);
+    expect(calls[1]?.relativePaths).toHaveLength(5);
+    expect(calls.every((call) => call.parentId === "salotto")).toBe(true);
+    expect(calls.flatMap((call) => call.relativePaths)).toContain("Guide/note-0.txt");
+    expect(calls.flatMap((call) => call.relativePaths)).toContain("Docs/note-1.txt");
+    expect(calls.flatMap((call) => call.relativePaths).every((relativePath) => !relativePath.startsWith("Vacanze LAN lunghissime/"))).toBe(true);
   });
 });

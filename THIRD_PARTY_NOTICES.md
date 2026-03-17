@@ -20,7 +20,7 @@ Questa lista copre le dipendenze dirette piu rilevanti individuate in
 | `@mui/icons-material` | Icone UI in stile Material | MIT | Il pacchetto npm e MIT; eventuali marchi Google o Material restano dei rispettivi titolari. |
 | `@emotion/react`, `@emotion/styled` | Styling runtime | MIT | Usati insieme a MUI. |
 | `react`, `react-dom`, `react-router-dom` | Runtime client SPA | MIT | Nessun obbligo copyleft. |
-| `express`, `mime-types`, `multer`, `nanoid`, `word-extractor` | Runtime server | MIT | Compatibili con distribuzione proprietaria. |
+| `archiver`, `express`, `mime-types`, `multer`, `nanoid`, `word-extractor` | Runtime server | MIT | Compatibili con distribuzione proprietaria. |
 | `mammoth` | Preview `.docx` | BSD-2-Clause | Richiede il mantenimento del notice applicabile. |
 | `@fontsource/titillium-web` / Titillium Web | Font UI | OFL-1.1 | Se redistribuisci i file font, conserva i notice e i termini della SIL Open Font License 1.1. |
 | `electron` | Runtime desktop | MIT | Rilevante per build desktop distribuite. |
