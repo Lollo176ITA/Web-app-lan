@@ -132,6 +132,16 @@ class SyncRepository(
     reconcileRemoteDevice(remoteDevice)
   }
 
+  suspend fun isHostReachable(): Boolean {
+    val hostUrl = preferences.getState().hostUrl.trim()
+
+    if (hostUrl.isBlank()) {
+      return false
+    }
+
+    return apiClient.isHostReachable(hostUrl)
+  }
+
   suspend fun syncAll() {
     val prefs = preferences.getState()
     val authToken = tokenStore.readToken()

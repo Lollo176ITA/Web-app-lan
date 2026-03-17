@@ -2,7 +2,6 @@ package com.routy.sync.ui
 
 import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -42,17 +42,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.routy.sync.AppContainer
-import com.routy.sync.runtime.SyncScheduler
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 
 @Composable
 fun SyncScreen(container: AppContainer) {
@@ -60,12 +58,7 @@ fun SyncScreen(container: AppContainer) {
   val state by viewModel.uiState.collectAsState()
   val snackbarHostState = remember { SnackbarHostState() }
   val context = LocalContext.current
-  var hasWifiPermission by remember {
-    mutableStateOf(
-      ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-    )
-  }
-  val currentSsid = if (hasWifiPermission) container.wifiProvider.currentSsidOrNull() else null
+  val currentSsid = container.wifiProvider.currentSsidOrNull()
   val folderPicker = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.OpenDocumentTree()
   ) { treeUri ->
@@ -77,12 +70,17 @@ fun SyncScreen(container: AppContainer) {
       viewModel.attachFolder(treeUri)
     }
   }
-  val wifiPermissionLauncher = rememberLauncherForActivityResult(
+  val qrScannerLauncher = rememberLauncherForActivityResult(
+    contract = ScanContract()
+  ) { result ->
+    val contents = result.contents ?: return@rememberLauncherForActivityResult
+    viewModel.applyPairingQrPayload(contents)
+  }
+  val cameraPermissionLauncher = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.RequestPermission()
   ) { granted ->
-    hasWifiPermission = granted
     if (granted) {
-      SyncScheduler.enqueueImmediate(context, "permission-granted")
+      qrScannerLauncher.launch(buildPairingScanOptions())
     }
   }
 
@@ -107,18 +105,20 @@ fun SyncScreen(container: AppContainer) {
       }
 
       item {
-        PairingSection(state = state, viewModel = viewModel)
+        PairingSection(
+          state = state,
+          viewModel = viewModel,
+          onScanQr = {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+          }
+        )
       }
 
       item {
         WifiSection(
           state = state,
           viewModel = viewModel,
-          hasWifiPermission = hasWifiPermission,
-          currentSsid = currentSsid,
-          onRequestWifiPermission = {
-            wifiPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-          }
+          currentSsid = currentSsid
         )
       }
 
@@ -151,7 +151,7 @@ private fun HeadlineSection(state: SyncUiState) {
     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
       Text("Routy Sync", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
       Text(
-        "Onboarding host URL -> pairing code -> cartelle Android. Dopo il pairing, il worker si attiva sui Wi-Fi approvati.",
+        "Onboarding host URL -> pairing code -> cartelle Android. Dopo il pairing, l’autosync parte quando il telefono torna sulla LAN e l’host risponde.",
         style = MaterialTheme.typography.bodyLarge
       )
       if (state.dashboard.isConfigured) {
@@ -165,7 +165,7 @@ private fun HeadlineSection(state: SyncUiState) {
 }
 
 @Composable
-private fun PairingSection(state: SyncUiState, viewModel: SyncViewModel) {
+private fun PairingSection(state: SyncUiState, viewModel: SyncViewModel, onScanQr: () -> Unit) {
   Card {
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
       Text("1. Pairing", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
@@ -192,6 +192,12 @@ private fun PairingSection(state: SyncUiState, viewModel: SyncViewModel) {
         label = { Text("Pairing code") }
       )
 
+      OutlinedButton(onClick = onScanQr, enabled = !state.busy) {
+        Icon(Icons.Rounded.QrCodeScanner, contentDescription = null)
+        Spacer(Modifier.width(4.dp))
+        Text("Scansiona QR pairing")
+      }
+
       Button(
         onClick = viewModel::registerDevice,
         enabled = !state.busy && state.hostUrl.isNotBlank() && state.pairingCode.isNotBlank()
@@ -210,38 +216,26 @@ private fun PairingSection(state: SyncUiState, viewModel: SyncViewModel) {
 private fun WifiSection(
   state: SyncUiState,
   viewModel: SyncViewModel,
-  hasWifiPermission: Boolean,
-  currentSsid: String?,
-  onRequestWifiPermission: () -> Unit
+  currentSsid: String?
 ) {
   Card {
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-      Text("2. Wi-Fi approvati", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+      Text("2. Rete LAN", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
       Text(
-        "L’autosync parte solo sugli SSID salvati. Per leggere il nome del Wi-Fi serve anche il permesso posizione.",
+        "L’autosync prova l’host configurato quando il telefono torna su Wi-Fi. Se il server host risponde, parte la sync.",
         style = MaterialTheme.typography.bodyMedium
       )
 
-      if (!hasWifiPermission) {
-        FilledTonalButton(onClick = onRequestWifiPermission, enabled = !state.busy) {
-          Text("Consenti accesso al Wi-Fi")
+      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilledTonalButton(onClick = { viewModel.addCurrentWifi(currentSsid) }, enabled = !state.busy && currentSsid != null) {
+          Text(currentSsid?.let { "Salva $it (opzionale)" } ?: "Wi-Fi corrente non rilevato")
         }
+      }
+      if (currentSsid == null) {
         Text(
-          "Senza questo permesso l’SSID resta invisibile e l’autosync non riesce a capire se sei su una rete approvata.",
+          "Il nome del Wi-Fi ora e facoltativo: serve solo come promemoria e non blocca piu l’autosync.",
           style = MaterialTheme.typography.bodySmall
         )
-      } else {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          FilledTonalButton(onClick = { viewModel.addCurrentWifi(currentSsid) }, enabled = !state.busy && currentSsid != null) {
-            Text(currentSsid?.let { "Aggiungi $it" } ?: "Wi-Fi corrente non rilevato")
-          }
-        }
-        if (currentSsid == null) {
-          Text(
-            "SSID non disponibile. Verifica che la localizzazione Android sia attiva e che tu sia davvero su Wi-Fi.",
-            style = MaterialTheme.typography.bodySmall
-          )
-        }
       }
 
       OutlinedTextField(
@@ -254,11 +248,11 @@ private fun WifiSection(
       OutlinedButton(onClick = viewModel::addManualWifi, enabled = !state.busy && state.manualSsid.isNotBlank()) {
         Icon(Icons.Rounded.Add, contentDescription = null)
         Spacer(Modifier.width(4.dp))
-        Text("Aggiungi SSID")
+        Text("Salva SSID")
       }
 
       if (state.dashboard.approvedSsids.isEmpty()) {
-        Text("Nessun Wi-Fi approvato.", style = MaterialTheme.typography.bodyMedium)
+        Text("Nessun SSID salvato.", style = MaterialTheme.typography.bodyMedium)
       } else {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
           state.dashboard.approvedSsids.sorted().forEach { ssid ->
@@ -325,7 +319,7 @@ private fun SyncActionsSection(
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
       Text("4. Sync", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
       Text(
-        "Il worker automatico parte sui Wi-Fi approvati. Qui puoi comunque forzare refresh config e sync manuale.",
+        "Il worker automatico prova l’host quando torni sulla LAN. Qui puoi comunque forzare refresh config e sync manuale.",
         style = MaterialTheme.typography.bodyMedium
       )
 
@@ -348,6 +342,14 @@ private fun SyncActionsSection(
     }
   }
 }
+
+private fun buildPairingScanOptions() =
+  ScanOptions().apply {
+    setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+    setPrompt("Scansiona il QR dalla pagina Sync host")
+    setBeepEnabled(false)
+    setOrientationLocked(false)
+  }
 
 private fun formatEpoch(value: Long): String =
   java.text.SimpleDateFormat("dd/MM HH:mm", java.util.Locale.ITALY).format(java.util.Date(value))

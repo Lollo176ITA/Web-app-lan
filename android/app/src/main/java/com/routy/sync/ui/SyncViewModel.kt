@@ -52,6 +52,32 @@ class SyncViewModel(private val repository: SyncRepository) : ViewModel() {
     _uiState.update { it.copy(pairingCode = value) }
   }
 
+  fun applyPairingQrPayload(rawValue: String) {
+    val payload = rawValue.trim()
+
+    if (payload.isBlank()) {
+      _uiState.update { it.copy(message = "QR pairing vuoto o non valido.") }
+      return
+    }
+
+    val uri = Uri.parse(payload)
+    val hostUrl = uri.getQueryParameter("host")?.trim().orEmpty()
+    val pairingCode = uri.getQueryParameter("code")?.trim().orEmpty()
+
+    if (uri.scheme != "routy-sync" || uri.host != "pair" || hostUrl.isBlank() || pairingCode.isBlank()) {
+      _uiState.update { it.copy(message = "QR pairing non riconosciuto.") }
+      return
+    }
+
+    _uiState.update {
+      it.copy(
+        hostUrl = hostUrl,
+        pairingCode = pairingCode,
+        message = "Pairing compilato da QR."
+      )
+    }
+  }
+
   fun updateDeviceName(value: String) {
     _uiState.update { it.copy(deviceName = value) }
   }
@@ -87,7 +113,7 @@ class SyncViewModel(private val repository: SyncRepository) : ViewModel() {
   fun addCurrentWifi(currentSsid: String?) {
 
     if (currentSsid.isNullOrBlank()) {
-      _uiState.update { it.copy(message = "SSID corrente non disponibile. Controlla permesso posizione e localizzazione del telefono.") }
+      _uiState.update { it.copy(message = "Wi-Fi corrente non rilevato. Puoi ignorarlo o salvare l’SSID manualmente.") }
       return
     }
 

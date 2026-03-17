@@ -18,7 +18,7 @@ class SyncWorker(
     return try {
       val runtimeConfig = repository.getLocalRuntimeConfig()
 
-      if (!runtimeConfig.isConfigured || runtimeConfig.approvedSsids.isEmpty()) {
+      if (!runtimeConfig.isConfigured) {
         return Result.success()
       }
 
@@ -26,9 +26,7 @@ class SyncWorker(
         return Result.success()
       }
 
-      val currentSsid = wifiProvider.currentSsidOrNull() ?: return Result.success()
-
-      if (!runtimeConfig.approvedSsids.contains(currentSsid)) {
+      if (!repository.isHostReachable()) {
         return Result.success()
       }
 

@@ -3,6 +3,7 @@ package com.routy.sync.net
 import android.content.ContentResolver
 import android.net.Uri
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -64,6 +65,9 @@ data class UploadableEntry(
 
 class SyncApiClient(private val contentResolver: ContentResolver) {
   private val client = OkHttpClient.Builder().build()
+  private val probeClient = client.newBuilder()
+    .callTimeout(5, TimeUnit.SECONDS)
+    .build()
 
   suspend fun registerDevice(hostUrl: String, pairingCode: String, deviceName: String) =
     withContext(Dispatchers.IO) {
@@ -199,6 +203,21 @@ class SyncApiClient(private val contentResolver: ContentResolver) {
       failedCount = response.getInt("failedCount"),
       lastSyncedAt = response.getString("lastSyncedAt")
     )
+  }
+
+  suspend fun isHostReachable(hostUrl: String) = withContext(Dispatchers.IO) {
+    try {
+      probeClient.newCall(
+        Request.Builder()
+          .url(buildUrl(hostUrl, "/api/health"))
+          .get()
+          .build()
+      ).execute().use { response ->
+        response.isSuccessful
+      }
+    } catch (_: IOException) {
+      false
+    }
   }
 
   private fun parseDevice(payload: JSONObject) =

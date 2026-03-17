@@ -193,11 +193,7 @@ class WifiConnectivityMonitor(
         return@launch
       }
 
-      val currentSsid = wifiProvider.currentSsidOrNull() ?: return@launch
-
-      if (runtimeConfig.approvedSsids.contains(currentSsid)) {
-        SyncScheduler.enqueueImmediate(appContext, "wifi:$currentSsid")
-      }
+      SyncScheduler.enqueueImmediate(appContext, "wifi-online")
     }
   }
 }

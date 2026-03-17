@@ -2,6 +2,7 @@ import { startTransition, useEffect, useState } from "react";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import LinkRoundedIcon from "@mui/icons-material/LinkRounded";
 import PhoneAndroidRoundedIcon from "@mui/icons-material/PhoneAndroidRounded";
+import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import SyncRoundedIcon from "@mui/icons-material/SyncRounded";
 import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import {
@@ -20,7 +21,16 @@ import {
 import { alpha, useTheme } from "@mui/material/styles";
 import type { ClientProfileResponse, SyncOverviewResponse } from "../../shared/types";
 import { PageHeader } from "../components/PageHeader";
-import { createSyncPairingCode, fetchClientProfile, fetchSyncOverview, revokeSyncDevice } from "../lib/api";
+import { QrCodeDialog } from "../components/QrCodeDialog";
+import {
+  createSyncPairingCode,
+  fetchClientProfile,
+  fetchSession,
+  fetchSyncOverview,
+  revokeSyncDevice
+} from "../lib/api";
+import { copyTextToClipboard } from "../lib/clipboard";
+import { useQrCodeDataUrl } from "../lib/useQrCodeDataUrl";
 import { useLanLiveState } from "../lib/useLanLiveState";
 
 function formatDateTime(value: string | null) {
@@ -36,6 +46,17 @@ function formatDateTime(value: string | null) {
   }).format(new Date(value));
 }
 
+function buildSyncPairingQrValue(hostUrl: string | null, pairingCode: string | null) {
+  if (!hostUrl || !pairingCode) {
+    return null;
+  }
+
+  return `routy-sync://pair?${new URLSearchParams({
+    host: hostUrl,
+    code: pairingCode
+  }).toString()}`;
+}
+
 export function SyncPage() {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
@@ -44,7 +65,11 @@ export function SyncPage() {
   const [loading, setLoading] = useState(true);
   const [creatingPairingCode, setCreatingPairingCode] = useState(false);
   const [revokingDeviceId, setRevokingDeviceId] = useState<string | null>(null);
+  const [sessionLanUrl, setSessionLanUrl] = useState<string | null>(null);
+  const [pairingQrOpen, setPairingQrOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const pairingQrValue = buildSyncPairingQrValue(sessionLanUrl, overview?.activePairingCode?.code ?? null);
+  const pairingQrDataUrl = useQrCodeDataUrl(pairingQrValue, { width: 256 });
 
   async function syncData() {
     const profile = await fetchClientProfile();
@@ -53,16 +78,18 @@ export function SyncPage() {
       startTransition(() => {
         setClientProfile(profile);
         setOverview(null);
+        setSessionLanUrl(null);
         setLoading(false);
       });
       return;
     }
 
-    const nextOverview = await fetchSyncOverview();
+    const [nextOverview, session] = await Promise.all([fetchSyncOverview(), fetchSession()]);
 
     startTransition(() => {
       setClientProfile(profile);
       setOverview(nextOverview);
+      setSessionLanUrl(session.lanUrl);
       setLoading(false);
     });
   }
@@ -149,9 +176,9 @@ export function SyncPage() {
                   <Stack spacing={1.5}>
                     <Typography variant="h5">Come funziona</Typography>
                     <Typography color="text.secondary">
-                      L’host genera un pairing code temporaneo, l’app Android inserisce l’indirizzo dell’host e registra le
-                      cartelle da sincronizzare. Dopo il pairing, l’autosync parte quando il telefono si collega a un Wi-Fi
-                      approvato.
+                      L’host genera un pairing code temporaneo. L’app Android puo anche scansionare un QR che compila host e
+                      codice in un colpo solo. Dopo il pairing, l’autosync parte quando il telefono torna sulla LAN e l’host
+                      risponde.
                     </Typography>
                   </Stack>
                 </CardContent>
@@ -212,22 +239,39 @@ export function SyncPage() {
                           <Typography color="text.secondary">
                             Scade alle {formatDateTime(overview.activePairingCode.expiresAt)}
                           </Typography>
+                          {sessionLanUrl ? (
+                            <Typography color="text.secondary">Host LAN: {sessionLanUrl}</Typography>
+                          ) : null}
                         </Box>
                       ) : (
                         <Typography color="text.secondary">Nessun pairing code attivo al momento.</Typography>
                       )}
 
-                      <Button
-                        variant="contained"
-                        startIcon={<SyncRoundedIcon />}
-                        disabled={creatingPairingCode}
-                        onClick={() => {
-                          void handleCreatePairingCode();
-                        }}
-                        sx={{ alignSelf: "flex-start" }}
-                      >
-                        {overview.activePairingCode ? "Rigenera pairing code" : "Genera pairing code"}
-                      </Button>
+                      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
+                        <Button
+                          variant="contained"
+                          startIcon={<SyncRoundedIcon />}
+                          disabled={creatingPairingCode}
+                          onClick={() => {
+                            void handleCreatePairingCode();
+                          }}
+                          sx={{ alignSelf: "flex-start" }}
+                        >
+                          {overview.activePairingCode ? "Rigenera pairing code" : "Genera pairing code"}
+                        </Button>
+                        {overview.activePairingCode && pairingQrValue ? (
+                          <Button
+                            variant="outlined"
+                            startIcon={<QrCode2RoundedIcon />}
+                            onClick={() => {
+                              setPairingQrOpen(true);
+                            }}
+                            sx={{ alignSelf: "flex-start" }}
+                          >
+                            Mostra QR pairing
+                          </Button>
+                        ) : null}
+                      </Stack>
                     </Stack>
                   </CardContent>
                 </Card>
@@ -263,14 +307,14 @@ export function SyncPage() {
                 <CardContent>
                   <Stack spacing={2}>
                     <Stack direction="row" spacing={1.25} alignItems="center">
-                      <Avatar sx={{ bgcolor: alpha("#1769aa", 0.12), color: "primary.main" }}>
-                        <PhoneAndroidRoundedIcon />
-                      </Avatar>
+                        <Avatar sx={{ bgcolor: alpha("#1769aa", 0.12), color: "primary.main" }}>
+                          <PhoneAndroidRoundedIcon />
+                        </Avatar>
                       <Box>
-                        <Typography variant="h5">Device registrati</Typography>
-                        <Typography color="text.secondary">Config attiva, SSID approvati e mapping delle cartelle.</Typography>
-                      </Box>
-                    </Stack>
+                          <Typography variant="h5">Device registrati</Typography>
+                          <Typography color="text.secondary">Config attiva, SSID salvati e mapping delle cartelle.</Typography>
+                        </Box>
+                      </Stack>
 
                     {overview.devices.length === 0 ? (
                       <Typography color="text.secondary">Nessun device Android registrato.</Typography>
@@ -313,13 +357,13 @@ export function SyncPage() {
 
                                 <Box>
                                   <Typography variant="overline" color="secondary.main">
-                                    Wi-Fi approvati
+                                    SSID salvati
                                   </Typography>
                                   <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 0.75 }}>
                                     {device.approvedSsids.length > 0 ? (
                                       device.approvedSsids.map((ssid) => <Chip key={ssid} label={ssid} size="small" />)
                                     ) : (
-                                      <Chip label="Nessun SSID approvato" size="small" variant="outlined" />
+                                      <Chip label="Nessun SSID salvato" size="small" variant="outlined" />
                                     )}
                                   </Stack>
                                 </Box>
@@ -412,6 +456,33 @@ export function SyncPage() {
           setSnackbar(null);
         }}
         message={snackbar}
+      />
+
+      <QrCodeDialog
+        open={pairingQrOpen}
+        onClose={() => {
+          setPairingQrOpen(false);
+        }}
+        title="QR pairing Android"
+        description="Scansiona questo codice dalla schermata Sync Android per compilare host LAN e pairing code."
+        qrCodeAlt="QR pairing Android"
+        qrCodeDataUrl={pairingQrDataUrl}
+        subject={overview?.activePairingCode ? `Code ${overview.activePairingCode.code}` : undefined}
+        url={sessionLanUrl}
+        onCopy={
+          pairingQrValue
+            ? () => {
+                void copyTextToClipboard(pairingQrValue)
+                  .then(() => {
+                    setSnackbar("Payload QR pairing copiato.");
+                  })
+                  .catch(() => {
+                    setSnackbar("Copia payload pairing non disponibile.");
+                  });
+              }
+            : undefined
+        }
+        copyLabel="Copia payload QR"
       />
     </Box>
   );
