@@ -34,6 +34,19 @@ function normalizeMimeType(mimeType: string, originalName: string) {
   return !mimeType || mimeType === "application/octet-stream" ? fallbackMimeType : mimeType;
 }
 
+function joinStoredPath(...segments: string[]) {
+  return path.posix.join(...segments.filter(Boolean));
+}
+
+async function pathExists(targetPath: string) {
+  try {
+    await fs.access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function classifyMimeType(mimeType: string): LibraryKind {
   if (mimeType.startsWith("video/")) {
     return "video";
@@ -109,35 +122,20 @@ export class LibraryStore {
     try {
       const manifest = await fs.readFile(this.manifestPath, "utf8");
       const rawItems = JSON.parse(manifest) as StoredLibraryItem[];
-      const existingItems: StoredLibraryItem[] = [];
+      const normalizedItems = rawItems.map((item) => ({
+        ...item,
+        parentId: item.parentId ?? null
+      }));
 
-      for (const item of rawItems) {
-        if (item.kind === "folder") {
-          existingItems.push({
-            ...item,
-            parentId: item.parentId ?? null
-          });
-          continue;
-        }
-
-        try {
-          await fs.access(this.resolveItemPath(item));
-          existingItems.push({
-            ...item,
-            parentId: item.parentId ?? null
-          });
-        } catch {
-          continue;
-        }
-      }
-
-      this.items = sortItems(existingItems);
+      this.items = await this.materializeStorageLayout(normalizedItems);
     } catch {
       this.items = [];
     }
 
     if (options.seedDemo && this.items.length === 0) {
       this.seedDemoContent();
+      this.items = this.computeDesiredStoredItems(this.items);
+      await this.ensureFolderDirectories(this.items);
     }
 
     await this.persist();
@@ -215,21 +213,14 @@ export class LibraryStore {
       throw new Error("Folders do not resolve to a file path");
     }
 
-    const resolvedPath = path.resolve(this.libraryDir, item.storedName);
-    const normalizedRoot = this.libraryDir.endsWith(path.sep)
-      ? this.libraryDir
-      : `${this.libraryDir}${path.sep}`;
-
-    if (!resolvedPath.startsWith(normalizedRoot)) {
-      throw new Error("Invalid storage path");
-    }
-
-    return resolvedPath;
+    return this.resolveStoredPath(item.storedName);
   }
 
   async registerUploads(files: Express.Multer.File[], parentId: string | null = null) {
     this.assertParentFolder(parentId);
+
     const createdAt = new Date().toISOString();
+    const parentStoredName = this.getParentStoredName(parentId);
     const newItems = files.map((file) => {
       const id = file.filename.split("--")[0];
       const mimeType = normalizeMimeType(file.mimetype, file.originalname);
@@ -238,7 +229,7 @@ export class LibraryStore {
       return {
         id,
         name: file.originalname,
-        storedName: file.filename,
+        storedName: this.buildFileStoredName(id, file.originalname, parentStoredName),
         mimeType,
         kind,
         sizeBytes: file.size,
@@ -246,6 +237,10 @@ export class LibraryStore {
         parentId
       } satisfies StoredLibraryItem;
     });
+
+    for (const [index, file] of files.entries()) {
+      await this.placeUploadedFile(this.resolveUploadTempPath(file), newItems[index]!.storedName);
+    }
 
     this.items = sortItems([...newItems, ...this.items]);
     await this.persist();
@@ -275,7 +270,7 @@ export class LibraryStore {
       return {
         id,
         name: fileName,
-        storedName: file.filename,
+        storedName: this.buildFileStoredName(id, fileName, this.getParentStoredName(targetParentId, createdFolders)),
         mimeType,
         kind,
         sizeBytes: file.size,
@@ -283,6 +278,12 @@ export class LibraryStore {
         parentId: targetParentId
       } satisfies StoredLibraryItem;
     });
+
+    await this.ensureFolderDirectories(createdFolders);
+
+    for (const [index, file] of files.entries()) {
+      await this.placeUploadedFile(this.resolveUploadTempPath(file), newItems[index]!.storedName);
+    }
 
     this.items = sortItems([...createdFolders, ...newItems, ...this.items]);
     await this.persist();
@@ -299,7 +300,7 @@ export class LibraryStore {
 
     this.assertParentFolder(parentId);
 
-    const folder = {
+    const nextFolder = {
       id: nanoid(10),
       name: trimmedName,
       storedName: "",
@@ -310,10 +311,13 @@ export class LibraryStore {
       parentId
     } satisfies StoredLibraryItem;
 
-    this.items = sortItems([folder, ...this.items]);
+    nextFolder.storedName = this.buildFolderStoredName(nextFolder.id, parentId);
+    await fs.mkdir(this.resolveStoredPath(nextFolder.storedName), { recursive: true });
+
+    this.items = sortItems([nextFolder, ...this.items]);
     await this.persist();
 
-    return this.hydrateItem(folder);
+    return this.hydrateItem(nextFolder);
   }
 
   async registerGeneratedFile(
@@ -325,8 +329,9 @@ export class LibraryStore {
     this.assertParentFolder(parentId);
 
     const id = nanoid(10);
-    const storedName = this.buildStoredName(id, originalName);
-    const destinationPath = path.join(this.libraryDir, storedName);
+    const storedName = this.buildFileStoredName(id, originalName, this.getParentStoredName(parentId));
+    const destinationPath = this.resolveStoredPath(storedName);
+    await fs.mkdir(path.dirname(destinationPath), { recursive: true });
     await fs.copyFile(sourcePath, destinationPath);
     const fileStats = await fs.stat(destinationPath);
     const normalizedMimeType = normalizeMimeType(mimeType, originalName);
@@ -370,18 +375,13 @@ export class LibraryStore {
           }
         }
       }
-    }
 
-    for (const item of this.items) {
-      if (!idsToDelete.has(item.id) || item.kind === "folder") {
-        continue;
-      }
-
-      try {
-        await fs.rm(this.resolveItemPath(item), { force: true });
-      } catch {
-        continue;
-      }
+      await fs.rm(this.resolveStoredPath(target.storedName), {
+        recursive: true,
+        force: true
+      });
+    } else {
+      await fs.rm(this.resolveItemPath(target), { force: true });
     }
 
     this.items = this.items.filter((item) => !idsToDelete.has(item.id));
@@ -432,27 +432,18 @@ export class LibraryStore {
         continue;
       }
 
-      const existingFolder = this.items.find(
-        (item) =>
-          item.kind === "folder" &&
-          item.parentId === currentParentId &&
-          item.name === folderName
-      ) ?? createdFolders.find(
-        (item) =>
-          item.kind === "folder" &&
-          item.parentId === currentParentId &&
-          item.name === folderName
-      );
+      const existingFolder = this.findFolderByName(folderName, currentParentId, createdFolders);
 
       if (existingFolder) {
         currentParentId = existingFolder.id;
         continue;
       }
 
+      const folderId = nanoid(10);
       const folder = {
-        id: nanoid(10),
+        id: folderId,
         name: folderName,
-        storedName: "",
+        storedName: this.buildFolderStoredName(folderId, currentParentId, createdFolders),
         mimeType: FOLDER_MIME_TYPE,
         kind: "folder",
         sizeBytes: 0,
@@ -467,18 +458,214 @@ export class LibraryStore {
     return currentParentId;
   }
 
+  private findFolderByName(
+    folderName: string,
+    parentId: string | null,
+    createdFolders: StoredLibraryItem[] = []
+  ) {
+    return (
+      this.items.find(
+        (item) =>
+          item.kind === "folder" &&
+          item.parentId === parentId &&
+          item.name === folderName
+      ) ??
+      createdFolders.find(
+        (item) =>
+          item.kind === "folder" &&
+          item.parentId === parentId &&
+          item.name === folderName
+      )
+    );
+  }
+
+  private getParentStoredName(parentId: string | null, createdFolders: StoredLibraryItem[] = []) {
+    if (!parentId) {
+      return "";
+    }
+
+    const parent =
+      this.items.find((item) => item.id === parentId && item.kind === "folder") ??
+      createdFolders.find((item) => item.id === parentId && item.kind === "folder");
+
+    if (!parent) {
+      return "";
+    }
+
+    return parent.storedName;
+  }
+
+  private buildFolderStoredName(
+    folderId: string,
+    parentId: string | null,
+    createdFolders: StoredLibraryItem[] = []
+  ) {
+    const parentStoredName = this.getParentStoredName(parentId, createdFolders);
+    return parentStoredName ? joinStoredPath(parentStoredName, folderId) : folderId;
+  }
+
+  private buildFileStoredName(id: string, originalName: string, parentStoredName: string) {
+    const leafName = this.buildStoredName(id, originalName);
+    return parentStoredName ? joinStoredPath(parentStoredName, leafName) : leafName;
+  }
+
+  private resolveStoredPath(storedName: string) {
+    const resolvedPath = path.resolve(this.libraryDir, ...storedName.split("/").filter(Boolean));
+    const normalizedRoot = this.libraryDir.endsWith(path.sep)
+      ? this.libraryDir
+      : `${this.libraryDir}${path.sep}`;
+
+    if (resolvedPath !== this.libraryDir && !resolvedPath.startsWith(normalizedRoot)) {
+      throw new Error("Invalid storage path");
+    }
+
+    return resolvedPath;
+  }
+
+  private resolveUploadTempPath(file: Express.Multer.File) {
+    return "path" in file && typeof file.path === "string"
+      ? file.path
+      : path.resolve(this.libraryDir, file.filename);
+  }
+
+  private async placeUploadedFile(sourcePath: string, storedName: string) {
+    const destinationPath = this.resolveStoredPath(storedName);
+
+    if (sourcePath === destinationPath) {
+      return;
+    }
+
+    await this.moveStorageEntry(sourcePath, destinationPath);
+  }
+
+  private async moveStorageEntry(sourcePath: string, destinationPath: string) {
+    await fs.mkdir(path.dirname(destinationPath), { recursive: true });
+
+    try {
+      await fs.rename(sourcePath, destinationPath);
+    } catch (error) {
+      const code = error instanceof Error && "code" in error ? String(error.code) : "";
+
+      if (code !== "EXDEV") {
+        throw error;
+      }
+
+      await fs.copyFile(sourcePath, destinationPath);
+      await fs.rm(sourcePath, { force: true });
+    }
+  }
+
+  private async materializeStorageLayout(items: StoredLibraryItem[]) {
+    const rawItems = sortItems(items);
+    const desiredItems = this.computeDesiredStoredItems(rawItems);
+    const rawItemsById = new Map(rawItems.map((item) => [item.id, item]));
+    const existingItems: StoredLibraryItem[] = [];
+
+    await this.ensureFolderDirectories(desiredItems);
+
+    for (const item of desiredItems) {
+      if (item.kind === "folder") {
+        existingItems.push(item);
+        continue;
+      }
+
+      const rawItem = rawItemsById.get(item.id) ?? item;
+      const desiredPath = this.resolveStoredPath(item.storedName);
+      const currentPath = rawItem.storedName ? this.resolveStoredPath(rawItem.storedName) : null;
+      const desiredExists = await pathExists(desiredPath);
+      const currentExists = currentPath
+        ? currentPath === desiredPath
+          ? desiredExists
+          : await pathExists(currentPath)
+        : false;
+
+      if (!desiredExists && currentPath && currentExists) {
+        await this.moveStorageEntry(currentPath, desiredPath);
+        existingItems.push(item);
+        continue;
+      }
+
+      if (desiredExists) {
+        if (currentPath && currentPath !== desiredPath && currentExists) {
+          await fs.rm(currentPath, { force: true });
+        }
+
+        existingItems.push(item);
+      }
+    }
+
+    return sortItems(existingItems);
+  }
+
+  private computeDesiredStoredItems(items: StoredLibraryItem[]) {
+    const itemsById = new Map(items.map((item) => [item.id, item]));
+    const folderPathCache = new Map<string, string>();
+
+    const resolveFolderStoredName = (folderId: string): string => {
+      const cached = folderPathCache.get(folderId);
+
+      if (cached) {
+        return cached;
+      }
+
+      const folder = itemsById.get(folderId);
+
+      if (!folder || folder.kind !== "folder") {
+        return folderId;
+      }
+
+      const parent = folder.parentId ? itemsById.get(folder.parentId) : undefined;
+      const parentStoredName =
+        parent && parent.kind === "folder" ? resolveFolderStoredName(parent.id) : "";
+      const storedName = parentStoredName ? joinStoredPath(parentStoredName, folder.id) : folder.id;
+
+      folderPathCache.set(folderId, storedName);
+      return storedName;
+    };
+
+    return items.map((item) => {
+      if (item.kind === "folder") {
+        return {
+          ...item,
+          storedName: resolveFolderStoredName(item.id)
+        };
+      }
+
+      const parent = item.parentId ? itemsById.get(item.parentId) : undefined;
+      const parentStoredName =
+        parent && parent.kind === "folder" ? resolveFolderStoredName(parent.id) : "";
+
+      return {
+        ...item,
+        storedName: this.buildFileStoredName(item.id, item.name, parentStoredName)
+      };
+    });
+  }
+
+  private async ensureFolderDirectories(items: StoredLibraryItem[]) {
+    for (const item of items) {
+      if (item.kind !== "folder") {
+        continue;
+      }
+
+      await fs.mkdir(this.resolveStoredPath(item.storedName), { recursive: true });
+    }
+  }
+
   private seedDemoContent() {
     const rootFolderId = nanoid(10);
+    const manualsFolderId = nanoid(10);
+    const createdAt = new Date().toISOString();
 
     this.items = sortItems([
       {
-        id: nanoid(10),
+        id: manualsFolderId,
         name: "Manuali",
         storedName: "",
         mimeType: FOLDER_MIME_TYPE,
         kind: "folder",
         sizeBytes: 0,
-        createdAt: new Date().toISOString(),
+        createdAt,
         parentId: rootFolderId
       },
       {
@@ -488,7 +675,7 @@ export class LibraryStore {
         mimeType: FOLDER_MIME_TYPE,
         kind: "folder",
         sizeBytes: 0,
-        createdAt: new Date().toISOString(),
+        createdAt,
         parentId: null
       }
     ]);

@@ -39,6 +39,10 @@ function createUploadFile(name: string, relativePath?: string, sizeBytes?: numbe
   return file;
 }
 
+function resolveStoredPath(storageRoot: string, storedName: string) {
+  return path.join(storageRoot, "library", ...storedName.split("/"));
+}
+
 describe("Routeroom API", () => {
   it("returns session details with LAN metadata", async () => {
     const storageRoot = await createTemporaryStorage();
@@ -81,6 +85,35 @@ describe("Routeroom API", () => {
         contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
       })
       .expect(201);
+
+    const currentItemsResponse = await request(app).get("/api/items").expect(200);
+    const currentItems = currentItemsResponse.body as Array<{
+      id: string;
+      kind: string;
+      name: string;
+      parentId: string | null;
+      storedName: string;
+    }>;
+    const salotto = currentItems.find((item) => item.kind === "folder" && item.name === "Salotto");
+    const bundle = currentItems.find((item) => item.kind === "folder" && item.name === "sample-bundle");
+    const guide = currentItems.find((item) => item.kind === "folder" && item.name === "Guide");
+    const docs = currentItems.find((item) => item.kind === "folder" && item.name === "Docs");
+    const note = currentItems.find((item) => item.kind === "document" && item.name === "sample-note.txt");
+    const brief = currentItems.find((item) => item.kind === "document" && item.name === "sample-brief.docx");
+
+    expect(salotto?.storedName).toBe(salotto?.id);
+    expect(bundle?.parentId).toBe(salotto?.id);
+    expect(guide?.parentId).toBe(bundle?.id);
+    expect(docs?.parentId).toBe(bundle?.id);
+    expect(note?.parentId).toBe(guide?.id);
+    expect(brief?.parentId).toBe(docs?.id);
+
+    await expect(fs.access(resolveStoredPath(storageRoot, salotto!.storedName))).resolves.toBeUndefined();
+    await expect(fs.access(resolveStoredPath(storageRoot, bundle!.storedName))).resolves.toBeUndefined();
+    await expect(fs.access(resolveStoredPath(storageRoot, guide!.storedName))).resolves.toBeUndefined();
+    await expect(fs.access(resolveStoredPath(storageRoot, docs!.storedName))).resolves.toBeUndefined();
+    await expect(fs.access(resolveStoredPath(storageRoot, note!.storedName))).resolves.toBeUndefined();
+    await expect(fs.access(resolveStoredPath(storageRoot, brief!.storedName))).resolves.toBeUndefined();
 
     close();
 
@@ -273,6 +306,72 @@ describe("Routeroom API", () => {
     expect(deleteResponse.body.deletedIds).toHaveLength(2);
     const itemsResponse = await request(app).get("/api/items").expect(200);
     expect(itemsResponse.body).toHaveLength(0);
+    await expect(fs.readdir(path.join(storageRoot, "library"))).resolves.toHaveLength(0);
+    close();
+  });
+
+  it("migrates legacy flat storage into folder directories on startup", async () => {
+    const storageRoot = await createTemporaryStorage();
+    const libraryDir = path.join(storageRoot, "library");
+    const rootFolderId = "folder-root-1";
+    const childFolderId = "folder-child-1";
+    const fileId = "legacy-file-1";
+    const legacyFileName = `${fileId}--legacy-note.txt`;
+
+    await fs.mkdir(libraryDir, { recursive: true });
+    await fs.writeFile(path.join(libraryDir, legacyFileName), "legacy note", "utf8");
+    await fs.writeFile(
+      path.join(storageRoot, "index.json"),
+      JSON.stringify(
+        [
+          {
+            id: rootFolderId,
+            name: "Archivio",
+            storedName: "",
+            mimeType: "application/vnd.routeroom.folder",
+            kind: "folder",
+            sizeBytes: 0,
+            createdAt: "2026-03-17T00:00:00.000Z",
+            parentId: null
+          },
+          {
+            id: childFolderId,
+            name: "Interna",
+            storedName: "",
+            mimeType: "application/vnd.routeroom.folder",
+            kind: "folder",
+            sizeBytes: 0,
+            createdAt: "2026-03-17T00:00:00.000Z",
+            parentId: rootFolderId
+          },
+          {
+            id: fileId,
+            name: "legacy-note.txt",
+            storedName: legacyFileName,
+            mimeType: "text/plain",
+            kind: "document",
+            sizeBytes: 11,
+            createdAt: "2026-03-17T00:00:00.000Z",
+            parentId: childFolderId
+          }
+        ],
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const { app, close } = await createApp({ storageRoot });
+    const itemsResponse = await request(app).get("/api/items").expect(200);
+    const migratedFile = (itemsResponse.body as Array<{ id: string; storedName: string }>).find(
+      (item) => item.id === fileId
+    );
+
+    expect(migratedFile?.storedName).toBe(`${rootFolderId}/${childFolderId}/${legacyFileName}`);
+    await expect(
+      fs.access(path.join(libraryDir, rootFolderId, childFolderId, legacyFileName))
+    ).resolves.toBeUndefined();
+    await expect(fs.access(path.join(libraryDir, legacyFileName))).rejects.toBeDefined();
     close();
   });
 

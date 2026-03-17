@@ -68,9 +68,6 @@ export function UploadProgressCard({
                 <Typography variant={compact ? "subtitle1" : "h6"} noWrap>
                   Caricamento in corso
                 </Typography>
-                <Typography variant="body2" color="text.secondary" noWrap>
-                  Destinazione: {targetLabel}
-                </Typography>
               </Box>
             </Stack>
             <Stack direction="row" spacing={0.75} alignItems="center" flexShrink={0}>
