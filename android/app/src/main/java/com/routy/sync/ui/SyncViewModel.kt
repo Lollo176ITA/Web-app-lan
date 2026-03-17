@@ -15,9 +15,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class SyncUiState(
-  val hostUrl: String = "",
-  val pairingCode: String = "",
-  val deviceName: String = Build.MODEL ?: "Android",
   val dashboard: SyncDashboardState = SyncDashboardState(),
   val busy: Boolean = false,
   val message: String? = null
@@ -32,26 +29,20 @@ class SyncViewModel(private val repository: SyncRepository) : ViewModel() {
       repository.observeDashboardState().collect { dashboard ->
         _uiState.update { current ->
           current.copy(
-            hostUrl = current.hostUrl.ifBlank { dashboard.hostUrl },
-            deviceName = current.deviceName.ifBlank { dashboard.deviceName.ifBlank { Build.MODEL ?: "Android" } },
             dashboard = dashboard
           )
         }
       }
     }
 
-    refresh()
+    viewModelScope.launch {
+      runCatching {
+        repository.refreshRemoteState()
+      }
+    }
   }
 
-  fun updateHostUrl(value: String) {
-    _uiState.update { it.copy(hostUrl = value) }
-  }
-
-  fun updatePairingCode(value: String) {
-    _uiState.update { it.copy(pairingCode = value) }
-  }
-
-  fun applyPairingQrPayload(rawValue: String) {
+  fun pairFromQrPayload(rawValue: String) {
     val payload = rawValue.trim()
 
     if (payload.isBlank()) {
@@ -68,59 +59,38 @@ class SyncViewModel(private val repository: SyncRepository) : ViewModel() {
       return
     }
 
-    _uiState.update {
-      it.copy(
+    if (_uiState.value.dashboard.isConfigured) {
+      _uiState.update { it.copy(message = "Host già collegato.") }
+      return
+    }
+
+    runTask("Pairing completato.") {
+      repository.registerDevice(
         hostUrl = hostUrl,
         pairingCode = pairingCode,
-        message = "Pairing compilato da QR."
+        deviceName = Build.MODEL ?: "Android"
       )
+      repository.refreshRemoteState()
     }
-  }
-
-  fun updateDeviceName(value: String) {
-    _uiState.update { it.copy(deviceName = value) }
   }
 
   fun dismissMessage() {
     _uiState.update { it.copy(message = null) }
   }
 
-  fun refresh() {
-    runTask("Configurazione aggiornata.") {
-      repository.refreshRemoteState()
-    }
-  }
-
-  fun registerDevice() {
-    val snapshot = _uiState.value
-
-    runTask("Pairing completato.") {
-      repository.registerDevice(
-        hostUrl = snapshot.hostUrl,
-        pairingCode = snapshot.pairingCode,
-        deviceName = snapshot.deviceName
-      )
-      repository.refreshRemoteState()
-      _uiState.update { current -> current.copy(pairingCode = "") }
-    }
-  }
-
   fun attachFolder(treeUri: Uri) {
     runTask("Cartella aggiunta alla sync.") {
       repository.attachFolder(treeUri)
+      if (repository.isHostReachable()) {
+        repository.trySyncAll()
+        repository.refreshRemoteState()
+      }
     }
   }
 
   fun removeMapping(localId: String) {
     runTask("Cartella rimossa dalla configurazione.") {
       repository.removeMapping(localId)
-    }
-  }
-
-  fun syncNow() {
-    runTask("Sync completata.") {
-      repository.syncAll()
-      repository.refreshRemoteState()
     }
   }
 

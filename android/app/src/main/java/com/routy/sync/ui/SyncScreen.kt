@@ -5,35 +5,38 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.QrCodeScanner
-import androidx.compose.material.icons.rounded.Sync
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,9 +48,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.routy.sync.AppContainer
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
+import com.routy.sync.AppContainer
+import com.routy.sync.runtime.SyncForegroundService
 
 @Composable
 fun SyncScreen(container: AppContainer) {
@@ -55,6 +59,7 @@ fun SyncScreen(container: AppContainer) {
   val state by viewModel.uiState.collectAsState()
   val snackbarHostState = remember { SnackbarHostState() }
   val context = LocalContext.current
+  val keepAliveInBackground = state.dashboard.isConfigured && state.dashboard.mappings.isNotEmpty()
   val folderPicker = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.OpenDocumentTree()
   ) { treeUri ->
@@ -70,7 +75,7 @@ fun SyncScreen(container: AppContainer) {
     contract = ScanContract()
   ) { result ->
     val contents = result.contents ?: return@rememberLauncherForActivityResult
-    viewModel.applyPairingQrPayload(contents)
+    viewModel.pairFromQrPayload(contents)
   }
   val cameraPermissionLauncher = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.RequestPermission()
@@ -86,7 +91,23 @@ fun SyncScreen(container: AppContainer) {
     viewModel.dismissMessage()
   }
 
+  LaunchedEffect(keepAliveInBackground) {
+    if (keepAliveInBackground) {
+      SyncForegroundService.start(context)
+    } else {
+      SyncForegroundService.stop(context)
+    }
+  }
+
   Scaffold(
+    topBar = {
+      CenterAlignedTopAppBar(
+        title = { Text("Routy Sync") },
+        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+          containerColor = MaterialTheme.colorScheme.surface
+        )
+      )
+    },
     snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
   ) { innerPadding ->
     LazyColumn(
@@ -97,13 +118,8 @@ fun SyncScreen(container: AppContainer) {
       verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
       item {
-        HeadlineSection(state = state)
-      }
-
-      item {
-        PairingSection(
+        QrSection(
           state = state,
-          viewModel = viewModel,
           onScanQr = {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
           }
@@ -118,82 +134,59 @@ fun SyncScreen(container: AppContainer) {
         )
       }
 
-      item {
-        SyncActionsSection(
-          state = state,
-          onRefresh = viewModel::refresh,
-          onSyncNow = viewModel::syncNow
-        )
+      if (state.busy) {
+        item {
+          LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
       }
     }
   }
 }
 
 @Composable
-private fun HeadlineSection(state: SyncUiState) {
-  Card(
-    colors = CardDefaults.cardColors(
-      containerColor = MaterialTheme.colorScheme.primaryContainer
-    )
-  ) {
-    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-      Text("Routy Sync", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-      Text(
-        "Onboarding host URL -> pairing code -> cartelle Android. Dopo il pairing, l’autosync parte appena il telefono torna sulla LAN e l’host risponde.",
-        style = MaterialTheme.typography.bodyLarge
+private fun QrSection(state: SyncUiState, onScanQr: () -> Unit) {
+  ElevatedCard {
+    if (state.dashboard.isConfigured) {
+      ListItem(
+        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+        leadingContent = {
+          Icon(
+            imageVector = Icons.Rounded.CheckCircle,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+          )
+        },
+        headlineContent = {
+          Text("Host collegato", fontWeight = FontWeight.SemiBold)
+        },
+        supportingContent = {
+          Text(state.dashboard.hostUrl)
+        }
       )
-      if (state.dashboard.isConfigured) {
-        Text(
-          "Host attuale: ${state.dashboard.hostUrl}",
-          style = MaterialTheme.typography.bodyMedium
-        )
-      }
-    }
-  }
-}
-
-@Composable
-private fun PairingSection(state: SyncUiState, viewModel: SyncViewModel, onScanQr: () -> Unit) {
-  Card {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-      Text("1. Pairing", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-
-      OutlinedTextField(
-        value = state.hostUrl,
-        onValueChange = viewModel::updateHostUrl,
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text("Host URL") },
-        supportingText = { Text("Esempio: http://192.168.1.20:8787") }
-      )
-
-      OutlinedTextField(
-        value = state.deviceName,
-        onValueChange = viewModel::updateDeviceName,
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text("Nome device") }
-      )
-
-      OutlinedTextField(
-        value = state.pairingCode,
-        onValueChange = viewModel::updatePairingCode,
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text("Pairing code") }
-      )
-
-      OutlinedButton(onClick = onScanQr, enabled = !state.busy) {
-        Icon(Icons.Rounded.QrCodeScanner, contentDescription = null)
-        Spacer(Modifier.width(4.dp))
-        Text("Scansiona QR pairing")
-      }
-
-      Button(
-        onClick = viewModel::registerDevice,
-        enabled = !state.busy && state.hostUrl.isNotBlank() && state.pairingCode.isNotBlank()
+    } else {
+      FilledTonalButton(
+        onClick = onScanQr,
+        enabled = !state.busy,
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(16.dp)
+          .heightIn(min = 180.dp)
       ) {
-        if (state.busy) {
-          CircularProgressIndicator(modifier = Modifier.height(18.dp), strokeWidth = 2.dp)
-        } else {
-          Text("Esegui pairing")
+        Column(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalAlignment = Alignment.CenterHorizontally,
+          verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+          if (state.busy) {
+            CircularProgressIndicator(strokeWidth = 2.dp)
+          } else {
+            Icon(
+              imageVector = Icons.Rounded.QrCodeScanner,
+              contentDescription = null,
+              modifier = Modifier.size(44.dp)
+            )
+          }
+          Text("Scansiona QR", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         }
       }
     }
@@ -206,9 +199,9 @@ private fun FolderSection(
   onPickFolder: () -> Unit,
   onRemoveMapping: (String) -> Unit
 ) {
-  Card {
+  ElevatedCard {
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-      Text("2. Cartelle da sincronizzare", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+      Text("Cartelle", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
       OutlinedButton(onClick = onPickFolder, enabled = !state.busy && state.dashboard.isConfigured) {
         Icon(Icons.Rounded.FolderOpen, contentDescription = null)
         Spacer(Modifier.width(4.dp))
@@ -216,63 +209,33 @@ private fun FolderSection(
       }
 
       if (!state.dashboard.isConfigured) {
-        Text("Completa prima il pairing con l’host.", style = MaterialTheme.typography.bodyMedium)
+        Text("Serve prima il QR.", style = MaterialTheme.typography.bodyMedium)
       }
 
       if (state.dashboard.mappings.isEmpty()) {
-        Text("Nessuna cartella registrata.", style = MaterialTheme.typography.bodyMedium)
+        Text("Nessuna cartella.", style = MaterialTheme.typography.bodyMedium)
       } else {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-          state.dashboard.mappings.forEach { mapping ->
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-              Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(mapping.sourceName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text(
-                  "Ultima sync locale: ${mapping.lastSyncedAt?.let(::formatEpoch) ?: "mai"}",
-                  style = MaterialTheme.typography.bodyMedium
-                )
-                TextButton(onClick = { onRemoveMapping(mapping.localId) }, enabled = !state.busy) {
-                  Icon(Icons.Rounded.DeleteOutline, contentDescription = null)
-                  Spacer(Modifier.width(4.dp))
-                  Text("Rimuovi")
+        Column {
+          state.dashboard.mappings.forEachIndexed { index, mapping ->
+            ListItem(
+              colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+              headlineContent = {
+                Text(mapping.sourceName, fontWeight = FontWeight.SemiBold)
+              },
+              supportingContent = {
+                Text("Ultima sync: ${mapping.lastSyncedAt?.let(::formatEpoch) ?: "mai"}")
+              },
+              trailingContent = {
+                IconButton(onClick = { onRemoveMapping(mapping.localId) }, enabled = !state.busy) {
+                  Icon(Icons.Rounded.DeleteOutline, contentDescription = "Rimuovi cartella")
                 }
               }
+            )
+
+            if (index < state.dashboard.mappings.lastIndex) {
+              HorizontalDivider()
             }
           }
-        }
-      }
-    }
-  }
-}
-
-@Composable
-private fun SyncActionsSection(
-  state: SyncUiState,
-  onRefresh: () -> Unit,
-  onSyncNow: () -> Unit
-) {
-  Card {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-      Text("3. Sync", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-      Text(
-        "Quando il telefono torna sul Wi-Fi, l’app prova subito l’host configurato. Il worker periodico resta come fallback, e qui puoi sempre forzare refresh config e sync manuale.",
-        style = MaterialTheme.typography.bodyMedium
-      )
-
-      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton(onClick = onRefresh, enabled = !state.busy && state.dashboard.isConfigured) {
-          Text("Aggiorna config")
-        }
-        Button(onClick = onSyncNow, enabled = !state.busy && state.dashboard.isConfigured) {
-          Icon(Icons.Rounded.Sync, contentDescription = null)
-          Spacer(Modifier.width(4.dp))
-          Text("Sync now")
-        }
-      }
-
-      if (state.busy) {
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
-          CircularProgressIndicator(strokeWidth = 2.dp)
         }
       }
     }
