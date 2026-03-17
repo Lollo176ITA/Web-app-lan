@@ -13,7 +13,7 @@
     android:allowBackup="true"
     android:label="Routy Sync"
     android:supportsRtl="true"
-    android:theme="@android:style/Theme.DeviceDefault.DayNight.NoActionBar">
+    android:theme="@style/Theme.RoutySync">
 
     <activity
       android:name=".MainActivity"
