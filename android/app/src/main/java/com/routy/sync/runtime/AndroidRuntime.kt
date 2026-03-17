@@ -11,14 +11,17 @@ import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.routy.sync.MainActivity
@@ -28,10 +31,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 class CurrentWifiProvider(private val context: Context) {
   private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
   private val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+
+  fun hasSsidAccessPermission(): Boolean =
+    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
   fun isWifiConnected(): Boolean {
     val capabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork) ?: return false
@@ -40,34 +47,60 @@ class CurrentWifiProvider(private val context: Context) {
 
   @SuppressLint("MissingPermission")
   fun currentSsidOrNull(): String? {
-    val hasPermission =
-      ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-
-    if (!hasPermission) {
+    if (!hasSsidAccessPermission()) {
       return null
     }
 
-    val ssid = wifiManager.connectionInfo?.ssid?.trim()?.removePrefix("\"")?.removeSuffix("\"")
+    val ssid = currentWifiInfoOrNull()?.ssid?.trim()?.removePrefix("\"")?.removeSuffix("\"")
     return ssid?.takeUnless { it.isBlank() || it == WifiManager.UNKNOWN_SSID }
   }
+
+  @SuppressLint("MissingPermission")
+  private fun currentWifiInfoOrNull(): WifiInfo? {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      val capabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+      return capabilities?.transportInfo as? WifiInfo
+    }
+
+    return legacyWifiInfoOrNull()
+  }
+
+  @Suppress("DEPRECATION")
+  @SuppressLint("MissingPermission")
+  private fun legacyWifiInfoOrNull(): WifiInfo? = wifiManager.connectionInfo
 }
 
 object SyncScheduler {
-  private const val UNIQUE_WORK_NAME = "routy-sync-auto"
+  private const val IMMEDIATE_WORK_NAME = "routy-sync-auto"
+  private const val PERIODIC_WORK_NAME = "routy-sync-periodic"
+
+  private fun syncConstraints() =
+    Constraints.Builder()
+      .setRequiredNetworkType(NetworkType.UNMETERED)
+      .build()
 
   fun enqueueImmediate(context: Context, reason: String) {
     val request = OneTimeWorkRequestBuilder<SyncWorker>()
       .setInputData(workDataOf("reason" to reason))
-      .setConstraints(
-        Constraints.Builder()
-          .setRequiredNetworkType(NetworkType.UNMETERED)
-          .build()
-      )
+      .setConstraints(syncConstraints())
       .build()
 
     WorkManager.getInstance(context).enqueueUniqueWork(
-      UNIQUE_WORK_NAME,
+      IMMEDIATE_WORK_NAME,
       androidx.work.ExistingWorkPolicy.REPLACE,
+      request
+    )
+  }
+
+  fun ensurePeriodic(context: Context) {
+    val request = PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
+      .setInputData(workDataOf("reason" to "periodic"))
+      .setConstraints(syncConstraints())
+      .build()
+
+    WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+      PERIODIC_WORK_NAME,
+      ExistingPeriodicWorkPolicy.UPDATE,
       request
     )
   }

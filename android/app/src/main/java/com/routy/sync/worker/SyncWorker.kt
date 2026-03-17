@@ -11,9 +11,27 @@ class SyncWorker(
   workerParameters: WorkerParameters
 ) : CoroutineWorker(appContext, workerParameters) {
   override suspend fun doWork(): Result {
-    val repository = (applicationContext as RoutySyncApp).container.repository
+    val container = (applicationContext as RoutySyncApp).container
+    val repository = container.repository
+    val wifiProvider = container.wifiProvider
 
     return try {
+      val runtimeConfig = repository.getLocalRuntimeConfig()
+
+      if (!runtimeConfig.isConfigured || runtimeConfig.approvedSsids.isEmpty()) {
+        return Result.success()
+      }
+
+      if (!wifiProvider.isWifiConnected()) {
+        return Result.success()
+      }
+
+      val currentSsid = wifiProvider.currentSsidOrNull() ?: return Result.success()
+
+      if (!runtimeConfig.approvedSsids.contains(currentSsid)) {
+        return Result.success()
+      }
+
       repository.syncAll()
       Result.success()
     } catch (error: IOException) {

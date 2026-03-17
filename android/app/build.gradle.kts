@@ -4,6 +4,8 @@ plugins {
   id("com.google.devtools.ksp")
 }
 
+val ciBuild = providers.gradleProperty("ciBuild").orNull == "true"
+
 android {
   namespace = "com.routy.sync"
   compileSdk = 35
@@ -19,7 +21,11 @@ android {
 
   buildTypes {
     release {
-      isMinifyEnabled = false
+      isMinifyEnabled = true
+      isShrinkResources = true
+      if (ciBuild) {
+        signingConfig = signingConfigs.getByName("debug")
+      }
       proguardFiles(
         getDefaultProguardFile("proguard-android-optimize.txt"),
         "proguard-rules.pro"
@@ -73,7 +79,6 @@ dependencies {
   implementation("androidx.security:security-crypto:1.1.0-alpha06")
   implementation("androidx.work:work-runtime-ktx:2.9.1")
   implementation("com.squareup.okhttp3:okhttp:4.12.0")
-  implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
   ksp("androidx.room:room-compiler:2.6.1")

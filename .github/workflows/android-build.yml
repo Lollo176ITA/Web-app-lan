@@ -5,6 +5,12 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 concurrency:
   group: android-build-${{ github.ref }}
   cancel-in-progress: true
@@ -34,16 +40,95 @@ jobs:
       - name: Install Android SDK packages
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Build debug APK and run unit tests
-        run: gradle -p android --no-daemon :app:assembleDebug :app:testDebugUnitTest
+      - name: Build release APK and run unit tests
+        run: gradle -p android --no-daemon :app:assembleRelease :app:testDebugUnitTest -PciBuild=true
 
       - name: Upload APK artifact
         if: success()
         uses: actions/upload-artifact@v6
         with:
-          name: android-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: android-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+
+      - name: Publish build branch
+        if: success() && github.event_name != 'pull_request'
+        shell: bash
+        env:
+          TARGET_BRANCH: builds/android-release
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          publish_dir="$(mktemp -d)"
+          export PUBLISH_DIR="$publish_dir"
+
+          python3 <<'PY'
+          import hashlib
+          import json
+          import os
+          import pathlib
+          import shutil
+
+          apk_dir = pathlib.Path("android/app/build/outputs/apk/release")
+          publish_dir = pathlib.Path(os.environ["PUBLISH_DIR"])
+
+          publish_dir.mkdir(parents=True, exist_ok=True)
+
+          metadata = {
+              "target": "android-release",
+              "sourceBranch": os.environ["GITHUB_REF_NAME"],
+              "sourceCommit": os.environ["GITHUB_SHA"],
+              "workflowRunUrl": f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+              "files": [],
+          }
+
+          def sha256_for(path: pathlib.Path) -> str:
+              digest = hashlib.sha256()
+              with path.open("rb") as handle:
+                  for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                      digest.update(chunk)
+              return digest.hexdigest()
+
+          apk_files = sorted(apk_dir.glob("*.apk"))
+          if not apk_files:
+              raise SystemExit("No APK files found in release output directory")
+
+          for item in apk_files:
+              destination = publish_dir / item.name
+              shutil.copy2(item, destination)
+              metadata["files"].append({
+                  "name": item.name,
+                  "size": item.stat().st_size,
+                  "sha256": sha256_for(item),
+              })
+
+          (publish_dir / "build-info.json").write_text(
+              json.dumps(metadata, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+          cat > "$publish_dir/README.md" <<EOF
+          # android-release
+
+          Android APK published from GitHub Actions.
+
+          - Source branch: ${GITHUB_REF_NAME}
+          - Source commit: ${GITHUB_SHA}
+          - Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+
+          See build-info.json for checksums and sizes.
+          EOF
+
+          cd "$publish_dir"
+          git init -b "$TARGET_BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Build android-release from ${GITHUB_SHA}"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin "HEAD:${TARGET_BRANCH}"
 
       - name: Upload build reports
         if: always()
@@ -53,4 +138,5 @@ jobs:
           path: |
             android/app/build/reports/**
             android/app/build/test-results/**
+            android/app/build/outputs/mapping/release/**
           if-no-files-found: ignore

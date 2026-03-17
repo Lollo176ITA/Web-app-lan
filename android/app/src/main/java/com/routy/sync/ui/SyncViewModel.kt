@@ -84,11 +84,10 @@ class SyncViewModel(private val repository: SyncRepository) : ViewModel() {
     }
   }
 
-  fun addCurrentWifi() {
-    val currentSsid = _uiState.value.dashboard.currentSsid
+  fun addCurrentWifi(currentSsid: String?) {
 
     if (currentSsid.isNullOrBlank()) {
-      _uiState.update { it.copy(message = "SSID corrente non disponibile. Inseriscilo manualmente.") }
+      _uiState.update { it.copy(message = "SSID corrente non disponibile. Controlla permesso posizione e localizzazione del telefono.") }
       return
     }
 

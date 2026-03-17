@@ -1,6 +1,8 @@
 package com.routy.sync.ui
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -40,13 +42,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.routy.sync.AppContainer
+import com.routy.sync.runtime.SyncScheduler
 
 @Composable
 fun SyncScreen(container: AppContainer) {
@@ -54,6 +60,12 @@ fun SyncScreen(container: AppContainer) {
   val state by viewModel.uiState.collectAsState()
   val snackbarHostState = remember { SnackbarHostState() }
   val context = LocalContext.current
+  var hasWifiPermission by remember {
+    mutableStateOf(
+      ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    )
+  }
+  val currentSsid = if (hasWifiPermission) container.wifiProvider.currentSsidOrNull() else null
   val folderPicker = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.OpenDocumentTree()
   ) { treeUri ->
@@ -63,6 +75,14 @@ fun SyncScreen(container: AppContainer) {
         Intent.FLAG_GRANT_READ_URI_PERMISSION
       )
       viewModel.attachFolder(treeUri)
+    }
+  }
+  val wifiPermissionLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestPermission()
+  ) { granted ->
+    hasWifiPermission = granted
+    if (granted) {
+      SyncScheduler.enqueueImmediate(context, "permission-granted")
     }
   }
 
@@ -91,7 +111,15 @@ fun SyncScreen(container: AppContainer) {
       }
 
       item {
-        WifiSection(state = state, viewModel = viewModel)
+        WifiSection(
+          state = state,
+          viewModel = viewModel,
+          hasWifiPermission = hasWifiPermission,
+          currentSsid = currentSsid,
+          onRequestWifiPermission = {
+            wifiPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+          }
+        )
       }
 
       item {
@@ -179,18 +207,40 @@ private fun PairingSection(state: SyncUiState, viewModel: SyncViewModel) {
 }
 
 @Composable
-private fun WifiSection(state: SyncUiState, viewModel: SyncViewModel) {
+private fun WifiSection(
+  state: SyncUiState,
+  viewModel: SyncViewModel,
+  hasWifiPermission: Boolean,
+  currentSsid: String?,
+  onRequestWifiPermission: () -> Unit
+) {
   Card {
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
       Text("2. Wi-Fi approvati", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
       Text(
-        "L’autosync parte solo sugli SSID salvati. Se il nome della rete non e disponibile, aggiungilo manualmente.",
+        "L’autosync parte solo sugli SSID salvati. Per leggere il nome del Wi-Fi serve anche il permesso posizione.",
         style = MaterialTheme.typography.bodyMedium
       )
 
-      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilledTonalButton(onClick = viewModel::addCurrentWifi, enabled = !state.busy && state.dashboard.currentSsid != null) {
-          Text(state.dashboard.currentSsid?.let { "Aggiungi $it" } ?: "Wi-Fi corrente non rilevato")
+      if (!hasWifiPermission) {
+        FilledTonalButton(onClick = onRequestWifiPermission, enabled = !state.busy) {
+          Text("Consenti accesso al Wi-Fi")
+        }
+        Text(
+          "Senza questo permesso l’SSID resta invisibile e l’autosync non riesce a capire se sei su una rete approvata.",
+          style = MaterialTheme.typography.bodySmall
+        )
+      } else {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          FilledTonalButton(onClick = { viewModel.addCurrentWifi(currentSsid) }, enabled = !state.busy && currentSsid != null) {
+            Text(currentSsid?.let { "Aggiungi $it" } ?: "Wi-Fi corrente non rilevato")
+          }
+        }
+        if (currentSsid == null) {
+          Text(
+            "SSID non disponibile. Verifica che la localizzazione Android sia attiva e che tu sia davvero su Wi-Fi.",
+            style = MaterialTheme.typography.bodySmall
+          )
         }
       }
 
