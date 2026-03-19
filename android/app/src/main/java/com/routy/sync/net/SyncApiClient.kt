@@ -19,6 +19,10 @@ import okio.source
 import org.json.JSONArray
 import org.json.JSONObject
 
+private const val UPLOAD_TARGET_BATCH_BYTES = 24L * 1024L * 1024L
+private const val UPLOAD_LARGE_FILE_THRESHOLD_BYTES = 16L * 1024L * 1024L
+private const val UPLOAD_MAX_BATCH_SIZE = 60
+
 data class ApiSyncMapping(
   val id: String,
   val sourceName: String,
@@ -73,6 +77,57 @@ data class UploadableEntry(
   val mimeType: String,
   val documentUri: Uri
 )
+
+private data class UploadBatch(
+  val indexedEntries: List<IndexedValue<UploadableEntry>>
+)
+
+private fun uploadEntrySize(entry: UploadableEntry) = maxOf(entry.sizeBytes, 1L)
+
+private fun buildUploadBatches(entries: List<UploadableEntry>): List<UploadBatch> {
+  val batches = mutableListOf<UploadBatch>()
+  var startIndex = 0
+
+  while (startIndex < entries.size) {
+    val indexedEntries = mutableListOf<IndexedValue<UploadableEntry>>()
+    var batchBytes = 0L
+    var index = startIndex
+
+    while (index < entries.size) {
+      val entry = entries[index]
+      val entryBytes = uploadEntrySize(entry)
+
+      if (indexedEntries.isEmpty()) {
+        indexedEntries += IndexedValue(index, entry)
+        batchBytes += entryBytes
+        index += 1
+
+        if (entryBytes >= UPLOAD_LARGE_FILE_THRESHOLD_BYTES) {
+          break
+        }
+
+        continue
+      }
+
+      if (
+        entryBytes >= UPLOAD_LARGE_FILE_THRESHOLD_BYTES ||
+        indexedEntries.size >= UPLOAD_MAX_BATCH_SIZE ||
+        batchBytes + entryBytes > UPLOAD_TARGET_BATCH_BYTES
+      ) {
+        break
+      }
+
+      indexedEntries += IndexedValue(index, entry)
+      batchBytes += entryBytes
+      index += 1
+    }
+
+    batches += UploadBatch(indexedEntries = indexedEntries)
+    startIndex = index
+  }
+
+  return batches
+}
 
 class SyncApiClient(private val contentResolver: ContentResolver) {
   private val client = OkHttpClient.Builder().build()
@@ -186,14 +241,19 @@ class SyncApiClient(private val contentResolver: ContentResolver) {
     entries: List<UploadableEntry>,
     onProgress: ((SyncUploadProgressSnapshot) -> Unit)? = null
   ) = withContext(Dispatchers.IO) {
-    val totalBytes = entries.sumOf { entry -> maxOf(entry.sizeBytes, 1L) }
+    val totalBytes = entries.sumOf(::uploadEntrySize)
     val uploadedBytesByIndex = LongArray(entries.size)
+    val batches = buildUploadBatches(entries)
     var lastPercentage = -1
+    var uploadedCount = 0
+    var skippedCount = 0
+    var failedCount = 0
+    var lastSyncedAt = ""
 
     fun emitProgress() {
       val uploadedBytes = uploadedBytesByIndex.sum()
       val uploadedFiles = entries.indices.count { index ->
-        uploadedBytesByIndex[index] >= maxOf(entries[index].sizeBytes, 1L)
+        uploadedBytesByIndex[index] >= uploadEntrySize(entries[index])
       }
       val snapshot = SyncUploadProgressSnapshot(
         uploadedBytes = uploadedBytes,
@@ -208,21 +268,6 @@ class SyncApiClient(private val contentResolver: ContentResolver) {
       }
     }
 
-    val multipartBody = MultipartBody.Builder().setType(MultipartBody.FORM).apply {
-      entries.forEachIndexed { index, entry ->
-        addFormDataPart("relativePaths", entry.relativePath)
-        addFormDataPart("modifiedAtMs", entry.modifiedAtMs.toString())
-        addFormDataPart(
-          "files",
-          entry.relativePath.substringAfterLast("/"),
-          ContentUriRequestBody(contentResolver, entry.documentUri, entry.mimeType) { writtenForFile ->
-            uploadedBytesByIndex[index] = minOf(writtenForFile, maxOf(entry.sizeBytes, 1L))
-            emitProgress()
-          }
-        )
-      }
-    }.build()
-
     onProgress?.invoke(
       SyncUploadProgressSnapshot(
         uploadedBytes = 0L,
@@ -232,19 +277,43 @@ class SyncApiClient(private val contentResolver: ContentResolver) {
       )
     )
 
-    val response = executeJson(
-      Request.Builder()
-        .url(buildUrl(hostUrl, "/api/sync/mappings/$mappingId/upload"))
-        .header("Authorization", "Bearer $authToken")
-        .post(multipartBody)
-        .build()
-    )
+    batches.forEach { batch ->
+      val multipartBody = MultipartBody.Builder().setType(MultipartBody.FORM).apply {
+        batch.indexedEntries.forEach { indexedEntry ->
+          val index = indexedEntry.index
+          val entry = indexedEntry.value
+          addFormDataPart("relativePaths", entry.relativePath)
+          addFormDataPart("modifiedAtMs", entry.modifiedAtMs.toString())
+          addFormDataPart(
+            "files",
+            entry.relativePath.substringAfterLast("/"),
+            ContentUriRequestBody(contentResolver, entry.documentUri, entry.mimeType) { writtenForFile ->
+              uploadedBytesByIndex[index] = minOf(writtenForFile, uploadEntrySize(entry))
+              emitProgress()
+            }
+          )
+        }
+      }.build()
+
+      val response = executeJson(
+        Request.Builder()
+          .url(buildUrl(hostUrl, "/api/sync/mappings/$mappingId/upload"))
+          .header("Authorization", "Bearer $authToken")
+          .post(multipartBody)
+          .build()
+      )
+
+      uploadedCount += response.getInt("uploadedCount")
+      skippedCount += response.getInt("skippedCount")
+      failedCount += response.getInt("failedCount")
+      lastSyncedAt = response.getString("lastSyncedAt")
+    }
 
     UploadMappingResult(
-      uploadedCount = response.getInt("uploadedCount"),
-      skippedCount = response.getInt("skippedCount"),
-      failedCount = response.getInt("failedCount"),
-      lastSyncedAt = response.getString("lastSyncedAt")
+      uploadedCount = uploadedCount,
+      skippedCount = skippedCount,
+      failedCount = failedCount,
+      lastSyncedAt = lastSyncedAt
     )
   }
 
