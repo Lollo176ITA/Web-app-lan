@@ -1446,12 +1446,13 @@ private fun CornerBracket(
 
 @Composable
 private fun SyncBackdrop() {
+  val surfaceColor = MaterialTheme.colorScheme.surface
   Canvas(
     modifier = Modifier
       .fillMaxSize()
-      .background(MaterialTheme.colorScheme.surface)
+      .background(surfaceColor)
   ) {
-    drawRect(MaterialTheme.colorScheme.surface)
+    drawRect(surfaceColor)
     drawCircle(
       brush = Brush.radialGradient(
         colors = listOf(Color(0x146D3CD7), Color.Transparent),

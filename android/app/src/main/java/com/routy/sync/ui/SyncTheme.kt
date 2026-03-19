@@ -10,25 +10,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.googlefonts.GoogleFont
-import androidx.compose.ui.text.googlefonts.Font as GoogleFontEntry
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.routy.sync.R
 
-private val GoogleFontProvider = androidx.compose.ui.text.googlefonts.GoogleFont.Provider(
-  providerAuthority = "com.google.android.gms.fonts",
-  providerPackage = "com.google.android.gms",
-  certificates = R.array.com_google_android_gms_fonts_certs
-)
-
-private val ManropeFamily = FontFamily(
-  GoogleFontEntry(googleFont = GoogleFont("Manrope"), fontProvider = GoogleFontProvider)
-)
-
-private val InterFamily = FontFamily(
-  GoogleFontEntry(googleFont = GoogleFont("Inter"), fontProvider = GoogleFontProvider)
-)
+private val ManropeFamily = FontFamily.SansSerif
+private val InterFamily = FontFamily.SansSerif
 
 private val LightColors = lightColorScheme(
   primary = Color(0xFF6D3CD7),
