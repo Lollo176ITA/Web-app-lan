@@ -189,8 +189,10 @@ fun SyncScreen(container: AppContainer) {
       ) {
         SyncTopBar()
 
-        if (state.syncProgress != null) {
-          UploadProgressBanner(progress = state.syncProgress)
+        // Evita smart-cast su proprieta' potenzialmente instabile/complessa.
+        val syncProgress = state.syncProgress
+        if (syncProgress != null) {
+          UploadProgressBanner(progress = syncProgress)
         }
 
         if (state.busy) {
