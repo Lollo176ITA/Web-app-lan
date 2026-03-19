@@ -1322,7 +1322,19 @@ export async function createApp(options: CreateAppOptions = {}) {
     });
   }
 
-  app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
+  app.use((error: unknown, request: express.Request, response: express.Response, _next: express.NextFunction) => {
+    const isAbortedUpload =
+      (request.aborted || request.destroyed) &&
+      error instanceof Error &&
+      (error.message === "Request aborted" || error.name === "AbortError");
+
+    if (isAbortedUpload) {
+      if (!response.headersSent) {
+        response.status(499).end();
+      }
+      return;
+    }
+
     console.error(error);
     response.status(500).json({ message: "Errore interno del server." });
   });
