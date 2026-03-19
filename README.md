@@ -1,10 +1,11 @@
 # win-x64
 
-Build output published from GitHub Actions.
+Published desktop builds from GitHub Actions.
 
-- Source branch: main
-- Source commit: 2e407e264be106861bb601d23fde3a81a9df069b
-- Workflow run: https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23285792261
+- Latest snapshot: `latest/`
+- Archived snapshots: `archives/<run-number>-<commit>/`
+- Current source branch: main
+- Current source commit: b5ca9d3f13caac1914f858da7b2cd58e2f7202c9
+- Current workflow run: https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23286913686
 
-Some distributables may be split into , , ... files to stay below GitHub's 100 MiB per-file repository limit.
-See  for the exact manifest.
+Each successful publish updates `latest/` and also stores an immutable copy in `archives/43-b5ca9d3/`.
