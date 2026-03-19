@@ -1,0 +1,25 @@
+{
+  "target": "mac-arm64",
+  "sourceBranch": "main",
+  "sourceCommit": "830d1ef4e7ce79edb49987a9ed35d210429133e8",
+  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23287121401",
+  "files": [
+    {
+      "name": "Routy-2.7.1-arm64.dmg",
+      "originalName": "Routy-2.7.1-arm64.dmg",
+      "size": 119284588,
+      "sha256": "e14de5c1604aef64842c807fff0f18d7fca3a2b7d98593cc02038109e12a8f1b",
+      "split": true,
+      "parts": [
+        {
+          "name": "Routy-2.7.1-arm64.dmg.part-000",
+          "size": 99614720
+        },
+        {
+          "name": "Routy-2.7.1-arm64.dmg.part-001",
+          "size": 19669868
+        }
+      ]
+    }
+  ]
+}
