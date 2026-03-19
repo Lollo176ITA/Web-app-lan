@@ -8,7 +8,7 @@ storage/
 test-results/
 test*
 
-desktop/*
+
 !desktop/main.mjs
 release/
 output/

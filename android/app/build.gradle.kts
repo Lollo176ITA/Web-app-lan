@@ -24,6 +24,9 @@ android {
 
     versionCode = ciVersionCode ?: 1
     versionName = ciVersionName ?: manualAndroidVersionName ?: "0.1.0"
+    buildConfigField("String", "GITHUB_REPO_OWNER", "\"Lollo176ITA\"")
+    buildConfigField("String", "GITHUB_REPO_NAME", "\"Web-app-lan\"")
+    buildConfigField("String", "ANDROID_UPDATE_BRANCH", "\"builds/android-release\"")
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

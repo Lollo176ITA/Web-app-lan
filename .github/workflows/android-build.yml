@@ -93,6 +93,7 @@ jobs:
         if: success() && github.event_name != 'pull_request'
         shell: bash
         env:
+          ANDROID_VERSION_NAME: ${{ steps.android_version.outputs.version_name }}
           TARGET_BRANCH: builds/android-release
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -115,6 +116,7 @@ jobs:
 
           metadata = {
               "target": "android-release",
+              "version": os.environ["ANDROID_VERSION_NAME"],
               "sourceBranch": os.environ["GITHUB_REF_NAME"],
               "sourceCommit": os.environ["GITHUB_SHA"],
               "workflowRunUrl": f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",

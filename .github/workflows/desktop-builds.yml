@@ -127,6 +127,8 @@ jobs:
           import pathlib
           import shutil
 
+          package_json = json.loads(pathlib.Path("package.json").read_text(encoding="utf-8"))
+
           release_dir = pathlib.Path("release")
           publish_dir = pathlib.Path(os.environ["PUBLISH_DIR"])
           max_chunk_size = 95 * 1024 * 1024
@@ -135,6 +137,7 @@ jobs:
 
           metadata = {
               "target": os.environ["TARGET_ID"],
+              "version": package_json["version"],
               "sourceBranch": os.environ["GITHUB_REF_NAME"],
               "sourceCommit": os.environ["GITHUB_SHA"],
               "workflowRunUrl": f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",

@@ -1,7 +1,12 @@
 package com.routy.sync.ui
 
 import android.Manifest
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -65,6 +70,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -88,6 +94,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.routy.sync.AppContainer
+import com.routy.sync.BuildConfig
 import com.routy.sync.data.SyncMappingEntity
 import com.routy.sync.runtime.SyncForegroundService
 
@@ -168,6 +175,35 @@ fun SyncScreen(container: AppContainer) {
     }
   }
 
+  DisposableEffect(context, state.appUpdateDownloadId) {
+    val receiver = object : BroadcastReceiver() {
+      override fun onReceive(receiverContext: Context, intent: Intent) {
+        if (intent.action != DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
+          return
+        }
+
+        val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L)
+
+        if (downloadId > 0L) {
+          viewModel.onAppUpdateDownloadCompleted(downloadId)
+        }
+      }
+    }
+
+    val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+    } else {
+      @Suppress("DEPRECATION")
+      context.registerReceiver(receiver, filter)
+    }
+
+    onDispose {
+      runCatching { context.unregisterReceiver(receiver) }
+    }
+  }
+
   Box(modifier = Modifier.fillMaxSize()) {
     SyncBackdrop()
 
@@ -224,6 +260,8 @@ fun SyncScreen(container: AppContainer) {
             state = state,
             onToggleDarkMode = viewModel::setDarkModeEnabled,
             onToggleBackgroundSync = viewModel::setBackgroundSyncEnabled,
+            onCheckForAppUpdate = { viewModel.checkForAppUpdate(showUpToDateMessage = true) },
+            onStartAppUpdate = viewModel::startAppUpdateDownload,
             onSyncNow = viewModel::syncNow,
             onRefreshStatus = viewModel::refreshConnectionStatus,
             onDisconnect = viewModel::disconnect
@@ -518,6 +556,8 @@ private fun SettingsTab(
   state: SyncUiState,
   onToggleDarkMode: (Boolean) -> Unit,
   onToggleBackgroundSync: (Boolean) -> Unit,
+  onCheckForAppUpdate: () -> Unit,
+  onStartAppUpdate: () -> Unit,
   onSyncNow: () -> Unit,
   onRefreshStatus: () -> Unit,
   onDisconnect: () -> Unit
@@ -551,6 +591,11 @@ private fun SettingsTab(
             text = state.dashboard.deviceName.ifBlank { "Android device" },
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
+          )
+          Text(
+            text = "Versione app ${BuildConfig.VERSION_NAME}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
           )
           Text(
             text = state.dashboard.deviceId.ifBlank { "Non ancora registrato" },
@@ -621,6 +666,59 @@ private fun SettingsTab(
             title = "Cartelle collegate",
             subtitle = "${state.dashboard.mappings.size} configurate su questo dispositivo"
           )
+        }
+      }
+    }
+
+    item {
+      SectionLabel(icon = Icons.Rounded.Notifications, text = "Aggiornamenti")
+    }
+
+    item {
+      Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.medium
+      ) {
+        Column(
+          modifier = Modifier.padding(20.dp),
+          verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+          val availableUpdate = state.appUpdate
+
+          Text(
+            text = if (availableUpdate != null) {
+              "È disponibile Routy Sync ${availableUpdate.versionName}"
+            } else {
+              "Nessun aggiornamento disponibile"
+            },
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+          )
+          Text(
+            text = if (availableUpdate != null) {
+              "Scarica l'APK pubblicato su GitHub e apri l'installer appena il download termina."
+            } else {
+              "Controlla le build pubblicate su GitHub senza uscire dall'app."
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+          )
+          Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Button(
+              onClick = onCheckForAppUpdate,
+              enabled = !state.checkingForAppUpdate
+            ) {
+              Text(if (state.checkingForAppUpdate) "Controllo..." else "Controlla ora")
+            }
+            if (availableUpdate != null) {
+              TextButton(onClick = onStartAppUpdate) {
+                Text("Scarica APK")
+              }
+            }
+          }
         }
       }
     }

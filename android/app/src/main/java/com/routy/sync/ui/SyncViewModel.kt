@@ -6,10 +6,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.routy.sync.AppContainer
+import com.routy.sync.BuildConfig
 import com.routy.sync.SyncDashboardState
 import com.routy.sync.SyncRepository
 import com.routy.sync.SyncTransferProgress
 import com.routy.sync.data.SyncPreferences
+import com.routy.sync.update.AndroidAppUpdateInfo
+import com.routy.sync.update.AndroidAppUpdater
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,13 +26,17 @@ data class SyncUiState(
   val darkModeEnabled: Boolean = false,
   val backgroundSyncEnabled: Boolean = true,
   val syncProgress: SyncTransferProgress? = null,
+  val checkingForAppUpdate: Boolean = false,
+  val appUpdate: AndroidAppUpdateInfo? = null,
+  val appUpdateDownloadId: Long? = null,
   val busy: Boolean = false,
   val message: String? = null
 )
 
 class SyncViewModel(
   private val repository: SyncRepository,
-  private val preferences: SyncPreferences
+  private val preferences: SyncPreferences,
+  private val appUpdater: AndroidAppUpdater
 ) : ViewModel() {
   private val _uiState = MutableStateFlow(SyncUiState())
   val uiState: StateFlow<SyncUiState> = _uiState.asStateFlow()
@@ -68,6 +75,8 @@ class SyncViewModel(
         refreshHostStatusSilently()
       }
     }
+
+    checkForAppUpdate()
   }
 
   fun pairFromQrPayload(rawValue: String) {
@@ -206,6 +215,83 @@ class SyncViewModel(
     }
   }
 
+  fun checkForAppUpdate(showUpToDateMessage: Boolean = false) {
+    viewModelScope.launch {
+      _uiState.update { it.copy(checkingForAppUpdate = true) }
+
+      try {
+        val update = appUpdater.checkForUpdate(BuildConfig.VERSION_NAME)
+        _uiState.update { current ->
+          current.copy(
+            checkingForAppUpdate = false,
+            appUpdate = update,
+            message = when {
+              update != null -> "È disponibile Routy Sync ${update.versionName}."
+              showUpToDateMessage -> "App già aggiornata."
+              else -> current.message
+            }
+          )
+        }
+      } catch (error: Exception) {
+        _uiState.update {
+          it.copy(
+            checkingForAppUpdate = false,
+            message = error.message ?: "Controllo aggiornamenti non riuscito."
+          )
+        }
+      }
+    }
+  }
+
+  fun startAppUpdateDownload() {
+    val update = _uiState.value.appUpdate ?: return
+
+    if (!appUpdater.canRequestPackageInstalls()) {
+      appUpdater.openInstallPermissionSettings()
+      _uiState.update {
+        it.copy(message = "Abilita l'installazione da questa app e riprova.")
+      }
+      return
+    }
+
+    try {
+      val downloadId = appUpdater.enqueueUpdateDownload(update)
+      _uiState.update {
+        it.copy(
+          appUpdateDownloadId = downloadId,
+          message = "Download aggiornamento avviato."
+        )
+      }
+    } catch (error: Exception) {
+      _uiState.update {
+        it.copy(message = error.message ?: "Download aggiornamento non riuscito.")
+      }
+    }
+  }
+
+  fun onAppUpdateDownloadCompleted(downloadId: Long) {
+    if (_uiState.value.appUpdateDownloadId != downloadId) {
+      return
+    }
+
+    val installed = runCatching { appUpdater.installDownloadedUpdate(downloadId) }.getOrElse { error ->
+      _uiState.update {
+        it.copy(
+          appUpdateDownloadId = null,
+          message = error.message ?: "Installazione aggiornamento non riuscita."
+        )
+      }
+      return
+    }
+
+    _uiState.update {
+      it.copy(
+        appUpdateDownloadId = null,
+        message = if (installed) "Installer APK aperto." else "Download completato ma installer non disponibile."
+      )
+    }
+  }
+
   private suspend fun refreshHostStatusSilently() {
     val isConfigured = repository.getLocalRuntimeConfig().isConfigured
 
@@ -238,7 +324,7 @@ class SyncViewModel(
     fun factory(container: AppContainer) = object : ViewModelProvider.Factory {
       @Suppress("UNCHECKED_CAST")
       override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return SyncViewModel(container.repository, container.preferences) as T
+        return SyncViewModel(container.repository, container.preferences, container.appUpdater) as T
       }
     }
   }

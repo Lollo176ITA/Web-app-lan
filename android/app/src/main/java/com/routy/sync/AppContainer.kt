@@ -8,6 +8,7 @@ import com.routy.sync.data.SyncPreferences
 import com.routy.sync.net.SyncApiClient
 import com.routy.sync.runtime.CurrentWifiProvider
 import com.routy.sync.runtime.SetupNotificationManager
+import com.routy.sync.update.AndroidAppUpdater
 
 class AppContainer(context: Context) {
   private val appContext = context.applicationContext
@@ -18,6 +19,7 @@ class AppContainer(context: Context) {
   val wifiProvider: CurrentWifiProvider by lazy { CurrentWifiProvider(appContext) }
   val notificationManager: SetupNotificationManager by lazy { SetupNotificationManager(appContext) }
   val apiClient: SyncApiClient by lazy { SyncApiClient(appContext.contentResolver) }
+  val appUpdater: AndroidAppUpdater by lazy { AndroidAppUpdater(appContext) }
   val documentTreePlanner: DocumentTreePlanner by lazy { DocumentTreePlanner(appContext) }
   val repository: SyncRepository by lazy {
     SyncRepository(
