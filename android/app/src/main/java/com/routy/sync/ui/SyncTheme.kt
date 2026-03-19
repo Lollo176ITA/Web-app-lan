@@ -117,9 +117,12 @@ private val SyncShapes = Shapes(
 )
 
 @Composable
-fun RoutySyncTheme(content: @Composable () -> Unit) {
+fun RoutySyncTheme(
+  darkTheme: Boolean? = null,
+  content: @Composable () -> Unit
+) {
   MaterialTheme(
-    colorScheme = if (isSystemInDarkTheme()) DarkColors else LightColors,
+    colorScheme = if (darkTheme ?: isSystemInDarkTheme()) DarkColors else LightColors,
     typography = SyncTypography,
     shapes = SyncShapes,
     content = content

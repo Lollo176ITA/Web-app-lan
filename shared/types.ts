@@ -321,10 +321,24 @@ export interface SyncJobSummary {
   failedCount: number;
 }
 
+export interface SyncActiveUploadSummary {
+  deviceId: string;
+  deviceName: string;
+  mappingId: string;
+  mappingSourceName: string;
+  startedAt: string;
+  uploadedBytes: number;
+  totalBytes: number;
+  uploadedFiles: number;
+  totalFiles: number;
+  percentage: number;
+}
+
 export interface SyncOverviewResponse {
   activePairingCode: CreatePairingCodeResponse | null;
   devices: SyncDeviceSummary[];
   jobs: SyncJobSummary[];
+  activeUploads: SyncActiveUploadSummary[];
 }
 
 export interface RegisterSyncDeviceRequest {
@@ -382,4 +396,11 @@ export interface SyncUploadResponse {
   failedCount: number;
   lastSyncedAt: string;
   mapping: SyncFolderMapping;
+}
+
+export interface UpdateSyncUploadProgressRequest {
+  uploadedBytes: number;
+  totalBytes: number;
+  uploadedFiles: number;
+  totalFiles: number;
 }

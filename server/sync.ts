@@ -7,6 +7,7 @@ import type {
   PlanSyncMappingEntry,
   PlanSyncMappingResponse,
   RegisterSyncDeviceResponse,
+  SyncActiveUploadSummary,
   SyncDeviceConfigResponse,
   SyncDeviceSummary,
   SyncFolderMapping,
@@ -93,6 +94,7 @@ export class SyncStore {
   readonly manifestPath: string;
   private devices: PersistedSyncDeviceRecord[] = [];
   private jobs: SyncJobSummary[] = [];
+  private activeUploads: SyncActiveUploadSummary[] = [];
   private activePairingCode: ActivePairingCodeRecord | null = null;
 
   constructor(private readonly rootDir: string) {
@@ -119,7 +121,8 @@ export class SyncStore {
     return {
       activePairingCode: this.activePairingCode,
       devices: this.devices.map((device) => this.toDeviceSummary(device)),
-      jobs: [...this.jobs]
+      jobs: [...this.jobs],
+      activeUploads: [...this.activeUploads]
     };
   }
 
@@ -273,8 +276,62 @@ export class SyncStore {
 
     this.devices = nextDevices;
     this.jobs = this.jobs.filter((job) => job.deviceId !== deviceId);
+    this.activeUploads = this.activeUploads.filter((upload) => upload.deviceId !== deviceId);
     await this.persist();
     return true;
+  }
+
+  updateActiveUploadProgress(
+    deviceId: string,
+    mappingId: string,
+    progress: {
+      uploadedBytes: number;
+      totalBytes: number;
+      uploadedFiles: number;
+      totalFiles: number;
+    }
+  ) {
+    const { device, mapping } = this.requireMapping(deviceId, mappingId);
+    if (progress.totalBytes <= 0 || progress.totalFiles <= 0) {
+      this.clearActiveUploadProgress(deviceId, mappingId);
+      return;
+    }
+
+    const totalBytes = Math.max(progress.totalBytes, 0);
+    const uploadedBytes = Math.min(Math.max(progress.uploadedBytes, 0), totalBytes);
+    const totalFiles = Math.max(progress.totalFiles, 0);
+    const uploadedFiles = Math.min(Math.max(progress.uploadedFiles, 0), totalFiles);
+    const percentage = totalBytes > 0 ? Math.min(100, Math.round((uploadedBytes / totalBytes) * 100)) : 0;
+    const existing = this.activeUploads.find((upload) => upload.deviceId === deviceId && upload.mappingId === mappingId);
+
+    if (existing) {
+      existing.uploadedBytes = uploadedBytes;
+      existing.totalBytes = totalBytes;
+      existing.uploadedFiles = uploadedFiles;
+      existing.totalFiles = totalFiles;
+      existing.percentage = percentage;
+      existing.startedAt ||= new Date().toISOString();
+    } else {
+      this.activeUploads = [
+        {
+          deviceId,
+          deviceName: device.deviceName,
+          mappingId,
+          mappingSourceName: mapping.sourceName,
+          startedAt: new Date().toISOString(),
+          uploadedBytes,
+          totalBytes,
+          uploadedFiles,
+          totalFiles,
+          percentage
+        },
+        ...this.activeUploads
+      ];
+    }
+  }
+
+  clearActiveUploadProgress(deviceId: string, mappingId: string) {
+    this.activeUploads = this.activeUploads.filter((upload) => !(upload.deviceId === deviceId && upload.mappingId === mappingId));
   }
 
   async planMapping(
@@ -365,6 +422,7 @@ export class SyncStore {
     mapping.lastSyncedAt = completedAt;
     this.markDeviceSeen(device, completedAt);
     device.lastSyncAt = completedAt;
+    this.clearActiveUploadProgress(deviceId, mappingId);
     this.jobs = [
       {
         id: nanoid(10),

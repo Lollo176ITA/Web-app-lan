@@ -22,6 +22,10 @@ class SyncWorker(
         return Result.success()
       }
 
+      if (!runtimeConfig.backgroundSyncEnabled) {
+        return Result.success()
+      }
+
       if (!wifiProvider.isWifiConnected()) {
         return Result.success()
       }

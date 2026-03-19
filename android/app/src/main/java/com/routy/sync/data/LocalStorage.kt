@@ -1,6 +1,7 @@
 package com.routy.sync.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -70,7 +71,9 @@ abstract class SyncDatabase : RoomDatabase() {
 data class SyncPreferencesState(
   val hostUrl: String = "",
   val deviceId: String = "",
-  val deviceName: String = ""
+  val deviceName: String = "",
+  val darkModeEnabled: Boolean = false,
+  val backgroundSyncEnabled: Boolean = true
 ) {
   val isConfigured: Boolean
     get() = hostUrl.isNotBlank() && deviceId.isNotBlank()
@@ -97,7 +100,9 @@ class SyncPreferences(private val context: Context) {
         SyncPreferencesState(
           hostUrl = preferences[HOST_URL] ?: "",
           deviceId = preferences[DEVICE_ID] ?: "",
-          deviceName = preferences[DEVICE_NAME] ?: ""
+          deviceName = preferences[DEVICE_NAME] ?: "",
+          darkModeEnabled = preferences[DARK_MODE_ENABLED] ?: false,
+          backgroundSyncEnabled = preferences[BACKGROUND_SYNC_ENABLED] ?: true
         )
       }
 
@@ -117,10 +122,24 @@ class SyncPreferences(private val context: Context) {
     }
   }
 
+  suspend fun setDarkModeEnabled(enabled: Boolean) {
+    dataStore.edit { preferences ->
+      preferences[DARK_MODE_ENABLED] = enabled
+    }
+  }
+
+  suspend fun setBackgroundSyncEnabled(enabled: Boolean) {
+    dataStore.edit { preferences ->
+      preferences[BACKGROUND_SYNC_ENABLED] = enabled
+    }
+  }
+
   companion object {
     private val HOST_URL = stringPreferencesKey("host_url")
     private val DEVICE_ID = stringPreferencesKey("device_id")
     private val DEVICE_NAME = stringPreferencesKey("device_name")
+    private val DARK_MODE_ENABLED = booleanPreferencesKey("dark_mode_enabled")
+    private val BACKGROUND_SYNC_ENABLED = booleanPreferencesKey("background_sync_enabled")
   }
 }
 

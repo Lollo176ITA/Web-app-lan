@@ -35,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Devices
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Info
@@ -60,6 +61,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -120,7 +122,7 @@ fun SyncScreen(container: AppContainer) {
   var selectedTabName by rememberSaveable { mutableStateOf(SyncTab.Qr.name) }
   var manualPairingVisible by rememberSaveable { mutableStateOf(false) }
   val selectedTab = remember(selectedTabName) { SyncTab.valueOf(selectedTabName) }
-  val keepAliveInBackground = state.dashboard.isConfigured && state.dashboard.mappings.isNotEmpty()
+  val keepAliveInBackground = state.backgroundSyncEnabled && state.dashboard.isConfigured && state.dashboard.mappings.isNotEmpty()
 
   val folderPicker = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.OpenDocumentTree()
@@ -187,6 +189,10 @@ fun SyncScreen(container: AppContainer) {
       ) {
         SyncTopBar()
 
+        if (state.syncProgress != null) {
+          UploadProgressBanner(progress = state.syncProgress)
+        }
+
         if (state.busy) {
           LinearProgressIndicator(
             modifier = Modifier.fillMaxWidth(),
@@ -214,6 +220,9 @@ fun SyncScreen(container: AppContainer) {
 
           SyncTab.Settings -> SettingsTab(
             state = state,
+            onToggleDarkMode = viewModel::setDarkModeEnabled,
+            onToggleBackgroundSync = viewModel::setBackgroundSyncEnabled,
+            onSyncNow = viewModel::syncNow,
             onRefreshStatus = viewModel::refreshConnectionStatus,
             onDisconnect = viewModel::disconnect
           )
@@ -505,6 +514,9 @@ private fun ActivityTab(state: SyncUiState) {
 @Composable
 private fun SettingsTab(
   state: SyncUiState,
+  onToggleDarkMode: (Boolean) -> Unit,
+  onToggleBackgroundSync: (Boolean) -> Unit,
+  onSyncNow: () -> Unit,
   onRefreshStatus: () -> Unit,
   onDisconnect: () -> Unit
 ) {
@@ -565,7 +577,7 @@ private fun SettingsTab(
     }
 
     item {
-      SectionLabel(icon = Icons.Rounded.Sync, text = "Rete e sincronizzazione")
+      SectionLabel(icon = Icons.Rounded.DarkMode, text = "Aspetto")
     }
 
     item {
@@ -574,19 +586,33 @@ private fun SettingsTab(
         shape = MaterialTheme.shapes.medium
       ) {
         Column(modifier = Modifier.padding(8.dp)) {
-          SettingsRow(
-            icon = Icons.Rounded.Link,
-            title = "Host",
-            subtitle = state.dashboard.hostUrl.ifBlank { "Nessun host collegato" }
+          ToggleRow(
+            icon = Icons.Rounded.DarkMode,
+            title = "Dark mode",
+            subtitle = "Usa sempre il tema scuro nell'app Android.",
+            checked = state.darkModeEnabled,
+            onCheckedChange = onToggleDarkMode
           )
-          SettingsRow(
+        }
+      }
+    }
+
+    item {
+      SectionLabel(icon = Icons.Rounded.Sync, text = "Comportamento")
+    }
+
+    item {
+      Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.medium
+      ) {
+        Column(modifier = Modifier.padding(8.dp)) {
+          ToggleRow(
             icon = Icons.Rounded.Wifi,
-            title = "Background sync",
-            subtitle = if (state.dashboard.mappings.isNotEmpty()) {
-              "Attiva finché esiste almeno una cartella collegata"
-            } else {
-              "Si attiva quando aggiungi una cartella"
-            }
+            title = "Sync in background",
+            subtitle = "Continua a sincronizzare quando l'app non è aperta.",
+            checked = state.backgroundSyncEnabled,
+            onCheckedChange = onToggleBackgroundSync
           )
           SettingsRow(
             icon = Icons.Rounded.FolderOpen,
@@ -609,6 +635,13 @@ private fun SettingsTab(
         Column(modifier = Modifier.padding(8.dp)) {
           ActionRow(
             icon = Icons.Rounded.Sync,
+            title = "Sincronizza ora",
+            subtitle = "Forza subito un ciclo di upload verso l'host.",
+            onClick = onSyncNow,
+            enabled = !state.busy && state.dashboard.isConfigured
+          )
+          ActionRow(
+            icon = Icons.Rounded.Sync,
             title = "Aggiorna stato host",
             subtitle = "Ricarica configurazione remota e reachability",
             onClick = onRefreshStatus,
@@ -624,6 +657,59 @@ private fun SettingsTab(
           )
         }
       }
+    }
+  }
+}
+
+@Composable
+private fun UploadProgressBanner(progress: com.routy.sync.SyncTransferProgress) {
+  Surface(
+    modifier = Modifier
+      .fillMaxWidth()
+      .padding(horizontal = 20.dp, vertical = 4.dp),
+    color = MaterialTheme.colorScheme.surfaceContainerLow,
+    shape = MaterialTheme.shapes.medium
+  ) {
+    Column(
+      modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+      verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Column(modifier = Modifier.weight(1f)) {
+          Text(
+            text = "Caricamento ${progress.mappingName}",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+          )
+          Text(
+            text = "${progress.uploadedFiles}/${progress.totalFiles} file • ${formatBytes(progress.uploadedBytes)} / ${formatBytes(progress.totalBytes)}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+          )
+        }
+        Text(
+          text = "${progress.percentage}%",
+          style = MaterialTheme.typography.titleMedium,
+          fontWeight = FontWeight.Bold,
+          color = MaterialTheme.colorScheme.primary
+        )
+      }
+
+      LinearProgressIndicator(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(10.dp)
+          .clip(RoundedCornerShape(999.dp)),
+        progress = { progress.percentage / 100f },
+        color = MaterialTheme.colorScheme.primary,
+        trackColor = MaterialTheme.colorScheme.surfaceContainerHigh
+      )
     }
   }
 }
@@ -1079,6 +1165,47 @@ private fun SettingsRow(
 }
 
 @Composable
+private fun ToggleRow(
+  icon: ImageVector,
+  title: String,
+  subtitle: String,
+  checked: Boolean,
+  onCheckedChange: (Boolean) -> Unit
+) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .padding(horizontal = 12.dp, vertical = 12.dp),
+    horizontalArrangement = Arrangement.spacedBy(14.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Surface(
+      modifier = Modifier.size(42.dp),
+      color = MaterialTheme.colorScheme.surfaceContainerLowest,
+      shape = RoundedCornerShape(16.dp)
+    ) {
+      Box(contentAlignment = Alignment.Center) {
+        Icon(
+          imageVector = icon,
+          contentDescription = null,
+          tint = MaterialTheme.colorScheme.primary
+        )
+      }
+    }
+
+    Column(modifier = Modifier.weight(1f)) {
+      Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+      Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+
+    Switch(
+      checked = checked,
+      onCheckedChange = onCheckedChange
+    )
+  }
+}
+
+@Composable
 private fun ActionRow(
   icon: ImageVector,
   title: String,
@@ -1485,6 +1612,15 @@ private fun buildPairingScanOptions() =
 
 private fun prettyHostLabel(hostUrl: String): String =
   Uri.parse(hostUrl).host?.substringBefore(".")?.replaceFirstChar { it.uppercase() } ?: hostUrl
+
+private fun formatBytes(value: Long): String {
+  val mb = value / (1024f * 1024f)
+  return if (mb >= 1024f) {
+    String.format(java.util.Locale.US, "%.2f GB", mb / 1024f)
+  } else {
+    String.format(java.util.Locale.US, "%.1f MB", mb)
+  }
+}
 
 private fun formatEpoch(value: Long): String =
   java.text.SimpleDateFormat("dd/MM HH:mm", java.util.Locale.ITALY).format(java.util.Date(value))

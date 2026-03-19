@@ -8,20 +8,29 @@ import androidx.lifecycle.viewModelScope
 import com.routy.sync.AppContainer
 import com.routy.sync.SyncDashboardState
 import com.routy.sync.SyncRepository
+import com.routy.sync.SyncTransferProgress
+import com.routy.sync.data.SyncPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class SyncUiState(
   val dashboard: SyncDashboardState = SyncDashboardState(),
   val hostReachable: Boolean? = null,
+  val darkModeEnabled: Boolean = false,
+  val backgroundSyncEnabled: Boolean = true,
+  val syncProgress: SyncTransferProgress? = null,
   val busy: Boolean = false,
   val message: String? = null
 )
 
-class SyncViewModel(private val repository: SyncRepository) : ViewModel() {
+class SyncViewModel(
+  private val repository: SyncRepository,
+  private val preferences: SyncPreferences
+) : ViewModel() {
   private val _uiState = MutableStateFlow(SyncUiState())
   val uiState: StateFlow<SyncUiState> = _uiState.asStateFlow()
 
@@ -33,6 +42,23 @@ class SyncViewModel(private val repository: SyncRepository) : ViewModel() {
             dashboard = dashboard
           )
         }
+      }
+    }
+
+    viewModelScope.launch {
+      preferences.state.collect { settings ->
+        _uiState.update { current ->
+          current.copy(
+            darkModeEnabled = settings.darkModeEnabled,
+            backgroundSyncEnabled = settings.backgroundSyncEnabled
+          )
+        }
+      }
+    }
+
+    viewModelScope.launch {
+      repository.observeSyncProgress().collect { progress ->
+        _uiState.update { it.copy(syncProgress = progress) }
       }
     }
 
@@ -121,6 +147,31 @@ class SyncViewModel(private val repository: SyncRepository) : ViewModel() {
     }
   }
 
+  fun setDarkModeEnabled(enabled: Boolean) {
+    viewModelScope.launch {
+      repository.setDarkModeEnabled(enabled)
+    }
+  }
+
+  fun setBackgroundSyncEnabled(enabled: Boolean) {
+    viewModelScope.launch {
+      repository.setBackgroundSyncEnabled(enabled)
+      _uiState.update {
+        it.copy(
+          message = if (enabled) "Sync in background attivata." else "Sync in background disattivata."
+        )
+      }
+    }
+  }
+
+  fun syncNow() {
+    runTask("Sync completata.") {
+      repository.syncAll()
+      repository.refreshRemoteState()
+      refreshHostStatusSilently()
+    }
+  }
+
   private fun pairWithCredentials(hostUrl: String, pairingCode: String) {
     runTask("Pairing completato.") {
       repository.registerDevice(
@@ -187,7 +238,7 @@ class SyncViewModel(private val repository: SyncRepository) : ViewModel() {
     fun factory(container: AppContainer) = object : ViewModelProvider.Factory {
       @Suppress("UNCHECKED_CAST")
       override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return SyncViewModel(container.repository) as T
+        return SyncViewModel(container.repository, container.preferences) as T
       }
     }
   }

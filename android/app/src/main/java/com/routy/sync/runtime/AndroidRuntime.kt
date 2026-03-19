@@ -166,6 +166,10 @@ class WifiConnectivityMonitor(
         return@launch
       }
 
+      if (!runtimeConfig.backgroundSyncEnabled) {
+        return@launch
+      }
+
       val startedAt = System.currentTimeMillis()
 
       if (startedAt - lastAutoSyncStartedAt < AUTO_SYNC_DEBOUNCE_MS) {

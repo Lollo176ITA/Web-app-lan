@@ -13,6 +13,8 @@ import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.BufferedSink
+import okio.ForwardingSink
+import okio.buffer
 import okio.source
 import org.json.JSONArray
 import org.json.JSONObject
@@ -53,6 +55,16 @@ data class UploadMappingResult(
   val failedCount: Int,
   val lastSyncedAt: String
 )
+
+data class SyncUploadProgressSnapshot(
+  val uploadedBytes: Long,
+  val totalBytes: Long,
+  val uploadedFiles: Int,
+  val totalFiles: Int
+) {
+  val percentage: Int
+    get() = if (totalBytes <= 0L) 0 else ((uploadedBytes * 100) / totalBytes).coerceIn(0L, 100L).toInt()
+}
 
 data class UploadableEntry(
   val relativePath: String,
@@ -171,19 +183,54 @@ class SyncApiClient(private val contentResolver: ContentResolver) {
     hostUrl: String,
     authToken: String,
     mappingId: String,
-    entries: List<UploadableEntry>
+    entries: List<UploadableEntry>,
+    onProgress: ((SyncUploadProgressSnapshot) -> Unit)? = null
   ) = withContext(Dispatchers.IO) {
+    val totalBytes = entries.sumOf { entry -> maxOf(entry.sizeBytes, 1L) }
+    val uploadedBytesByIndex = LongArray(entries.size)
+    var lastPercentage = -1
+
+    fun emitProgress() {
+      val uploadedBytes = uploadedBytesByIndex.sum()
+      val uploadedFiles = entries.indices.count { index ->
+        uploadedBytesByIndex[index] >= maxOf(entries[index].sizeBytes, 1L)
+      }
+      val snapshot = SyncUploadProgressSnapshot(
+        uploadedBytes = uploadedBytes,
+        totalBytes = totalBytes,
+        uploadedFiles = uploadedFiles,
+        totalFiles = entries.size
+      )
+
+      if (snapshot.percentage != lastPercentage || snapshot.uploadedFiles == snapshot.totalFiles) {
+        lastPercentage = snapshot.percentage
+        onProgress?.invoke(snapshot)
+      }
+    }
+
     val multipartBody = MultipartBody.Builder().setType(MultipartBody.FORM).apply {
-      entries.forEach { entry ->
+      entries.forEachIndexed { index, entry ->
         addFormDataPart("relativePaths", entry.relativePath)
         addFormDataPart("modifiedAtMs", entry.modifiedAtMs.toString())
         addFormDataPart(
           "files",
           entry.relativePath.substringAfterLast("/"),
-          ContentUriRequestBody(contentResolver, entry.documentUri, entry.mimeType)
+          ContentUriRequestBody(contentResolver, entry.documentUri, entry.mimeType) { writtenForFile ->
+            uploadedBytesByIndex[index] = minOf(writtenForFile, maxOf(entry.sizeBytes, 1L))
+            emitProgress()
+          }
         )
       }
     }.build()
+
+    onProgress?.invoke(
+      SyncUploadProgressSnapshot(
+        uploadedBytes = 0L,
+        totalBytes = totalBytes,
+        uploadedFiles = 0,
+        totalFiles = entries.size
+      )
+    )
 
     val response = executeJson(
       Request.Builder()
@@ -198,6 +245,50 @@ class SyncApiClient(private val contentResolver: ContentResolver) {
       skippedCount = response.getInt("skippedCount"),
       failedCount = response.getInt("failedCount"),
       lastSyncedAt = response.getString("lastSyncedAt")
+    )
+  }
+
+  suspend fun reportUploadProgress(
+    hostUrl: String,
+    authToken: String,
+    mappingId: String,
+    snapshot: SyncUploadProgressSnapshot
+  ) = withContext(Dispatchers.IO) {
+    val payload = JSONObject()
+      .put("uploadedBytes", snapshot.uploadedBytes)
+      .put("totalBytes", snapshot.totalBytes)
+      .put("uploadedFiles", snapshot.uploadedFiles)
+      .put("totalFiles", snapshot.totalFiles)
+
+    executeJson(
+      Request.Builder()
+        .url(buildUrl(hostUrl, "/api/sync/mappings/$mappingId/progress"))
+        .header("Authorization", "Bearer $authToken")
+        .put(payload.toString().toRequestBody(JSON_MEDIA_TYPE))
+        .build()
+    )
+  }
+
+  suspend fun clearUploadProgress(
+    hostUrl: String,
+    authToken: String,
+    mappingId: String
+  ) = withContext(Dispatchers.IO) {
+    // Report 100% before cleanup so the host page sees a completed state briefly.
+    executeJson(
+      Request.Builder()
+        .url(buildUrl(hostUrl, "/api/sync/mappings/$mappingId/progress"))
+        .header("Authorization", "Bearer $authToken")
+        .put(
+          JSONObject()
+            .put("uploadedBytes", 0)
+            .put("totalBytes", 0)
+            .put("uploadedFiles", 0)
+            .put("totalFiles", 0)
+            .toString()
+            .toRequestBody(JSON_MEDIA_TYPE)
+        )
+        .build()
     )
   }
 
@@ -254,13 +345,24 @@ class SyncApiClient(private val contentResolver: ContentResolver) {
   private class ContentUriRequestBody(
     private val contentResolver: ContentResolver,
     private val uri: Uri,
-    private val mimeType: String
+    private val mimeType: String,
+    private val onBytesWritten: ((Long) -> Unit)? = null
   ) : RequestBody() {
     override fun contentType() = mimeType.toMediaTypeOrNull()
 
     override fun writeTo(sink: BufferedSink) {
       contentResolver.openInputStream(uri)?.use { input ->
-        sink.writeAll(input.source())
+        var written = 0L
+        val countingSink = object : ForwardingSink(sink) {
+          override fun write(source: okio.Buffer, byteCount: Long) {
+            super.write(source, byteCount)
+            written += byteCount
+            onBytesWritten?.invoke(written)
+          }
+        }.buffer()
+
+        countingSink.writeAll(input.source())
+        countingSink.flush()
       } ?: throw IOException("Unable to read $uri")
     }
   }

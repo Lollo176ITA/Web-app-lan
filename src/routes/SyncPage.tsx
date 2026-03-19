@@ -13,6 +13,7 @@ import {
   Card,
   CardContent,
   Container,
+  LinearProgress,
   Snackbar,
   Stack,
   Typography
@@ -103,11 +104,14 @@ export function SyncPage() {
       onFallback: () => {
         const pollingId = window.setInterval(() => {
           void syncData();
-        }, 15000);
+        }, 5000);
 
         return () => {
           window.clearInterval(pollingId);
         };
+      },
+      onOpen: () => {
+        void syncData();
       }
     },
     []
@@ -118,6 +122,19 @@ export function SyncPage() {
       setLoading(false);
       setSnackbar("Area sync non disponibile al momento.");
     });
+  }, []);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void syncData();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, []);
 
   async function handleCreatePairingCode() {
@@ -395,6 +412,42 @@ export function SyncPage() {
                 <CardContent>
                   <Stack spacing={2}>
                     <Typography variant="h5">Attivita recente</Typography>
+
+                    {overview.activeUploads.length > 0 ? (
+                      <Stack spacing={1.25}>
+                        {overview.activeUploads.map((upload) => (
+                          <Box
+                            key={`${upload.deviceId}-${upload.mappingId}`}
+                            sx={{
+                              p: 1.5,
+                              borderRadius: 2.5,
+                              border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.22 : 0.1)}`,
+                              bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.04)
+                            }}
+                          >
+                            <Stack spacing={1}>
+                              <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} justifyContent="space-between">
+                                <Box>
+                                  <Typography sx={{ fontWeight: 700 }}>
+                                    {upload.deviceName} sta sincronizzando {upload.mappingSourceName}
+                                  </Typography>
+                                  <Typography color="text.secondary">
+                                    {upload.uploadedFiles}/{upload.totalFiles} file • {(upload.uploadedBytes / (1024 * 1024)).toFixed(1)} /{" "}
+                                    {(upload.totalBytes / (1024 * 1024)).toFixed(1)} MB
+                                  </Typography>
+                                </Box>
+                                <Typography color="text.secondary">{upload.percentage}%</Typography>
+                              </Stack>
+                              <LinearProgress
+                                variant="determinate"
+                                value={upload.percentage}
+                                sx={{ height: 10, borderRadius: 999 }}
+                              />
+                            </Stack>
+                          </Box>
+                        ))}
+                      </Stack>
+                    ) : null}
 
                     {overview.jobs.length === 0 ? (
                       <Typography color="text.secondary">Nessun job sync registrato.</Typography>

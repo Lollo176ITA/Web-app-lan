@@ -1,7 +1,7 @@
 {
   "name": "routy",
-  "version": "2.6.3",
-  "androidAppVersion": "0.2.1",
+  "version": "2.7.0",
+  "androidAppVersion": "0.3.0",
   "license": "UNLICENSED",
   "private": true,
   "type": "module",

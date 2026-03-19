@@ -44,6 +44,7 @@ import type {
   SyncDeviceConfigResponse,
   SyncOverviewResponse,
   SyncUploadResponse,
+  UpdateSyncUploadProgressRequest,
   UpdateSyncFoldersRequest,
   SessionInfo,
   StreamRoomDetail,
@@ -618,6 +619,7 @@ export async function createApp(options: CreateAppOptions = {}) {
 
   app.post("/api/sync/mappings/:mappingId/upload", syncUpload.array("files"), async (request, response, next) => {
     const device = requireSyncDevice(request);
+    const mappingId = normalizeRouteParam(request.params.mappingId);
 
     if (!device) {
       response.status(401).json({ message: "Device sync non autenticato." });
@@ -636,7 +638,7 @@ export async function createApp(options: CreateAppOptions = {}) {
 
       const result: SyncUploadResponse = await sync.applyUpload(
         device.id,
-        normalizeRouteParam(request.params.mappingId),
+        mappingId,
         files.map((file, index) => ({
           relativePath: relativePaths[index] ?? file.originalname,
           sizeBytes: file.size,
@@ -649,6 +651,44 @@ export async function createApp(options: CreateAppOptions = {}) {
       broadcastLibraryUpdated();
       broadcastSyncUpdated();
       response.status(201).json(result);
+    } catch (error) {
+      sync.clearActiveUploadProgress(device.id, mappingId);
+      broadcastSyncUpdated();
+
+      if (error instanceof Error && error.message === "Unknown sync mapping") {
+        response.status(404).json({ message: "Mapping sync non trovato." });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
+  app.put("/api/sync/mappings/:mappingId/progress", (request, response, next) => {
+    const device = requireSyncDevice(request);
+
+    if (!device) {
+      response.status(401).json({ message: "Device sync non autenticato." });
+      return;
+    }
+
+    const payload = request.body as UpdateSyncUploadProgressRequest | undefined;
+
+    if (
+      !payload ||
+      typeof payload.uploadedBytes !== "number" ||
+      typeof payload.totalBytes !== "number" ||
+      typeof payload.uploadedFiles !== "number" ||
+      typeof payload.totalFiles !== "number"
+    ) {
+      response.status(400).json({ message: "Progress sync non valido." });
+      return;
+    }
+
+    try {
+      sync.updateActiveUploadProgress(device.id, normalizeRouteParam(request.params.mappingId), payload);
+      broadcastSyncUpdated();
+      response.status(204).end();
     } catch (error) {
       if (error instanceof Error && error.message === "Unknown sync mapping") {
         response.status(404).json({ message: "Mapping sync non trovato." });
