@@ -1477,9 +1477,10 @@ private fun SyncBackdrop() {
 private fun buildPairingScanOptions() =
   ScanOptions().apply {
     setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+    setCaptureActivity(ScannerCaptureActivity::class.java)
     setPrompt("Scansiona il QR dalla pagina Sync host")
     setBeepEnabled(false)
-    setOrientationLocked(false)
+    setOrientationLocked(true)
   }
 
 private fun prettyHostLabel(hostUrl: String): String =

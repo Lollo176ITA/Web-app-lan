@@ -159,14 +159,48 @@ jobs:
           See build-info.json for checksums and sizes.
           EOF
 
-          cd "$publish_dir"
-          git init -b "$TARGET_BRANCH"
+          repo_dir="$(mktemp -d)"
+          remote_url="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          snapshot_dir="archives/${GITHUB_RUN_NUMBER}-${GITHUB_SHA::7}"
+
+          if git ls-remote --exit-code --heads "$remote_url" "$TARGET_BRANCH" >/dev/null 2>&1; then
+            git clone --depth 1 --branch "$TARGET_BRANCH" "$remote_url" "$repo_dir"
+          else
+            git init "$repo_dir"
+            git -C "$repo_dir" checkout -b "$TARGET_BRANCH"
+            git -C "$repo_dir" remote add origin "$remote_url"
+          fi
+
+          mkdir -p "$repo_dir/latest" "$repo_dir/$snapshot_dir"
+          find "$repo_dir/latest" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+          find "$repo_dir/$snapshot_dir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+          cp -a "$publish_dir"/. "$repo_dir/latest/"
+          cp -a "$publish_dir"/. "$repo_dir/$snapshot_dir/"
+
+          cat > "$repo_dir/README.md" <<EOF
+          # android-release
+
+          Published Android builds from GitHub Actions.
+
+          - Latest snapshot: \`latest/\`
+          - Archived snapshots: \`archives/<run-number>-<commit>/\`
+          - Current source branch: ${GITHUB_REF_NAME}
+          - Current source commit: ${GITHUB_SHA}
+          - Current workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+
+          Each successful publish updates \`latest/\` and also stores an immutable copy in \`${snapshot_dir}/\`.
+          EOF
+
+          cd "$repo_dir"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "Build android-release from ${GITHUB_SHA}"
-          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push --force origin "HEAD:${TARGET_BRANCH}"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to publish."
+            exit 0
+          fi
+          git commit -m "Publish android-release build from ${GITHUB_SHA}"
+          git push origin "HEAD:${TARGET_BRANCH}"
 
       - name: Upload build reports
         if: always()
