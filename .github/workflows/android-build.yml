@@ -3,7 +3,13 @@ name: Android Build
 on:
   workflow_dispatch:
   push:
+    paths:
+      - ".github/workflows/android-build.yml"
+      - "android/**"
   pull_request:
+    paths:
+      - ".github/workflows/android-build.yml"
+      - "android/**"
 
 permissions:
   contents: write
@@ -24,6 +30,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -42,8 +50,36 @@ jobs:
       - name: Install Android SDK packages
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
+      - name: Determine Android version
+        id: android_version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version_name="$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).androidAppVersion")"
+          if [ -z "${version_name}" ] || [ "${version_name}" = "null" ]; then
+            echo "androidAppVersion missing in package.json" >&2
+            exit 1
+          fi
+
+          version_code="${GITHUB_RUN_NUMBER}"
+
+          {
+            echo "version_name=${version_name}"
+            echo "version_code=${version_code}"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build release APK and run unit tests
-        run: gradle -p android --no-daemon :app:assembleRelease :app:testDebugUnitTest -PciBuild=true
+        env:
+          ANDROID_VERSION_NAME: ${{ steps.android_version.outputs.version_name }}
+          ANDROID_VERSION_CODE: ${{ steps.android_version.outputs.version_code }}
+        run: >-
+          gradle -p android --no-daemon
+          :app:assembleRelease
+          :app:testDebugUnitTest
+          -PciBuild=true
+          -PandroidAppVersion=${ANDROID_VERSION_NAME}
+          -PversionCode=${ANDROID_VERSION_CODE}
 
       - name: Upload APK artifact
         if: success()

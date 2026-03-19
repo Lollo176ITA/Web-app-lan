@@ -1,0 +1,112 @@
+name: Tag version
+
+on:
+  workflow_run:
+    workflows:
+      - Desktop Builds
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  tag-version:
+    name: Tag version
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      contains(fromJSON('[]'), 'disabled') == false
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Ensure version tag only when web/desktop files changed
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          base_sha="${{ github.event.workflow_run.head_sha }}^"
+          if ! git rev-parse --verify "${base_sha}" >/dev/null 2>&1; then
+            echo "should_continue=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed="$(git diff --name-only "${base_sha}" "${{ github.event.workflow_run.head_sha }}")"
+
+          # Se sono cambiati SOLO file Android, non taggare la versione del sito/desktop.
+          non_android="$(printf '%s\n' "$changed" | grep -vE '^(android/|\.github/workflows/android-build\.yml$)' || true)"
+
+          if [ -z "$changed" ]; then
+            echo "should_continue=false" >> "$GITHUB_OUTPUT"
+          elif [ -z "$non_android" ]; then
+            echo "should_continue=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_continue=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip tag creation (out of scope)
+        if: steps.scope.outputs.should_continue != 'true'
+        run: 'echo "Skipping tag: only Android-related files changed."'
+
+      - name: Determine tag status
+        if: steps.scope.outputs.should_continue == 'true'
+        id: tag_status
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version")"
+          tag="v${version}"
+          should_tag=false
+          reason="package.json version was not changed in this commit"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+            reason="tag ${tag} already exists"
+          elif git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+            if git cat-file -e HEAD^:package.json 2>/dev/null; then
+              previous_version="$(git show HEAD^:package.json | node -p "const fs = require('fs'); JSON.parse(fs.readFileSync(0, 'utf8')).version")"
+
+              if [ "${previous_version}" != "${version}" ]; then
+                should_tag=true
+                reason="version changed from ${previous_version} to ${version}"
+              fi
+            else
+              should_tag=true
+              reason="package.json was added with version ${version}"
+            fi
+          else
+            should_tag=true
+            reason="initial commit with version ${version}"
+          fi
+
+          {
+            printf 'should_tag=%s\n' "${should_tag}"
+            printf 'version=%s\n' "${version}"
+            printf 'tag=%s\n' "${tag}"
+            printf 'reason=%s\n' "${reason}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Skip tag creation
+        if: steps.scope.outputs.should_continue == 'true' && steps.tag_status.outputs.should_tag != 'true'
+        run: echo "${{ steps.tag_status.outputs.reason }}"
+
+      - name: Create annotated tag
+        if: steps.scope.outputs.should_continue == 'true' && steps.tag_status.outputs.should_tag == 'true'
+        shell: bash
+        env:
+          TAG: ${{ steps.tag_status.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${TAG}" -m "Release ${TAG}"
+          git push origin "refs/tags/${TAG}"

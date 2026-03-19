@@ -14,8 +14,17 @@ android {
     applicationId = "com.routy.sync"
     minSdk = 29
     targetSdk = 35
-    versionCode = 1
-    versionName = "1.0"
+
+    // CI/local overrides
+    val ciVersionCode = providers.gradleProperty("versionCode").orNull?.toIntOrNull()
+    val ciVersionName = providers.gradleProperty("versionName").orNull
+
+    // Human-managed version (recommended): pass -PandroidAppVersion=<semver>
+    val manualAndroidVersionName = providers.gradleProperty("androidAppVersion").orNull
+
+    versionCode = ciVersionCode ?: 1
+    versionName = ciVersionName ?: manualAndroidVersionName ?: "0.1.0"
+
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
