@@ -1,9 +1,11 @@
 # android-release
 
-Android APK published from GitHub Actions.
+Published Android builds from GitHub Actions.
 
-- Source branch: main
-- Source commit: 2e407e264be106861bb601d23fde3a81a9df069b
-- Workflow run: https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23285792256
+- Latest snapshot: `latest/`
+- Archived snapshots: `archives/<run-number>-<commit>/`
+- Current source branch: main
+- Current source commit: 830d1ef4e7ce79edb49987a9ed35d210429133e8
+- Current workflow run: https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23287121438
 
-See build-info.json for checksums and sizes.
+Each successful publish updates `latest/` and also stores an immutable copy in `archives/16-830d1ef/`.

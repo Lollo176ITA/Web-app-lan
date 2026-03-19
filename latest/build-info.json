@@ -1,0 +1,13 @@
+{
+  "target": "android-release",
+  "sourceBranch": "main",
+  "sourceCommit": "830d1ef4e7ce79edb49987a9ed35d210429133e8",
+  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23287121438",
+  "files": [
+    {
+      "name": "app-release.apk",
+      "size": 3350392,
+      "sha256": "fb0c3e055b0da86de15ab5d32e180f9da47a469f7ba3ff5f3b86c5d6e97d0145"
+    }
+  ]
+}
