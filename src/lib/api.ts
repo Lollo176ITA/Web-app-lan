@@ -40,10 +40,16 @@ import type {
 const uploadTargetBatchBytes = 24 * 1024 * 1024;
 const uploadLargeFileThresholdBytes = 16 * 1024 * 1024;
 const uploadMaxBatchSize = 60;
+const uploadBatchConcurrency = 3;
 
 interface UploadEntry {
   file: File;
   relativePath: string;
+}
+
+interface UploadBatch {
+  entries: UploadEntry[];
+  batchBytes: number;
 }
 
 export interface UploadProgress {
@@ -145,6 +151,21 @@ function takeAdaptiveUploadBatch(entries: UploadEntry[], startIndex: number) {
   }
 
   return batch;
+}
+
+function buildUploadBatches(entries: UploadEntry[]) {
+  const batches: UploadBatch[] = [];
+
+  for (let index = 0; index < entries.length;) {
+    const batchEntries = takeAdaptiveUploadBatch(entries, index);
+    batches.push({
+      entries: batchEntries,
+      batchBytes: batchEntries.reduce((total, entry) => total + getUploadEntrySize(entry.file), 0)
+    });
+    index += batchEntries.length;
+  }
+
+  return batches;
 }
 
 async function uploadFileBatch(
@@ -474,14 +495,38 @@ export async function uploadFiles(files: File[], parentId?: string | null, optio
   }
 
   const uploadEntries = buildUploadEntries(files);
-  const items: UploadResponse["items"] = [];
   const totalFiles = uploadEntries.length;
   const totalBytes = uploadEntries.reduce((total, entry) => total + getUploadEntrySize(entry.file), 0);
-  const emitProgress = (
-    completedFiles: number,
-    uploadedBytes: number,
-    currentBatchFiles: number
-  ) => {
+  const batches = buildUploadBatches(uploadEntries);
+  const batchItems = Array.from({ length: batches.length }, () => [] as UploadResponse["items"]);
+  const batchLoadedBytes = new Array<number>(batches.length).fill(0);
+  const batchStarted = new Array<boolean>(batches.length).fill(false);
+  const batchCompleted = new Array<boolean>(batches.length).fill(false);
+  const abortController = new AbortController();
+  const handleAbort = () => {
+    abortController.abort();
+  };
+  let nextBatchIndex = 0;
+  let firstError: Error | null = null;
+
+  const emitProgress = () => {
+    let completedFiles = 0;
+    let uploadedBytes = 0;
+    let currentBatchFiles = 0;
+
+    batches.forEach((batch, index) => {
+      if (batchCompleted[index]) {
+        completedFiles += batch.entries.length;
+        uploadedBytes += batch.batchBytes;
+        return;
+      }
+
+      if (batchStarted[index]) {
+        currentBatchFiles += batch.entries.length;
+        uploadedBytes += Math.min(batchLoadedBytes[index] ?? 0, batch.batchBytes);
+      }
+    });
+
     options.onProgress?.({
       totalFiles,
       completedFiles,
@@ -492,39 +537,82 @@ export async function uploadFiles(files: File[], parentId?: string | null, optio
       percentage: totalBytes > 0 ? Math.min((uploadedBytes / totalBytes) * 100, 100) : 100
     });
   };
-  let completedFiles = 0;
-  let uploadedBytes = 0;
 
-  emitProgress(0, 0, 0);
+  const assignUploadError = (error: unknown) => {
+    if (firstError) {
+      return;
+    }
 
-  for (let index = 0; index < uploadEntries.length;) {
+    firstError = error instanceof Error ? error : new Error("Upload failed");
+  };
+
+  const runWorker = async () => {
+    while (true) {
+      if (abortController.signal.aborted) {
+        return;
+      }
+
+      const batchIndex = nextBatchIndex;
+      nextBatchIndex += 1;
+
+      if (batchIndex >= batches.length) {
+        return;
+      }
+
+      const batch = batches[batchIndex]!;
+
+      batchStarted[batchIndex] = true;
+      emitProgress();
+
+      try {
+        const response = await uploadFileBatch(
+          batch.entries,
+          parentId,
+          options.onProgress
+            ? (loadedBatchBytes) => {
+                batchLoadedBytes[batchIndex] = loadedBatchBytes;
+                emitProgress();
+              }
+            : undefined,
+          abortController.signal
+        );
+        batchItems[batchIndex] = response.items;
+        batchLoadedBytes[batchIndex] = batch.batchBytes;
+        batchCompleted[batchIndex] = true;
+        emitProgress();
+      } catch (error) {
+        assignUploadError(error);
+        abortController.abort();
+        return;
+      }
+    }
+  };
+
+  emitProgress();
+
+  if (options.signal?.aborted) {
+    throw createAbortError();
+  }
+
+  options.signal?.addEventListener("abort", handleAbort, { once: true });
+
+  try {
+    await Promise.allSettled(
+      Array.from({ length: Math.min(uploadBatchConcurrency, batches.length) }, () => runWorker())
+    );
+
+    if (firstError) {
+      throw firstError;
+    }
+
     if (options.signal?.aborted) {
       throw createAbortError();
     }
 
-    const batch = takeAdaptiveUploadBatch(uploadEntries, index);
-    const batchBytes = batch.reduce((total, entry) => total + getUploadEntrySize(entry.file), 0);
-
-    emitProgress(completedFiles, uploadedBytes, batch.length);
-
-    const response = await uploadFileBatch(
-      batch,
-      parentId,
-      options.onProgress
-        ? (loadedBatchBytes) => {
-            emitProgress(completedFiles, uploadedBytes + loadedBatchBytes, batch.length);
-          }
-        : undefined,
-      options.signal
-    );
-    items.push(...response.items);
-    completedFiles += batch.length;
-    uploadedBytes += batchBytes;
-    emitProgress(completedFiles, uploadedBytes, 0);
-    index += batch.length;
+    return { items: batchItems.flat() } satisfies UploadResponse;
+  } finally {
+    options.signal?.removeEventListener("abort", handleAbort);
   }
-
-  return { items } satisfies UploadResponse;
 }
 
 export function createArchive(itemId: string, format: ArchiveFormat) {

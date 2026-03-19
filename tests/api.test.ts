@@ -466,6 +466,39 @@ describe("Routeroom API", () => {
     close();
   });
 
+  it("supports ranged file downloads with attachment headers", async () => {
+    const storageRoot = await createTemporaryStorage();
+    const { app, close } = await createApp({ storageRoot });
+    const payload = Buffer.from("download-range-check");
+
+    const uploadResponse = await request(app)
+      .post("/api/items")
+      .attach("files", payload, {
+        filename: "range-note.txt",
+        contentType: "text/plain"
+      })
+      .expect(201);
+
+    const [{ id }] = uploadResponse.body.items as Array<{ id: string }>;
+
+    const downloadResponse = await request(app)
+      .get(`/api/items/${id}/download`)
+      .set("Range", "bytes=9-13")
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on("data", (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+        response.on("end", () => callback(null, Buffer.concat(chunks)));
+      })
+      .expect(206);
+
+    expect(downloadResponse.headers["accept-ranges"]).toBe("bytes");
+    expect(downloadResponse.headers["content-range"]).toBe(`bytes 9-13/${payload.length}`);
+    expect(downloadResponse.headers["content-disposition"]).toContain("attachment");
+    expect((downloadResponse.body as Buffer).toString("utf8")).toBe("range");
+    close();
+  });
+
   it("streams media with range support", async () => {
     const storageRoot = await createTemporaryStorage();
     const { app, close } = await createApp({ storageRoot });
@@ -900,6 +933,61 @@ describe("client upload api", () => {
     expect(response.items).toHaveLength(3);
     expect(calls.map((call) => call.relativePaths)).toEqual([["clip-a.mp4"], ["clip-b.mp4"], ["clip-c.mp4"]]);
     expect(calls.every((call) => call.parentId === null)).toBe(true);
+  });
+
+  it("uploads multiple large batches in parallel with bounded concurrency", async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const fetchMock = vi.fn(async (_resource: string | URL | Request, init?: RequestInit) => {
+      const body = init?.body;
+
+      expect(body).toBeInstanceOf(FormData);
+
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+
+      const relativePaths = (body as FormData).getAll("relativePaths").map((entry) => String(entry));
+
+      await delay(20);
+      inFlight -= 1;
+
+      return new Response(
+        JSON.stringify({
+          items: relativePaths.map((relativePath, index) => ({
+            id: `parallel-${relativePath}-${index}`,
+            name: relativePath,
+            storedName: `stored-${relativePath}-${index}`,
+            mimeType: "video/mp4",
+            kind: "video",
+            sizeBytes: 1,
+            createdAt: "2026-03-17T00:00:00.000Z",
+            parentId: null
+          }))
+        }),
+        {
+          status: 201,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      );
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const files = [
+      createUploadFile("parallel-a.mp4", undefined, 18 * 1024 * 1024),
+      createUploadFile("parallel-b.mp4", undefined, 19 * 1024 * 1024),
+      createUploadFile("parallel-c.mp4", undefined, 20 * 1024 * 1024),
+      createUploadFile("parallel-d.mp4", undefined, 21 * 1024 * 1024)
+    ];
+
+    const response = await uploadFiles(files);
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(response.items).toHaveLength(4);
+    expect(maxInFlight).toBeGreaterThan(1);
+    expect(maxInFlight).toBeLessThanOrEqual(3);
   });
 
   it("allows aborting an upload before the current batch completes", async () => {

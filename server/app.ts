@@ -313,6 +313,46 @@ export async function createApp(options: CreateAppOptions = {}) {
     return { archivePath, tempDir };
   }
 
+  async function sendResolvedFile(
+    request: express.Request,
+    response: express.Response,
+    resolved: NonNullable<Awaited<ReturnType<typeof resolveExistingFile>>>,
+    options: { downloadName?: string } = {}
+  ) {
+    const fileStats = await stat(resolved.filePath);
+    const rangeHeader = request.headers.range;
+
+    if (options.downloadName) {
+      response.attachment(options.downloadName);
+    }
+
+    if (rangeHeader) {
+      const range = parseRangeHeader(rangeHeader, fileStats.size);
+
+      if (!range) {
+        response.status(416).setHeader("Content-Range", `bytes */${fileStats.size}`).end();
+        return;
+      }
+
+      const { start, end } = range;
+      response.status(206).set({
+        "Accept-Ranges": "bytes",
+        "Content-Length": String(end - start + 1),
+        "Content-Range": `bytes ${start}-${end}/${fileStats.size}`,
+        "Content-Type": resolved.item.mimeType
+      });
+      createReadStream(resolved.filePath, { start, end }).pipe(response);
+      return;
+    }
+
+    response.status(200).set({
+      "Accept-Ranges": "bytes",
+      "Content-Length": String(fileStats.size),
+      "Content-Type": resolved.item.mimeType
+    });
+    createReadStream(resolved.filePath).pipe(response);
+  }
+
   function broadcastLibraryUpdated(changedIds: string[] = []) {
     events.broadcast("library-updated", {
       itemCount: store.getSummary().itemCount,
@@ -1144,7 +1184,9 @@ export async function createApp(options: CreateAppOptions = {}) {
         return;
       }
 
-      response.download(resolved.filePath, resolved.item.name);
+      await sendResolvedFile(request, response, resolved, {
+        downloadName: resolved.item.name
+      });
     } catch (error) {
       next(error);
     }
@@ -1196,12 +1238,7 @@ export async function createApp(options: CreateAppOptions = {}) {
       return;
     }
 
-    const fileStats = await stat(resolved.filePath);
-    response.status(200).set({
-      "Content-Length": String(fileStats.size),
-      "Content-Type": resolved.item.mimeType
-    });
-    createReadStream(resolved.filePath).pipe(response);
+    await sendResolvedFile(request, response, resolved);
   });
 
   app.get("/api/items/:id/preview", async (request, response, next) => {
@@ -1246,36 +1283,13 @@ export async function createApp(options: CreateAppOptions = {}) {
       return;
     }
 
-    const filePath = store.resolveItemPath(item);
-    const fileStats = await stat(filePath);
-    const rangeHeader = request.headers.range;
+    const resolved = await resolveExistingFile(request.params.id, response);
 
-    if (rangeHeader) {
-      const range = parseRangeHeader(rangeHeader, fileStats.size);
-
-      if (!range) {
-        response.status(416).setHeader("Content-Range", `bytes */${fileStats.size}`).end();
-        return;
-      }
-
-      const { start, end } = range;
-      response.status(206).set({
-        "Accept-Ranges": "bytes",
-        "Content-Length": String(end - start + 1),
-        "Content-Range": `bytes ${start}-${end}/${fileStats.size}`,
-        "Content-Type": item.mimeType
-      });
-
-      createReadStream(filePath, { start, end }).pipe(response);
+    if (!resolved) {
       return;
     }
 
-    response.status(200).set({
-      "Accept-Ranges": "bytes",
-      "Content-Length": String(fileStats.size),
-      "Content-Type": item.mimeType
-    });
-    createReadStream(filePath).pipe(response);
+    await sendResolvedFile(request, response, resolved);
   });
 
   app.get("/api/events", (request, response) => {
