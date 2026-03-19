@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+
+<html class="light" lang="it"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-bright": "#faf9fc",
+              "on-error": "#fff7f7",
+              "outline": "#787b80",
+              "secondary-fixed-dim": "#d7ceff",
+              "primary-dim": "#612cca",
+              "background": "#faf9fc",
+              "surface-container-high": "#e7e8ed",
+              "inverse-on-surface": "#9c9d9f",
+              "surface-container-low": "#f3f3f7",
+              "primary-fixed-dim": "#7444de",
+              "primary-fixed": "#8152ec",
+              "on-primary-container": "#ffffff",
+              "tertiary": "#615b7c",
+              "on-secondary-container": "#534597",
+              "tertiary-fixed": "#ded5fd",
+              "on-tertiary-fixed-variant": "#585273",
+              "error": "#a8364b",
+              "on-tertiary-container": "#4e4869",
+              "error-container": "#f97386",
+              "on-primary-fixed-variant": "#ebdfff",
+              "surface-container-lowest": "#ffffff",
+              "tertiary-fixed-dim": "#d0c7ee",
+              "surface-container": "#edeef2",
+              "on-primary-fixed": "#ffffff",
+              "on-tertiary": "#fcf7ff",
+              "surface-tint": "#6d3cd7",
+              "surface-container-highest": "#e0e2e8",
+              "surface-dim": "#d8dae0",
+              "outline-variant": "#b0b2b8",
+              "on-secondary-fixed-variant": "#5d4fa2",
+              "error-dim": "#6b0221",
+              "secondary": "#6053a6",
+              "on-tertiary-fixed": "#3b3655",
+              "surface": "#faf9fc",
+              "on-background": "#2f3337",
+              "secondary-fixed": "#e6deff",
+              "secondary-dim": "#544799",
+              "inverse-surface": "#0d0e10",
+              "on-primary": "#fdf7ff",
+              "on-surface": "#2f3337",
+              "tertiary-dim": "#554f70",
+              "on-secondary-fixed": "#403284",
+              "on-surface-variant": "#5c5f64",
+              "primary": "#6d3cd7",
+              "inverse-primary": "#9f78ff",
+              "surface-variant": "#e0e2e8",
+              "secondary-container": "#e6deff",
+              "on-secondary": "#fcf7ff",
+              "on-error-container": "#6e0523",
+              "tertiary-container": "#ded5fd",
+              "primary-container": "#8152ec"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-bright font-body text-on-surface selection:bg-primary-container selection:text-white">
+<!-- TopAppBar -->
+<header class="bg-[#faf9fc] dark:bg-slate-950 fixed top-0 left-0 right-0 z-50 flex justify-between items-center w-full px-6 h-16">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#9D7BFF] dark:text-[#b094ff]" data-icon="sync_saved_locally">sync_saved_locally</span>
+<h1 class="font-['Manrope'] font-bold text-2xl tracking-tight text-[#6d3cd7] dark:text-[#9D7BFF] font-extrabold tracking-tighter">Routy Sync</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="hover:bg-[#edeef2] dark:hover:bg-slate-800 transition-colors p-2 rounded-full active:scale-95 duration-200">
+<span class="material-symbols-outlined text-[#5c5f64] dark:text-slate-400" data-icon="history">history</span>
+</button>
+</div>
+</header>
+<main class="pt-24 pb-32 px-6 max-w-2xl mx-auto min-h-screen">
+<!-- Header Section -->
+<section class="mb-8">
+<h2 class="font-headline font-extrabold text-4xl text-on-surface tracking-tight mb-2">Attività</h2>
+<p class="text-on-surface-variant font-medium">Cronologia recente dei tuoi trasferimenti cloud.</p>
+</section>
+<!-- Filters (Chips) -->
+<section class="flex gap-3 mb-10 overflow-x-auto pb-2 scrollbar-hide">
+<button class="flex-none bg-gradient-to-br from-primary to-primary-container text-white px-6 py-2.5 rounded-full font-label font-bold text-sm shadow-sm active:scale-95 transition-transform">
+                Tutti
+            </button>
+<button class="flex-none bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high transition-colors px-6 py-2.5 rounded-full font-label font-bold text-sm active:scale-95">
+                Completati
+            </button>
+<button class="flex-none bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high transition-colors px-6 py-2.5 rounded-full font-label font-bold text-sm active:scale-95">
+                Errori
+            </button>
+<button class="flex-none bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high transition-colors px-6 py-2.5 rounded-full font-label font-bold text-sm active:scale-95">
+                In corso
+            </button>
+</section>
+<!-- Activity List -->
+<div class="space-y-4">
+<!-- Transfer Item: Success -->
+<div class="group bg-surface-container-lowest p-5 rounded-lg flex items-center gap-4 transition-all hover:bg-surface-container-high active:scale-[0.98]">
+<div class="flex-none w-12 h-12 rounded-xl bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="image">image</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-headline font-bold text-on-surface truncate pr-4">IMG_0821.jpg</h3>
+<span class="flex-none flex items-center gap-1.5 text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                            Completato
+                        </span>
+</div>
+<p class="text-sm text-on-surface-variant flex items-center gap-2">
+<span>4.2 MB</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span>/Foto/Vacanze</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span>2 min fa</span>
+</p>
+</div>
+</div>
+<!-- Transfer Item: In Progress -->
+<div class="group bg-surface-container-lowest p-5 rounded-lg flex items-center gap-4 transition-all hover:bg-surface-container-high active:scale-[0.98]">
+<div class="flex-none w-12 h-12 rounded-xl bg-primary-container/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="folder">folder</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-headline font-bold text-on-surface truncate pr-4">Work Documents</h3>
+<span class="flex-none flex items-center gap-1.5 text-xs font-bold text-primary-fixed-dim bg-primary-fixed/10 px-2 py-1 rounded-full">
+<span class="material-symbols-outlined text-[14px] animate-spin" data-icon="sync">sync</span>
+                            Sincronizzazione...
+                        </span>
+</div>
+<div class="mt-2 w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 65%;"></div>
+</div>
+<p class="mt-2 text-sm text-on-surface-variant flex items-center gap-2">
+<span>12.5 MB</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span>/Google Drive/Business</span>
+</p>
+</div>
+</div>
+<!-- Transfer Item: Error -->
+<div class="group bg-surface-container-lowest p-5 rounded-lg flex items-center gap-4 transition-all hover:bg-surface-container-high active:scale-[0.98]">
+<div class="flex-none w-12 h-12 rounded-xl bg-error-container/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-error" data-icon="description">description</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-headline font-bold text-on-surface truncate pr-4">Q3_Report_Final.pdf</h3>
+<span class="flex-none flex items-center gap-1.5 text-xs font-bold text-error bg-error-container/20 px-2 py-1 rounded-full">
+<span class="material-symbols-outlined text-[14px]" data-icon="error" data-weight="fill" style="font-variation-settings: 'FILL' 1;">error</span>
+                            Fallito
+                        </span>
+</div>
+<p class="text-sm text-on-surface-variant flex items-center gap-2">
+<span>1.8 MB</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="text-error">Spazio insufficiente</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span>1 ora fa</span>
+</p>
+</div>
+</div>
+<!-- Transfer Item: Success -->
+<div class="group bg-surface-container-lowest p-5 rounded-lg flex items-center gap-4 transition-all hover:bg-surface-container-high active:scale-[0.98]">
+<div class="flex-none w-12 h-12 rounded-xl bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="video_library">video_library</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-headline font-bold text-on-surface truncate pr-4">Morning_Run.mp4</h3>
+<span class="flex-none flex items-center gap-1.5 text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                            Completato
+                        </span>
+</div>
+<p class="text-sm text-on-surface-variant flex items-center gap-2">
+<span>142.0 MB</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span>/Media/Video</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span>3 ore fa</span>
+</p>
+</div>
+</div>
+<!-- Empty Space for Bottom Nav -->
+<div class="h-10"></div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-6 left-0 right-0 z-50 flex justify-around items-center px-4 py-3 mx-auto max-w-md bg-[#ffffffcc] dark:bg-slate-900/80 backdrop-blur-xl fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] rounded-[3rem] shadow-[0_20px_50px_rgba(109,60,215,0.1)] dark:shadow-none">
+<a class="flex flex-col items-center justify-center text-[#5c5f64] dark:text-slate-400 px-5 py-2 hover:text-[#6d3cd7] dark:hover:text-[#9D7BFF] transition-transform active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="qr_code_scanner">qr_code_scanner</span>
+<span class="font-['Inter'] font-medium text-[10px] tracking-wide mt-1">QR</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#5c5f64] dark:text-slate-400 px-5 py-2 hover:text-[#6d3cd7] dark:hover:text-[#9D7BFF] transition-transform active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="folder">folder</span>
+<span class="font-['Inter'] font-medium text-[10px] tracking-wide mt-1">Cartelle</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-gradient-to-br from-[#6d3cd7] to-[#8152ec] text-white rounded-full px-5 py-2 transition-transform active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="history" data-weight="fill" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="font-['Inter'] font-medium text-[10px] tracking-wide mt-1">Attività</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#5c5f64] dark:text-slate-400 px-5 py-2 hover:text-[#6d3cd7] dark:hover:text-[#9D7BFF] transition-transform active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-['Inter'] font-medium text-[10px] tracking-wide mt-1">Impostazioni</span>
+</a>
+</nav>
+</body></html>

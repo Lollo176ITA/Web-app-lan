@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+
+<html class="light" lang="it"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed-variant": "#585273",
+              "surface-variant": "#e0e2e8",
+              "tertiary-fixed-dim": "#d0c7ee",
+              "on-secondary-fixed": "#403284",
+              "inverse-primary": "#9f78ff",
+              "error-dim": "#6b0221",
+              "on-primary-fixed-variant": "#ebdfff",
+              "on-tertiary-fixed": "#3b3655",
+              "on-error": "#fff7f7",
+              "surface-container-low": "#f3f3f7",
+              "error": "#a8364b",
+              "inverse-surface": "#0d0e10",
+              "primary-fixed": "#8152ec",
+              "surface-dim": "#d8dae0",
+              "tertiary": "#615b7c",
+              "tertiary-fixed": "#ded5fd",
+              "on-tertiary": "#fcf7ff",
+              "surface-container-highest": "#e0e2e8",
+              "primary-dim": "#612cca",
+              "secondary": "#6053a6",
+              "secondary-fixed-dim": "#d7ceff",
+              "secondary-dim": "#544799",
+              "surface-container-lowest": "#ffffff",
+              "on-error-container": "#6e0523",
+              "on-background": "#2f3337",
+              "error-container": "#f97386",
+              "surface": "#faf9fc",
+              "outline": "#787b80",
+              "on-secondary-container": "#534597",
+              "on-primary-fixed": "#ffffff",
+              "primary-container": "#8152ec",
+              "on-primary-container": "#ffffff",
+              "inverse-on-surface": "#9c9d9f",
+              "surface-container-high": "#e7e8ed",
+              "primary": "#6d3cd7",
+              "primary-fixed-dim": "#7444de",
+              "outline-variant": "#b0b2b8",
+              "on-primary": "#fdf7ff",
+              "surface-tint": "#6d3cd7",
+              "secondary-fixed": "#e6deff",
+              "on-surface-variant": "#5c5f64",
+              "on-secondary": "#fcf7ff",
+              "secondary-container": "#e6deff",
+              "tertiary-container": "#ded5fd",
+              "on-tertiary-container": "#4e4869",
+              "on-secondary-fixed-variant": "#5d4fa2",
+              "background": "#faf9fc",
+              "on-surface": "#2f3337",
+              "tertiary-dim": "#554f70",
+              "surface-bright": "#faf9fc",
+              "surface-container": "#edeef2"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .pulse-ring {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(1.1); }
+        }
+        .bg-mesh {
+            background-color: #faf9fc;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(109, 60, 215, 0.05) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(129, 82, 236, 0.08) 0px, transparent 50%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body min-h-screen flex flex-col bg-mesh">
+<!-- TopAppBar -->
+<header class="bg-[#faf9fc] dark:bg-slate-950 flex justify-between items-center w-full px-6 py-4 docked full-width top-0 z-40 sticky">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="Professional male user profile portrait avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAaJu5yk8EZpChx7WEqQQtFW7bmXKIxDREgZIU90Y--qbqD4lbSge4QDBFbzl1960mQNNIwHX_xaHCUjWR0wWNJ_sQf0mN9HC84rq8IZdmQY7HunSi8ma_1z8TADz6gtq9-1mc9i-WcUAH9rQsg0aJuI7hmxYnLU7JuijC2ePCol834PtVmHNLL1RM1y5LZwJT39xf3Rj2QETK8WTQEZEtvgfRrkjIjKEqM0Q6EwdEf0Srzk8juU1xbJzuOv7l5tIn80QHCC6S6xcA"/>
+</div>
+<h1 class="font-['Manrope'] font-bold text-xl tracking-tight text-[#9D7BFF] dark:text-[#b59dff]">
+                Routy Sync
+            </h1>
+</div>
+<div class="p-2 rounded-full hover:opacity-80 transition-opacity active:scale-95 duration-200 cursor-pointer">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="notifications">notifications</span>
+</div>
+</header>
+<main class="flex-1 flex flex-col items-center justify-center px-6 pb-32">
+<!-- Success State Visualization -->
+<div class="relative mb-12 flex items-center justify-center">
+<!-- Pulsing Rings -->
+<div class="absolute w-64 h-64 rounded-full bg-primary/10 pulse-ring"></div>
+<div class="absolute w-48 h-48 rounded-full bg-primary/20 pulse-ring" style="animation-delay: 1s;"></div>
+<!-- Core Icon Island -->
+<div class="relative w-32 h-32 bg-gradient-to-br from-primary to-primary-container rounded-xl shadow-[0_20px_50px_rgba(109,60,215,0.2)] flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-5xl" data-icon="sync_saved_locally" style="font-variation-settings: 'FILL' 1;">sync_saved_locally</span>
+<!-- Mini Status Indicator -->
+<div class="absolute -top-2 -right-2 w-8 h-8 bg-white dark:bg-slate-900 rounded-full p-1 shadow-md">
+<div class="w-full h-full bg-emerald-500 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-xs" data-icon="check">check</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Success Message -->
+<div class="text-center mb-10">
+<h2 class="font-headline font-extrabold text-3xl tracking-tight text-on-surface mb-2">Connessione Riuscita</h2>
+<p class="text-on-surface-variant font-medium">Sincronizzazione attiva e sicura</p>
+</div>
+<!-- Connection Details Bento Grid -->
+<div class="w-full max-w-md grid grid-cols-2 gap-4 mb-10">
+<!-- Host Card -->
+<div class="col-span-2 bg-surface-container-lowest p-6 rounded-lg shadow-sm border border-outline-variant/10">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined" data-icon="laptop_mac">laptop_mac</span>
+</div>
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Dispositivo Host</p>
+<p class="font-headline font-bold text-lg">MacBook Pro de Luca</p>
+</div>
+</div>
+</div>
+<!-- IP Address Card -->
+<div class="bg-surface-container-low p-5 rounded-lg flex flex-col justify-between">
+<span class="material-symbols-outlined text-primary mb-3" data-icon="lan">lan</span>
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Indirizzo IP</p>
+<p class="font-bold text-on-surface">192.168.1.124</p>
+</div>
+</div>
+<!-- Speed Card -->
+<div class="bg-surface-container-low p-5 rounded-lg flex flex-col justify-between">
+<span class="material-symbols-outlined text-primary mb-3" data-icon="speed">speed</span>
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Velocità</p>
+<p class="font-bold text-on-surface">842 Mbps</p>
+</div>
+</div>
+</div>
+<!-- Action Area -->
+<div class="w-full max-w-md space-y-4">
+<button class="w-full py-5 rounded-xl bg-gradient-to-br from-[#6d3cd7] to-[#8152ec] text-white font-headline font-bold text-lg shadow-lg active:scale-95 transition-transform">
+                Manage Folders
+            </button>
+<button class="w-full py-4 rounded-xl text-error font-body font-semibold hover:bg-error/5 active:scale-95 transition-all">
+                Disconnect
+            </button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-6 left-0 right-0 z-50 flex justify-around items-center px-4 py-2 mx-auto max-w-md">
+<!-- The Floating Island -->
+<div class="bg-[#ffffffcc] dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_20px_50px_rgba(109,60,215,0.1)] rounded-[3rem] w-full flex justify-around items-center p-2">
+<!-- QR Tab (Inactive) -->
+<div class="flex flex-col items-center justify-center text-[#5c5f64] dark:text-slate-400 p-2 hover:bg-[#f3f3f7] dark:hover:bg-slate-800 rounded-full transition-colors active:scale-90 duration-300 ease-out cursor-pointer">
+<span class="material-symbols-outlined text-2xl" data-icon="qr_code_scanner">qr_code_scanner</span>
+<span class="font-['Inter'] text-[10px] font-semibold tracking-wide uppercase mt-1">QR</span>
+</div>
+<!-- Cartelle Tab (Inactive) -->
+<div class="flex flex-col items-center justify-center text-[#5c5f64] dark:text-slate-400 p-2 hover:bg-[#f3f3f7] dark:hover:bg-slate-800 rounded-full transition-colors active:scale-90 duration-300 ease-out cursor-pointer">
+<span class="material-symbols-outlined text-2xl" data-icon="folder">folder</span>
+<span class="font-['Inter'] text-[10px] font-semibold tracking-wide uppercase mt-1">Cartelle</span>
+</div>
+<!-- Impostazioni Tab (Active) -->
+<div class="flex flex-col items-center justify-center bg-gradient-to-br from-[#6d3cd7] to-[#8152ec] text-white rounded-full p-3 w-14 h-14 shadow-lg active:scale-90 duration-300 ease-out cursor-pointer">
+<span class="material-symbols-outlined text-2xl" data-icon="settings" style="font-variation-settings: 'FILL' 1;">settings</span>
+</div>
+</div>
+</nav>
+</body></html>

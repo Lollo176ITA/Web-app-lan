@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+
+<html class="light" lang="it"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Routy Sync - Cartelle</title>
+<!-- Google Fonts: Manrope for headlines, Inter for body -->
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed-variant": "#585273",
+              "surface-variant": "#e0e2e8",
+              "tertiary-fixed-dim": "#d0c7ee",
+              "on-secondary-fixed": "#403284",
+              "inverse-primary": "#9f78ff",
+              "error-dim": "#6b0221",
+              "on-primary-fixed-variant": "#ebdfff",
+              "on-tertiary-fixed": "#3b3655",
+              "on-error": "#fff7f7",
+              "surface-container-low": "#f3f3f7",
+              "error": "#a8364b",
+              "inverse-surface": "#0d0e10",
+              "primary-fixed": "#8152ec",
+              "surface-dim": "#d8dae0",
+              "tertiary": "#615b7c",
+              "tertiary-fixed": "#ded5fd",
+              "on-tertiary": "#fcf7ff",
+              "surface-container-highest": "#e0e2e8",
+              "primary-dim": "#612cca",
+              "secondary": "#6053a6",
+              "secondary-fixed-dim": "#d7ceff",
+              "secondary-dim": "#544799",
+              "surface-container-lowest": "#ffffff",
+              "on-error-container": "#6e0523",
+              "on-background": "#2f3337",
+              "error-container": "#f97386",
+              "surface": "#faf9fc",
+              "outline": "#787b80",
+              "on-secondary-container": "#534597",
+              "on-primary-fixed": "#ffffff",
+              "primary-container": "#8152ec",
+              "on-primary-container": "#ffffff",
+              "inverse-on-surface": "#9c9d9f",
+              "surface-container-high": "#e7e8ed",
+              "primary": "#6d3cd7",
+              "primary-fixed-dim": "#7444de",
+              "outline-variant": "#b0b2b8",
+              "on-primary": "#fdf7ff",
+              "surface-tint": "#6d3cd7",
+              "secondary-fixed": "#e6deff",
+              "on-surface-variant": "#5c5f64",
+              "on-secondary": "#fcf7ff",
+              "secondary-container": "#e6deff",
+              "tertiary-container": "#ded5fd",
+              "on-tertiary-container": "#4e4869",
+              "on-secondary-fixed-variant": "#5d4fa2",
+              "background": "#faf9fc",
+              "on-surface": "#2f3337",
+              "tertiary-dim": "#554f70",
+              "surface-bright": "#faf9fc",
+              "surface-container": "#edeef2"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="bg-[#faf9fc] dark:bg-slate-950 flex justify-between items-center w-full px-6 py-4 sticky top-0 z-40">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center overflow-hidden">
+<img alt="Profile" class="w-full h-full object-cover" data-alt="User profile avatar close up photo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCLGq7kQ1BiPSF5KsycQCgoP08b1DvZAwcZFChGC0eKWWwA4oTHTTePeBpV0UNupJvvl4iXGlCdDgOUFntMK96_TYLTmb0DpzcWEl8ALd6o6Lr3OzVDFEb0_kOqbksc5oSn_0IahUYNCqpVhbztpeubq6pykFEkHz1dFNBuOlE64e5jzE8etRARoO2oETk-DXSFLt16YkgSK670dDCr0fQZtszG-wbweAuuKYROoT7K-YidATan76qxMpDUjSsfDLt3JtDwLlQvUho"/>
+</div>
+<span class="text-[#9D7BFF] font-extrabold tracking-tighter font-headline text-xl">Routy Sync</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-[#5c5f64] dark:text-slate-400 hover:opacity-80 transition-opacity active:scale-95 duration-200">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</header>
+<main class="max-w-md mx-auto px-6 pt-8">
+<!-- Section Header -->
+<div class="mb-10">
+<h1 class="font-headline font-bold text-4xl text-on-surface tracking-tight leading-tight">Cartelle Sincronizzate</h1>
+<p class="text-on-surface-variant mt-2 font-medium">Gestisci i tuoi spazi di lavoro digitali.</p>
+</div>
+<!-- Folder List (The Editorial Edge: No-line rule, tonal shifts) -->
+<div class="space-y-6">
+<!-- Folder Item: Synced -->
+<div class="bg-surface-container-lowest p-5 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-between group hover:bg-surface-container-low transition-colors duration-300">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 bg-secondary-container rounded-xl flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-3xl" data-weight="fill" style="font-variation-settings: 'FILL' 1;">folder</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-lg text-on-surface">Photos</h3>
+<p class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">1.2 GB • 458 Files</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<div class="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+<span class="material-symbols-outlined text-sm font-bold">check_circle</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Synced</span>
+</div>
+</div>
+</div>
+<!-- Folder Item: In Progress -->
+<div class="bg-surface-container-lowest p-5 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-between group hover:bg-surface-container-low transition-colors duration-300">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 bg-tertiary-container rounded-xl flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-3xl" data-weight="fill" style="font-variation-settings: 'FILL' 1;">work</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-lg text-on-surface">Work Documents</h3>
+<p class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">84 MB • 12 Files</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<div class="flex items-center gap-1.5 text-primary bg-primary/5 px-3 py-1 rounded-full">
+<span class="material-symbols-outlined text-sm font-bold animate-pulse">sync</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">In progress</span>
+</div>
+</div>
+</div>
+<!-- Folder Item: Queued -->
+<div class="bg-surface-container-lowest p-5 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-between group hover:bg-surface-container-low transition-colors duration-300">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 bg-surface-container-high rounded-xl flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-3xl" data-weight="fill" style="font-variation-settings: 'FILL' 1;">description</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-lg text-on-surface">Project Files</h3>
+<p class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">4.5 GB • 2,104 Files</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<div class="flex items-center gap-1.5 text-on-surface-variant bg-surface-container px-3 py-1 rounded-full">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Queued</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Add Folder Action (Primary Button with Gradient/Soul) -->
+<div class="mt-12 flex justify-center">
+<button class="bg-gradient-to-br from-[#6d3cd7] to-[#8152ec] text-white px-8 py-4 rounded-xl flex items-center gap-3 shadow-[0_20px_40px_rgba(109,60,215,0.25)] hover:opacity-90 active:scale-95 transition-all duration-300 group">
+<span class="material-symbols-outlined text-2xl font-bold">add</span>
+<span class="font-headline font-bold tracking-tight text-lg">Add Folder</span>
+</button>
+</div>
+<!-- Stats Bento Card (Demonstrating Asymmetry/Modern UI) -->
+<div class="mt-16 grid grid-cols-2 gap-4">
+<div class="col-span-2 bg-primary/5 p-6 rounded-lg flex flex-col justify-between h-40">
+<span class="text-primary font-bold uppercase text-[10px] tracking-widest">Cloud Storage</span>
+<div>
+<h4 class="text-3xl font-headline font-extrabold text-on-surface">82% <span class="text-sm font-medium text-on-surface-variant">Used</span></h4>
+<div class="w-full h-2 bg-surface-container-high rounded-full mt-4 overflow-hidden">
+<div class="h-full bg-primary rounded-full w-[82%]"></div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Floating Island) -->
+<nav class="fixed bottom-6 left-0 right-0 z-50 flex justify-around items-center px-4 py-2 mx-auto max-w-md bg-[#ffffffcc] dark:bg-slate-900/80 backdrop-blur-xl w-[90%] rounded-[3rem] shadow-[0_20px_50px_rgba(109,60,215,0.1)] dark:shadow-none">
+<!-- Tab: QR -->
+<a class="flex flex-col items-center justify-center text-[#5c5f64] dark:text-slate-400 p-2 hover:bg-[#f3f3f7] dark:hover:bg-slate-800 rounded-full transition-colors active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined">qr_code_scanner</span>
+<span class="font-['Inter'] text-[10px] font-semibold tracking-wide uppercase mt-1">QR</span>
+</a>
+<!-- Tab: Cartelle (ACTIVE) -->
+<a class="flex flex-col items-center justify-center bg-gradient-to-br from-[#6d3cd7] to-[#8152ec] text-white rounded-full p-3 w-12 h-12 shadow-lg active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 1;">folder</span>
+<!-- Label hidden for active state based on provided JSON structure where it's a fixed size circle -->
+</a>
+<!-- Tab: Impostazioni -->
+<a class="flex flex-col items-center justify-center text-[#5c5f64] dark:text-slate-400 p-2 hover:bg-[#f3f3f7] dark:hover:bg-slate-800 rounded-full transition-colors active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-['Inter'] text-[10px] font-semibold tracking-wide uppercase mt-1">Impostazioni</span>
+</a>
+</nav>
+</body></html>

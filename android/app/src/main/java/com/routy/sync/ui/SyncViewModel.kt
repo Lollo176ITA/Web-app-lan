@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 
 data class SyncUiState(
   val dashboard: SyncDashboardState = SyncDashboardState(),
+  val hostReachable: Boolean? = null,
   val busy: Boolean = false,
   val message: String? = null
 )
@@ -38,6 +39,7 @@ class SyncViewModel(private val repository: SyncRepository) : ViewModel() {
     viewModelScope.launch {
       runCatching {
         repository.refreshRemoteState()
+        refreshHostStatusSilently()
       }
     }
   }
@@ -64,6 +66,62 @@ class SyncViewModel(private val repository: SyncRepository) : ViewModel() {
       return
     }
 
+    pairWithCredentials(hostUrl = hostUrl, pairingCode = pairingCode)
+  }
+
+  fun pairManually(hostUrl: String, pairingCode: String) {
+    if (_uiState.value.dashboard.isConfigured) {
+      _uiState.update { it.copy(message = "Host già collegato.") }
+      return
+    }
+
+    pairWithCredentials(hostUrl = hostUrl.trim(), pairingCode = pairingCode.trim())
+  }
+
+  fun refreshConnectionStatus() {
+    viewModelScope.launch {
+      _uiState.update { it.copy(busy = true, message = null) }
+
+      try {
+        repository.refreshRemoteState()
+        refreshHostStatusSilently()
+        _uiState.update { it.copy(busy = false, message = "Stato aggiornato.") }
+      } catch (error: Exception) {
+        _uiState.update {
+          it.copy(
+            busy = false,
+            message = error.message ?: "Aggiornamento non riuscito."
+          )
+        }
+      }
+    }
+  }
+
+  fun disconnect() {
+    viewModelScope.launch {
+      _uiState.update { it.copy(busy = true, message = null) }
+
+      try {
+        repository.disconnect()
+        _uiState.update {
+          it.copy(
+            busy = false,
+            hostReachable = null,
+            message = "Dispositivo scollegato."
+          )
+        }
+      } catch (error: Exception) {
+        _uiState.update {
+          it.copy(
+            busy = false,
+            message = error.message ?: "Disconnessione non riuscita."
+          )
+        }
+      }
+    }
+  }
+
+  private fun pairWithCredentials(hostUrl: String, pairingCode: String) {
     runTask("Pairing completato.") {
       repository.registerDevice(
         hostUrl = hostUrl,
@@ -71,6 +129,7 @@ class SyncViewModel(private val repository: SyncRepository) : ViewModel() {
         deviceName = Build.MODEL ?: "Android"
       )
       repository.refreshRemoteState()
+      refreshHostStatusSilently()
     }
   }
 
@@ -85,12 +144,24 @@ class SyncViewModel(private val repository: SyncRepository) : ViewModel() {
         repository.trySyncAll()
         repository.refreshRemoteState()
       }
+      refreshHostStatusSilently()
     }
   }
 
   fun removeMapping(localId: String) {
     runTask("Cartella rimossa dalla configurazione.") {
       repository.removeMapping(localId)
+      refreshHostStatusSilently()
+    }
+  }
+
+  private suspend fun refreshHostStatusSilently() {
+    val isConfigured = repository.getLocalRuntimeConfig().isConfigured
+
+    _uiState.update {
+      it.copy(
+        hostReachable = if (isConfigured) repository.isHostReachable() else null
+      )
     }
   }
 

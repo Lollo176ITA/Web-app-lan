@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+
+<html lang="it"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed-variant": "#585273",
+              "surface-variant": "#e0e2e8",
+              "tertiary-fixed-dim": "#d0c7ee",
+              "on-secondary-fixed": "#403284",
+              "inverse-primary": "#9f78ff",
+              "error-dim": "#6b0221",
+              "on-primary-fixed-variant": "#ebdfff",
+              "on-tertiary-fixed": "#3b3655",
+              "on-error": "#fff7f7",
+              "surface-container-low": "#f3f3f7",
+              "error": "#a8364b",
+              "inverse-surface": "#0d0e10",
+              "primary-fixed": "#8152ec",
+              "surface-dim": "#d8dae0",
+              "tertiary": "#615b7c",
+              "tertiary-fixed": "#ded5fd",
+              "on-tertiary": "#fcf7ff",
+              "surface-container-highest": "#e0e2e8",
+              "primary-dim": "#612cca",
+              "secondary": "#6053a6",
+              "secondary-fixed-dim": "#d7ceff",
+              "secondary-dim": "#544799",
+              "surface-container-lowest": "#ffffff",
+              "on-error-container": "#6e0523",
+              "on-background": "#2f3337",
+              "error-container": "#f97386",
+              "surface": "#faf9fc",
+              "outline": "#787b80",
+              "on-secondary-container": "#534597",
+              "on-primary-fixed": "#ffffff",
+              "primary-container": "#8152ec",
+              "on-primary-container": "#ffffff",
+              "inverse-on-surface": "#9c9d9f",
+              "surface-container-high": "#e7e8ed",
+              "primary": "#6d3cd7",
+              "primary-fixed-dim": "#7444de",
+              "outline-variant": "#b0b2b8",
+              "on-primary": "#fdf7ff",
+              "surface-tint": "#6d3cd7",
+              "secondary-fixed": "#e6deff",
+              "on-surface-variant": "#5c5f64",
+              "on-secondary": "#fcf7ff",
+              "secondary-container": "#e6deff",
+              "tertiary-container": "#ded5fd",
+              "on-tertiary-container": "#4e4869",
+              "on-secondary-fixed-variant": "#5d4fa2",
+              "background": "#faf9fc",
+              "on-surface": "#2f3337",
+              "tertiary-dim": "#554f70",
+              "surface-bright": "#faf9fc",
+              "surface-container": "#edeef2"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="bg-[#faf9fc] dark:bg-slate-950 flex justify-between items-center w-full px-6 py-4 docked full-width top-0 z-40">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container">
+<img alt="User profile photo" data-alt="Close up professional portrait of a smiling user" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAH5gY_us2nQ8VdQu86_Av4jNcWj_Qc2b8YgUtfyiEAWhwTkSBMvGIc5uMS9zCONgGTudwLj7TiarjeJGww35o1uAkL2hENzVtvmi9qGwwaic714I981eL0uPOYKxY77DqxN2DvzkROohySSjQfP_xz0ok5f3XbMXon-dQwpSSI4JYHpDqJVu4CUZhocSK-HsG6o7yb8ZjgCLbPiurvzKQmsoEZ0mRjgLHJroJri_EUSxhqH5DZ17GR-1E-DuHv7rk-I1a8q2qjFtc"/>
+</div>
+<h1 class="text-[#9D7BFF] font-extrabold tracking-tighter font-['Manrope'] text-xl">Routy Sync</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-[#5c5f64] dark:text-slate-400 hover:opacity-80 transition-opacity active:scale-95 duration-200">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full max-w-2xl mx-auto px-6 pt-4 pb-32">
+<header class="mb-8">
+<h2 class="text-3xl font-extrabold tracking-tight text-on-surface mb-2">Impostazioni App</h2>
+<p class="text-on-surface-variant font-medium">Gestisci le tue preferenze e la sincronizzazione</p>
+</header>
+<!-- Account Section (Bento Inspired) -->
+<section class="mb-10">
+<div class="flex items-center gap-2 mb-4 px-2">
+<span class="material-symbols-outlined text-primary text-xl" data-icon="person">person</span>
+<h3 class="font-bold text-lg tracking-tight">Account</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-surface-container-lowest rounded-lg p-5 flex flex-col justify-between shadow-sm border border-outline-variant/10">
+<div>
+<p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-1">Profilo</p>
+<p class="font-bold text-lg">Marco Rossi</p>
+<p class="text-on-surface-variant text-sm">marco.rossi@provider.it</p>
+</div>
+<button class="mt-4 text-primary text-sm font-bold flex items-center gap-1 hover:opacity-80">
+                        Modifica Profilo <span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+<div class="bg-surface-container-low rounded-lg p-5 flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<span class="text-on-surface font-semibold">Stato Piano</span>
+<span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase">Premium</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[75%] rounded-full"></div>
+</div>
+<p class="text-xs text-on-surface-variant">7.5 GB di 10 GB utilizzati</p>
+</div>
+</div>
+</section>
+<!-- Network & Sync Section (Interactive Cards) -->
+<section class="mb-10">
+<div class="flex items-center gap-2 mb-4 px-2">
+<span class="material-symbols-outlined text-primary text-xl" data-icon="sync_alt">sync_alt</span>
+<h3 class="font-bold text-lg tracking-tight">Rete e Sincronizzazione</h3>
+</div>
+<div class="bg-surface-container-low rounded-lg overflow-hidden">
+<!-- Row 1: Wi-Fi Sync -->
+<div class="flex items-center justify-between p-5 hover:bg-surface-container-high transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-lowest flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="wifi">wifi</span>
+</div>
+<div>
+<p class="font-bold text-on-surface">Sync only on Wi-Fi</p>
+<p class="text-xs text-on-surface-variant">Risparmia dati mobili durante l'invio</p>
+</div>
+</div>
+<!-- Custom Modern Toggle -->
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-outline-variant/30 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Row 2: Auto-connect -->
+<div class="flex items-center justify-between p-5 hover:bg-surface-container-high transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-lowest flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="auto_mode">auto_mode</span>
+</div>
+<div>
+<p class="font-bold text-on-surface">Auto-connect</p>
+<p class="text-xs text-on-surface-variant">Connetti automaticamente ai server noti</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-outline-variant/30 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</section>
+<!-- Notifications Section -->
+<section class="mb-10">
+<div class="flex items-center gap-2 mb-4 px-2">
+<span class="material-symbols-outlined text-primary text-xl" data-icon="notifications">notifications</span>
+<h3 class="font-bold text-lg tracking-tight">Notifiche</h3>
+</div>
+<div class="space-y-3">
+<div class="bg-surface-container-lowest p-4 rounded-lg flex items-center justify-between border border-outline-variant/5">
+<span class="font-medium text-on-surface">Notifiche Push</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-10 h-5 bg-outline-variant/30 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-lg flex items-center justify-between border border-outline-variant/5">
+<span class="font-medium text-on-surface">Avvisi via Email</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-10 h-5 bg-outline-variant/30 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</section>
+<!-- Advanced Section (Actionable) -->
+<section class="mb-10">
+<div class="flex items-center gap-2 mb-4 px-2">
+<span class="material-symbols-outlined text-primary text-xl" data-icon="settings_suggest">settings_suggest</span>
+<h3 class="font-bold text-lg tracking-tight">Avanzate</h3>
+</div>
+<div class="bg-surface-container-low rounded-lg overflow-hidden">
+<button class="w-full flex items-center justify-between p-5 hover:bg-surface-container-high transition-colors text-left">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="security">security</span>
+<span class="font-medium">Privacy e Sicurezza</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant" data-icon="arrow_forward_ios">arrow_forward_ios</span>
+</button>
+<button class="w-full flex items-center justify-between p-5 hover:bg-surface-container-high transition-colors text-left">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="database">database</span>
+<span class="font-medium">Gestione Cache</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant" data-icon="arrow_forward_ios">arrow_forward_ios</span>
+</button>
+<button class="w-full flex items-center justify-between p-5 hover:bg-surface-container-high transition-colors text-left text-error">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-bold">Disconnetti</span>
+</div>
+</button>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-6 left-0 right-0 z-50 flex justify-around items-center px-4 py-2 mx-auto max-w-md bg-[#ffffffcc] dark:bg-slate-900/80 backdrop-blur-xl fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] rounded-[3rem] shadow-[0_20px_50px_rgba(109,60,215,0.1)] dark:shadow-none">
+<!-- Tab: QR -->
+<a class="flex flex-col items-center justify-center text-[#5c5f64] dark:text-slate-400 p-2 hover:bg-[#f3f3f7] dark:hover:bg-slate-800 rounded-full transition-colors active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="qr_code_scanner">qr_code_scanner</span>
+<span class="font-['Inter'] text-[10px] font-semibold tracking-wide uppercase mt-1">QR</span>
+</a>
+<!-- Tab: Cartelle -->
+<a class="flex flex-col items-center justify-center text-[#5c5f64] dark:text-slate-400 p-2 hover:bg-[#f3f3f7] dark:hover:bg-slate-800 rounded-full transition-colors active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="folder">folder</span>
+<span class="font-['Inter'] text-[10px] font-semibold tracking-wide uppercase mt-1">Cartelle</span>
+</a>
+<!-- Tab: Impostazioni (ACTIVE) -->
+<a class="flex flex-col items-center justify-center bg-gradient-to-br from-[#6d3cd7] to-[#8152ec] text-white rounded-full p-3 w-12 h-12 shadow-lg active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="settings" style="font-variation-settings: 'FILL' 1;">settings</span>
+<!-- Label hidden for active state to maintain the circular 'fab' look as defined in JSON styles -->
+</a>
+</nav>
+</body></html>

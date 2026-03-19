@@ -100,6 +100,12 @@ class SyncRepository(
     pushConfig()
   }
 
+  suspend fun disconnect() {
+    database.mappingDao().deleteAll()
+    tokenStore.clear()
+    preferences.clearAll()
+  }
+
   suspend fun refreshRemoteState() {
     val prefs = preferences.getState()
     val authToken = tokenStore.readToken()

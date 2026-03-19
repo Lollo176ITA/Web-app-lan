@@ -52,6 +52,9 @@ interface SyncMappingDao {
 
   @Query("DELETE FROM sync_mappings WHERE localId = :localId")
   suspend fun deleteById(localId: String)
+
+  @Query("DELETE FROM sync_mappings")
+  suspend fun deleteAll()
 }
 
 @Database(entities = [SyncMappingEntity::class], version = 1, exportSchema = false)
