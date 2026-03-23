@@ -5,7 +5,7 @@ Published Android builds from GitHub Actions.
 - Latest snapshot: `latest/`
 - Archived snapshots: `archives/<run-number>-<commit>/`
 - Current source branch: main
-- Current source commit: e4c5921f6dfa3793a2c53a50b89012a4404892d7
-- Current workflow run: https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23444836504
+- Current source commit: bb741748412b8b50396404f9c61ba11f3e77c982
+- Current workflow run: https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23445977404
 
-Each successful publish updates `latest/` and also stores an immutable copy in `archives/24-e4c5921/`.
+Each successful publish updates `latest/` and also stores an immutable copy in `archives/25-bb74174/`.
