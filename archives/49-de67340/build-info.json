@@ -1,0 +1,26 @@
+{
+  "target": "win-x64",
+  "version": "2.8.1",
+  "sourceBranch": "main",
+  "sourceCommit": "de67340228a9a846f82efeead15b0cc08d15bbc2",
+  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23436270911",
+  "files": [
+    {
+      "name": "Routy Setup 2.8.1.exe",
+      "originalName": "Routy Setup 2.8.1.exe",
+      "size": 103436777,
+      "sha256": "f8b0eedd180e3b49070329f97c07e01717dd68733cad50db2060bde7fd84b64d",
+      "split": true,
+      "parts": [
+        {
+          "name": "Routy Setup 2.8.1.exe.part-000",
+          "size": 99614720
+        },
+        {
+          "name": "Routy Setup 2.8.1.exe.part-001",
+          "size": 3822057
+        }
+      ]
+    }
+  ]
+}
