@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.provider.Settings
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -106,6 +107,19 @@ class SetupNotificationManager(private val context: Context) {
     }
   }
 
+  fun cancelSetupNeeded() {
+    manager.cancel(SETUP_NOTIFICATION_ID)
+  }
+
+  fun areNotificationsEnabled(): Boolean = manager.areNotificationsEnabled()
+
+  fun openNotificationSettings() {
+    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+      .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+      .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    context.startActivity(intent)
+  }
+
   private fun ensureChannel() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
       return
@@ -162,6 +176,10 @@ class WifiConnectivityMonitor(
       val runtimeConfig = repository.getLocalRuntimeConfig()
 
       if (!runtimeConfig.isConfigured) {
+        if (!runtimeConfig.notificationsEnabled) {
+          notificationManager.cancelSetupNeeded()
+          return@launch
+        }
         notificationManager.showSetupNeeded()
         return@launch
       }

@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.os.Build
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -90,7 +92,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.routy.sync.AppContainer
@@ -126,10 +132,15 @@ fun SyncScreen(container: AppContainer) {
   val state by viewModel.uiState.collectAsState()
   val snackbarHostState = remember { SnackbarHostState() }
   val context = LocalContext.current
+  val lifecycleOwner = LocalLifecycleOwner.current
   var selectedTabName by rememberSaveable { mutableStateOf(SyncTab.Qr.name) }
   var manualPairingVisible by rememberSaveable { mutableStateOf(false) }
+  var systemNotificationsEnabled by remember { mutableStateOf(container.notificationManager.areNotificationsEnabled()) }
   val selectedTab = remember(selectedTabName) { SyncTab.valueOf(selectedTabName) }
   val keepAliveInBackground = state.backgroundSyncEnabled && state.dashboard.isConfigured && state.dashboard.mappings.isNotEmpty()
+  val refreshNotificationStatus = remember(container) {
+    { systemNotificationsEnabled = container.notificationManager.areNotificationsEnabled() }
+  }
 
   val folderPicker = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.OpenDocumentTree()
@@ -161,6 +172,15 @@ fun SyncScreen(container: AppContainer) {
     }
   }
 
+  val notificationPermissionLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestPermission()
+  ) { granted ->
+    refreshNotificationStatus()
+    if (granted) {
+      viewModel.setNotificationsEnabled(true)
+    }
+  }
+
   LaunchedEffect(state.message) {
     val message = state.message ?: return@LaunchedEffect
     snackbarHostState.showSnackbar(message)
@@ -172,6 +192,18 @@ fun SyncScreen(container: AppContainer) {
       SyncForegroundService.start(context)
     } else {
       SyncForegroundService.stop(context)
+    }
+  }
+
+  DisposableEffect(lifecycleOwner, container) {
+    val observer = LifecycleEventObserver { _, event ->
+      if (event == Lifecycle.Event.ON_RESUME) {
+        refreshNotificationStatus()
+      }
+    }
+    lifecycleOwner.lifecycle.addObserver(observer)
+    onDispose {
+      lifecycleOwner.lifecycle.removeObserver(observer)
     }
   }
 
@@ -223,7 +255,37 @@ fun SyncScreen(container: AppContainer) {
           .fillMaxSize()
           .padding(innerPadding)
       ) {
-        SyncTopBar()
+        SyncTopBar(
+          notificationsEnabled = state.notificationsEnabled && systemNotificationsEnabled,
+          onToggleNotifications = {
+            val notificationPermissionGranted =
+              Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(
+                  context,
+                  Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+
+            when {
+              state.notificationsEnabled && systemNotificationsEnabled -> {
+                viewModel.setNotificationsEnabled(false)
+                refreshNotificationStatus()
+              }
+
+              !notificationPermissionGranted -> {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+              }
+
+              !systemNotificationsEnabled -> {
+                container.notificationManager.openNotificationSettings()
+              }
+
+              else -> {
+                viewModel.setNotificationsEnabled(true)
+                refreshNotificationStatus()
+              }
+            }
+          }
+        )
 
         // Evita smart-cast su proprieta' potenzialmente instabile/complessa.
         val syncProgress = state.syncProgress
@@ -283,7 +345,10 @@ fun SyncScreen(container: AppContainer) {
 }
 
 @Composable
-private fun SyncTopBar() {
+private fun SyncTopBar(
+  notificationsEnabled: Boolean,
+  onToggleNotifications: () -> Unit
+) {
   Row(
     modifier = Modifier
       .fillMaxWidth()
@@ -325,13 +390,24 @@ private fun SyncTopBar() {
     }
 
     IconButton(
-      onClick = {},
+      onClick = onToggleNotifications,
       colors = IconButtonDefaults.iconButtonColors(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        containerColor = if (notificationsEnabled) {
+          Color(0xFFEDE4FF)
+        } else {
+          MaterialTheme.colorScheme.surfaceContainerLow
+        },
+        contentColor = if (notificationsEnabled) {
+          Color(0xFF7C4DFF)
+        } else {
+          MaterialTheme.colorScheme.onSurfaceVariant
+        }
       )
     ) {
-      Icon(Icons.Rounded.Notifications, contentDescription = null)
+      Icon(
+        Icons.Rounded.Notifications,
+        contentDescription = if (notificationsEnabled) "Disattiva notifiche" else "Attiva notifiche"
+      )
     }
   }
 }
@@ -1505,12 +1581,15 @@ private fun FloatingBottomBar(
     horizontalArrangement = Arrangement.Center
   ) {
     Surface(
+      modifier = Modifier.fillMaxWidth(),
       color = MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.9f),
-      shape = RoundedCornerShape(40.dp),
+      shape = RoundedCornerShape(34.dp),
       shadowElevation = 18.dp
     ) {
       Row(
-        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(horizontal = 8.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
@@ -1518,16 +1597,22 @@ private fun FloatingBottomBar(
           val active = tab == selectedTab
           Box(
             modifier = Modifier
-              .clip(RoundedCornerShape(999.dp))
+              .weight(1f)
+              .clip(RoundedCornerShape(24.dp))
               .background(
-                if (active) Brush.linearGradient(listOf(Color(0xFF6D3CD7), Color(0xFF8152EC))) else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                if (active) {
+                  Brush.linearGradient(listOf(Color(0xFF6D3CD7), Color(0xFF8152EC)))
+                } else {
+                  Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                }
               )
               .clickable { onSelectTab(tab) }
-              .padding(horizontal = if (active) 16.dp else 12.dp, vertical = 10.dp)
+              .padding(horizontal = 8.dp, vertical = 10.dp)
           ) {
-            Row(
-              horizontalArrangement = Arrangement.spacedBy(8.dp),
-              verticalAlignment = Alignment.CenterVertically
+            Column(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalAlignment = Alignment.CenterHorizontally,
+              verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
               Icon(
                 imageVector = tab.icon,
@@ -1535,14 +1620,12 @@ private fun FloatingBottomBar(
                 tint = if (active) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
               )
-              if (active) {
-                Text(
-                  text = tab.label,
-                  style = MaterialTheme.typography.labelLarge,
-                  color = Color.White,
-                  fontWeight = FontWeight.Bold
-                )
-              }
+              Text(
+                text = tab.label,
+                style = MaterialTheme.typography.labelMedium,
+                color = if (active) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
+              )
             }
           }
         }

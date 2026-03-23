@@ -11,6 +11,7 @@ import com.routy.sync.SyncDashboardState
 import com.routy.sync.SyncRepository
 import com.routy.sync.SyncTransferProgress
 import com.routy.sync.data.SyncPreferences
+import com.routy.sync.runtime.SetupNotificationManager
 import com.routy.sync.update.AndroidAppUpdateInfo
 import com.routy.sync.update.AndroidAppUpdater
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +26,7 @@ data class SyncUiState(
   val hostReachable: Boolean? = null,
   val darkModeEnabled: Boolean = false,
   val backgroundSyncEnabled: Boolean = true,
+  val notificationsEnabled: Boolean = true,
   val syncProgress: SyncTransferProgress? = null,
   val checkingForAppUpdate: Boolean = false,
   val appUpdate: AndroidAppUpdateInfo? = null,
@@ -36,6 +38,7 @@ data class SyncUiState(
 class SyncViewModel(
   private val repository: SyncRepository,
   private val preferences: SyncPreferences,
+  private val notificationManager: SetupNotificationManager,
   private val appUpdater: AndroidAppUpdater
 ) : ViewModel() {
   private val _uiState = MutableStateFlow(SyncUiState())
@@ -57,7 +60,8 @@ class SyncViewModel(
         _uiState.update { current ->
           current.copy(
             darkModeEnabled = settings.darkModeEnabled,
-            backgroundSyncEnabled = settings.backgroundSyncEnabled
+            backgroundSyncEnabled = settings.backgroundSyncEnabled,
+            notificationsEnabled = settings.notificationsEnabled
           )
         }
       }
@@ -168,6 +172,20 @@ class SyncViewModel(
       _uiState.update {
         it.copy(
           message = if (enabled) "Sync in background attivata." else "Sync in background disattivata."
+        )
+      }
+    }
+  }
+
+  fun setNotificationsEnabled(enabled: Boolean) {
+    viewModelScope.launch {
+      repository.setNotificationsEnabled(enabled)
+      if (!enabled) {
+        notificationManager.cancelSetupNeeded()
+      }
+      _uiState.update {
+        it.copy(
+          message = if (enabled) "Notifiche attivate." else "Notifiche disattivate."
         )
       }
     }
@@ -324,7 +342,12 @@ class SyncViewModel(
     fun factory(container: AppContainer) = object : ViewModelProvider.Factory {
       @Suppress("UNCHECKED_CAST")
       override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return SyncViewModel(container.repository, container.preferences, container.appUpdater) as T
+        return SyncViewModel(
+          container.repository,
+          container.preferences,
+          container.notificationManager,
+          container.appUpdater
+        ) as T
       }
     }
   }

@@ -29,7 +29,8 @@ import kotlinx.coroutines.launch
 
 data class LocalRuntimeConfig(
   val isConfigured: Boolean,
-  val backgroundSyncEnabled: Boolean
+  val backgroundSyncEnabled: Boolean,
+  val notificationsEnabled: Boolean
 )
 
 data class SyncDashboardState(
@@ -81,7 +82,8 @@ class SyncRepository(
     val state = preferences.getState()
     return LocalRuntimeConfig(
       isConfigured = state.isConfigured && tokenStore.readToken().isNotBlank(),
-      backgroundSyncEnabled = state.backgroundSyncEnabled
+      backgroundSyncEnabled = state.backgroundSyncEnabled,
+      notificationsEnabled = state.notificationsEnabled
     )
   }
 
@@ -139,6 +141,10 @@ class SyncRepository(
 
   suspend fun setBackgroundSyncEnabled(enabled: Boolean) {
     preferences.setBackgroundSyncEnabled(enabled)
+  }
+
+  suspend fun setNotificationsEnabled(enabled: Boolean) {
+    preferences.setNotificationsEnabled(enabled)
   }
 
   suspend fun refreshRemoteState() {

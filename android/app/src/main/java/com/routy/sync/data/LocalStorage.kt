@@ -73,7 +73,8 @@ data class SyncPreferencesState(
   val deviceId: String = "",
   val deviceName: String = "",
   val darkModeEnabled: Boolean = false,
-  val backgroundSyncEnabled: Boolean = true
+  val backgroundSyncEnabled: Boolean = true,
+  val notificationsEnabled: Boolean = true
 ) {
   val isConfigured: Boolean
     get() = hostUrl.isNotBlank() && deviceId.isNotBlank()
@@ -102,7 +103,8 @@ class SyncPreferences(private val context: Context) {
           deviceId = preferences[DEVICE_ID] ?: "",
           deviceName = preferences[DEVICE_NAME] ?: "",
           darkModeEnabled = preferences[DARK_MODE_ENABLED] ?: false,
-          backgroundSyncEnabled = preferences[BACKGROUND_SYNC_ENABLED] ?: true
+          backgroundSyncEnabled = preferences[BACKGROUND_SYNC_ENABLED] ?: true,
+          notificationsEnabled = preferences[NOTIFICATIONS_ENABLED] ?: true
         )
       }
 
@@ -134,12 +136,19 @@ class SyncPreferences(private val context: Context) {
     }
   }
 
+  suspend fun setNotificationsEnabled(enabled: Boolean) {
+    dataStore.edit { preferences ->
+      preferences[NOTIFICATIONS_ENABLED] = enabled
+    }
+  }
+
   companion object {
     private val HOST_URL = stringPreferencesKey("host_url")
     private val DEVICE_ID = stringPreferencesKey("device_id")
     private val DEVICE_NAME = stringPreferencesKey("device_name")
     private val DARK_MODE_ENABLED = booleanPreferencesKey("dark_mode_enabled")
     private val BACKGROUND_SYNC_ENABLED = booleanPreferencesKey("background_sync_enabled")
+    private val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
   }
 }
 
