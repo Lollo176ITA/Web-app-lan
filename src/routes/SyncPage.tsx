@@ -33,6 +33,7 @@ import {
 } from "../lib/api";
 import type { AndroidAppReleaseInfo } from "../lib/api";
 import { copyTextToClipboard } from "../lib/clipboard";
+import { insetCardSx, pageCardSx } from "../lib/surfaces";
 import { useQrCodeDataUrl } from "../lib/useQrCodeDataUrl";
 import { useLanLiveState } from "../lib/useLanLiveState";
 
@@ -76,8 +77,6 @@ export function SyncPage() {
   const pairingQrValue = buildSyncPairingQrValue(sessionLanUrl, overview?.activePairingCode?.code ?? null);
   const pairingQrDataUrl = useQrCodeDataUrl(pairingQrValue, { width: 256 });
   const apkQrDataUrl = useQrCodeDataUrl(androidRelease?.downloadUrl ?? null, { width: 256 });
-  const pageCardSx = { borderRadius: { xs: 2, md: 2.25 } };
-  const nestedCardSx = { borderRadius: { xs: 1.5, md: 1.75 } };
 
   async function syncData() {
     const profile = await fetchClientProfile();
@@ -223,9 +222,6 @@ export function SyncPage() {
               </Avatar>
               <Box sx={{ flex: 1 }}>
                 <Typography variant="h5">APK Android</Typography>
-                <Typography color="text.secondary">
-                  Apri il download diretto dell’ultima build Routy Sync o mostra il QR per installarla da un altro device.
-                </Typography>
               </Box>
             </Stack>
 
@@ -233,7 +229,7 @@ export function SyncPage() {
               <Box
                 sx={{
                   p: 2,
-                  ...nestedCardSx,
+                  ...insetCardSx,
                   border: `1px solid ${alpha(theme.palette.secondary.main, isDark ? 0.28 : 0.16)}`,
                   bgcolor: alpha(theme.palette.background.paper, isDark ? 0.7 : 0.92)
                 }}
@@ -351,9 +347,6 @@ export function SyncPage() {
                         </Avatar>
                         <Box sx={{ flex: 1 }}>
                           <Typography variant="h5">Pairing Android</Typography>
-                          <Typography color="text.secondary">
-                            Il pairing code dura 10 minuti e abilita la prima registrazione del device.
-                          </Typography>
                         </Box>
                       </Stack>
 
@@ -361,14 +354,11 @@ export function SyncPage() {
                         <Box
                           sx={{
                             p: 2,
-                            ...nestedCardSx,
+                            ...insetCardSx,
                             border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.3 : 0.14)}`,
                             bgcolor: alpha(theme.palette.background.paper, isDark ? 0.68 : 0.92)
                           }}
                         >
-                          <Typography variant="overline" color="secondary.main">
-                            Code attivo
-                          </Typography>
                           <Typography sx={{ fontSize: "2.4rem", fontWeight: 800, letterSpacing: "0.18em" }}>
                             {overview.activePairingCode.code}
                           </Typography>
@@ -411,34 +401,7 @@ export function SyncPage() {
                     </Stack>
                   </CardContent>
                 </Card>
-
                 {renderAndroidDownloadCard()}
-
-                <Card variant="outlined" sx={pageCardSx}>
-                  <CardContent>
-                    <Stack spacing={2}>
-                      <Stack direction="row" spacing={1.25} alignItems="center">
-                        <Avatar sx={{ bgcolor: alpha("#0f9d94", 0.12), color: "secondary.main" }}>
-                          <WifiRoundedIcon />
-                        </Avatar>
-                        <Box>
-                          <Typography variant="h5">Stato rapido</Typography>
-                          <Typography color="text.secondary">Panoramica della rete sync registrata sull’host.</Typography>
-                        </Box>
-                      </Stack>
-
-                      <Typography>
-                        <strong>{overview.devices.length}</strong> device registrati
-                      </Typography>
-                      <Typography>
-                        <strong>{overview.jobs.length}</strong> job recenti
-                      </Typography>
-                      <Typography color="text.secondary">
-                        Root host fisso: <strong>Sync/&lt;device&gt;/&lt;source-folder&gt;</strong>
-                      </Typography>
-                    </Stack>
-                  </CardContent>
-                </Card>
               </Box>
 
               <Card variant="outlined" sx={pageCardSx}>
@@ -465,7 +428,7 @@ export function SyncPage() {
                         }}
                       >
                         {overview.devices.map((device) => (
-                          <Card key={device.id} variant="outlined" sx={nestedCardSx}>
+                          <Card key={device.id} variant="outlined" sx={insetCardSx}>
                             <CardContent>
                               <Stack spacing={1.5}>
                                 <Stack direction="row" justifyContent="space-between" spacing={1.5} alignItems="flex-start">
@@ -504,7 +467,7 @@ export function SyncPage() {
                                           key={mapping.id}
                                           sx={{
                                             p: 1.2,
-                                            ...nestedCardSx,
+                                            ...insetCardSx,
                                             bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.04),
                                             border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
                                           }}
@@ -542,7 +505,7 @@ export function SyncPage() {
                             key={`${upload.deviceId}-${upload.mappingId}`}
                             sx={{
                               p: 1.5,
-                              ...nestedCardSx,
+                              ...insetCardSx,
                               border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.22 : 0.1)}`,
                               bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.04)
                             }}
@@ -580,7 +543,7 @@ export function SyncPage() {
                             key={job.id}
                             sx={{
                               p: 1.5,
-                              ...nestedCardSx,
+                              ...insetCardSx,
                               border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`,
                               bgcolor: alpha(theme.palette.background.paper, isDark ? 0.62 : 0.92)
                             }}
@@ -628,8 +591,6 @@ export function SyncPage() {
         description="Scansiona questo codice dalla schermata Sync Android per compilare host LAN e pairing code."
         qrCodeAlt="QR pairing Android"
         qrCodeDataUrl={pairingQrDataUrl}
-        subject={overview?.activePairingCode ? `Code ${overview.activePairingCode.code}` : undefined}
-        url={sessionLanUrl}
         onCopy={
           pairingQrValue
             ? () => {

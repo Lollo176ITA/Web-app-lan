@@ -27,6 +27,7 @@ import { DiagnosticsRealtimePanel } from "../components/DiagnosticsRealtimePanel
 import { PageHeader } from "../components/PageHeader";
 import { fetchClientProfile, fetchDiagnostics, fetchDiagnosticsRuntimeStats } from "../lib/api";
 import { copyTextToClipboard } from "../lib/clipboard";
+import { cardRadii, pageCardSx } from "../lib/surfaces";
 import { useLanLiveState } from "../lib/useLanLiveState";
 
 type RuntimeState = "idle" | "loading" | "ready" | "error";
@@ -171,7 +172,7 @@ export function DiagnosticsPage() {
                     <Card
                       key={check.id}
                       sx={{
-                        borderRadius: 2.5,
+                        ...pageCardSx,
                         border: `1px solid ${tone.border}`,
                         bgcolor: tone.soft
                       }}
@@ -216,7 +217,7 @@ export function DiagnosticsPage() {
                                   key={command.id}
                                   sx={{
                                     p: 1.5,
-                                    borderRadius: 2,
+                                    borderRadius: cardRadii.inset,
                                     bgcolor: "background.paper",
                                     border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
                                   }}
@@ -246,7 +247,7 @@ export function DiagnosticsPage() {
                                       sx={{
                                         display: "block",
                                         p: 1.25,
-                                        borderRadius: 2,
+                                        borderRadius: cardRadii.panel,
                                         bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.03),
                                         border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`,
                                         fontSize: "0.85rem",

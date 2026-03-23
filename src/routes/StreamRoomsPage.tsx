@@ -26,6 +26,7 @@ import { PageHeader } from "../components/PageHeader";
 import { QrCodeDialog } from "../components/QrCodeDialog";
 import { copyTextToClipboard } from "../lib/clipboard";
 import { buildStreamRoomShareUrl } from "../lib/share-links";
+import { insetCardSx, pageCardSx } from "../lib/surfaces";
 import { useQrCodeDataUrl } from "../lib/useQrCodeDataUrl";
 import { createStreamRoom, deleteStreamRoom, fetchSession, fetchStreamRooms } from "../lib/api";
 import { useLanLiveState } from "../lib/useLanLiveState";
@@ -140,7 +141,7 @@ export function StreamRoomsPage() {
               gridTemplateColumns: { xs: "1fr", lg: "0.95fr 1.05fr" }
             }}
           >
-            <Card>
+            <Card sx={pageCardSx}>
               <CardContent>
                 <Stack spacing={2}>
                   <Typography variant="h5">Nuova stanza pubblica</Typography>
@@ -179,7 +180,7 @@ export function StreamRoomsPage() {
             <Alert severity="warning">Connessione live non disponibile. Sto aggiornando l’elenco con polling.</Alert>
           ) : null}
 
-          <Card>
+          <Card sx={pageCardSx}>
             <CardContent>
               <Stack spacing={2}>
                 <Typography variant="h5">Elenco stanze</Typography>
@@ -206,6 +207,7 @@ export function StreamRoomsPage() {
                         variant="outlined"
                         sx={{
                           position: "relative",
+                          ...insetCardSx,
                           minWidth: 0
                         }}
                       >

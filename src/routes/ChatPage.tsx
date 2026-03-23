@@ -41,6 +41,7 @@ import {
   sendChatMessage,
   sendDirectChatMessage
 } from "../lib/api";
+import { cardRadii, pageCardSx } from "../lib/surfaces";
 import { useLanLiveState } from "../lib/useLanLiveState";
 type ActiveChatMessage = ChatMessage | PrivateChatMessage;
 
@@ -340,7 +341,7 @@ export function ChatPage() {
                 sx={{
                   width: { xs: "100%", lg: 360 },
                   flexShrink: 0,
-                  borderRadius: 2.5,
+                  ...pageCardSx,
                   alignSelf: "stretch"
                 }}
               >
@@ -358,7 +359,7 @@ export function ChatPage() {
                           width: "100%",
                           display: "block",
                           textAlign: "left",
-                          borderRadius: 2,
+                          borderRadius: cardRadii.panel,
                           border: `1px solid ${globalThreadActive ? alpha(theme.palette.primary.main, isDark ? 0.3 : 0.24) : alpha(theme.palette.text.primary, isDark ? 0.16 : 0.08)}`,
                           background: globalThreadActive
                             ? isDark
@@ -395,7 +396,7 @@ export function ChatPage() {
                           sx={{
                             px: 1.5,
                             py: 2,
-                            borderRadius: 2,
+                            borderRadius: cardRadii.panel,
                             border: `1px dashed ${alpha(theme.palette.primary.main, isDark ? 0.26 : 0.18)}`,
                             bgcolor: alpha(theme.palette.primary.main, isDark ? 0.1 : 0.02)
                           }}
@@ -418,7 +419,7 @@ export function ChatPage() {
                                 width: "100%",
                                 display: "block",
                                 textAlign: "left",
-                                borderRadius: 2,
+                                borderRadius: cardRadii.panel,
                                 border: `1px solid ${isActive ? tone.border : alpha(theme.palette.text.primary, isDark ? 0.16 : 0.08)}`,
                                 background: isActive ? tone.soft : alpha(theme.palette.background.paper, isDark ? 0.8 : 0.76),
                                 boxShadow: isActive ? `inset 3px 0 0 ${tone.solid}` : "none"
@@ -461,7 +462,7 @@ export function ChatPage() {
             ) : null}
 
             {showConversationPanel ? (
-              <Card sx={{ flex: 1, borderRadius: 2.5 }}>
+              <Card sx={{ flex: 1, ...pageCardSx }}>
                 <CardContent sx={{ p: { xs: 2, md: 2.5 } }}>
                   <Stack spacing={2}>
                     {liveState === "fallback" ? (
@@ -524,7 +525,7 @@ export function ChatPage() {
                         overflowY: "auto",
                         px: { xs: 0.5, md: 0.75 },
                         py: 0.75,
-                        borderRadius: 2,
+                        borderRadius: cardRadii.inset,
                         bgcolor: alpha(theme.palette.background.paper, isDark ? 0.82 : 0.92),
                         border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.1)}`,
                         backgroundImage:
@@ -559,7 +560,7 @@ export function ChatPage() {
                                   sx={{
                                     px: 1.5,
                                     py: 1.35,
-                                    borderRadius: 1.5,
+                                    borderRadius: cardRadii.panel,
                                     border: `1px solid ${tone.border}`,
                                     bgcolor: tone.soft,
                                     boxShadow: `0 10px 24px ${tone.glow}`,
@@ -643,7 +644,7 @@ export function ChatPage() {
                         }}
                         sx={{
                           "& .MuiOutlinedInput-root": {
-                            borderRadius: 2
+                            borderRadius: cardRadii.panel
                           }
                         }}
                       />

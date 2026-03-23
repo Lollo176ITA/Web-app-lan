@@ -22,6 +22,7 @@ import { PageHeader } from "../components/PageHeader";
 import { fetchClientProfile } from "../lib/api";
 import { normalizeNickname } from "../lib/identity";
 import { useIdentity } from "../lib/identity-context";
+import { cardRadii, pageCardSx } from "../lib/surfaces";
 import { useLanLiveState } from "../lib/useLanLiveState";
 
 interface ProfileMeta {
@@ -71,7 +72,7 @@ export function UserProfilePage() {
 
         <Stack spacing={3} sx={{ mt: 3 }}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={2.5}>
-            <Card sx={{ flex: 1, borderRadius: 2.5 }}>
+            <Card sx={{ flex: 1, ...pageCardSx }}>
               <CardContent>
                 <Stack spacing={2}>
                   <Stack direction="row" spacing={1.25} alignItems="center">
@@ -91,7 +92,7 @@ export function UserProfilePage() {
                     helperText="Puoi cambiarlo qui. L'identificatore utente resta invariato."
                     sx={{
                       "& .MuiOutlinedInput-root": {
-                        borderRadius: 2
+                        borderRadius: cardRadii.panel
                       }
                     }}
                   />
@@ -111,7 +112,7 @@ export function UserProfilePage() {
                       });
                       setSnackbar("Profilo aggiornato.");
                     }}
-                    sx={{ alignSelf: "flex-start", borderRadius: 2 }}
+                    sx={{ alignSelf: "flex-start" }}
                   >
                     Salva modifiche
                   </Button>
@@ -119,7 +120,7 @@ export function UserProfilePage() {
               </CardContent>
             </Card>
 
-            <Card sx={{ flex: 1, borderRadius: 2.5 }}>
+            <Card sx={{ flex: 1, ...pageCardSx }}>
               <CardContent>
                 <Stack spacing={2}>
                   <Stack direction="row" spacing={1.25} alignItems="center">
@@ -140,7 +141,7 @@ export function UserProfilePage() {
             </Card>
           </Stack>
 
-          <Card sx={{ borderRadius: 2.5 }}>
+          <Card sx={pageCardSx}>
             <CardContent>
               <Stack spacing={2}>
                 <Stack direction="row" spacing={1.25} alignItems="center">

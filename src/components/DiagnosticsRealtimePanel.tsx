@@ -16,6 +16,7 @@ import {
 import { alpha, useTheme } from "@mui/material/styles";
 import type { HostRuntimeStatsResponse } from "../../shared/types";
 import { formatBytes } from "../lib/format";
+import { cardRadii, pageCardSx } from "../lib/surfaces";
 
 interface DiagnosticsRealtimePanelProps {
   loading: boolean;
@@ -103,7 +104,7 @@ function ComparisonMetricCard({
     <Card
       sx={{
         height: "100%",
-        borderRadius: 3,
+        ...pageCardSx,
         border: `1px solid ${alpha(accent, isDark ? 0.28 : 0.16)}`,
         background: isDark
           ? `linear-gradient(180deg, ${alpha(accent, 0.12)} 0%, ${alpha(theme.palette.background.paper, 0.96)} 100%)`
@@ -132,7 +133,7 @@ function ComparisonMetricCard({
 
           <Box
             sx={{
-              borderRadius: 2.75,
+              borderRadius: cardRadii.inset,
               overflow: "hidden",
               border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.2 : 0.1)}`,
               bgcolor: alpha(theme.palette.background.paper, isDark ? 0.42 : 0.78),
@@ -166,7 +167,7 @@ function ComparisonMetricCard({
                   width: 50,
                   disableLine: true,
                   disableTicks: true,
-                  valueFormatter: (value) => axisFormatter(Number(value)),
+                  valueFormatter: (value: number | null) => axisFormatter(Number(value ?? 0)),
                   tickLabelStyle: {
                     fontSize: 11,
                     fill: tickColor
@@ -215,7 +216,7 @@ function RealtimeSkeleton() {
       }}
     >
       {Array.from({ length: 3 }, (_, index) => (
-        <Card key={index} sx={{ borderRadius: 3 }}>
+        <Card key={index} sx={pageCardSx}>
           <CardContent>
             <Stack spacing={2}>
               <Skeleton variant="rounded" width={180} height={28} />

@@ -11,6 +11,7 @@ import {
 import { alpha, useTheme } from "@mui/material/styles";
 import type { SessionInfo } from "../../../shared/types";
 import { formatBytes } from "../../lib/format";
+import { cardRadii, insetCardSx, pageCardSx } from "../../lib/surfaces";
 import { formatLibraryCount } from "./utils";
 
 interface HostSessionCardProps {
@@ -32,7 +33,7 @@ export function HostSessionCard({
   const isDark = theme.palette.mode === "dark";
 
   return (
-    <Card>
+    <Card sx={pageCardSx}>
       <CardHeader title="Sessione host" subheader="Condividi questo indirizzo nella stessa rete" />
       <CardContent sx={{ pt: 0 }}>
         {loading || !session ? (
@@ -46,7 +47,7 @@ export function HostSessionCard({
                 gap: 2,
                 alignItems: "center",
                 gridTemplateColumns: { xs: "1fr", sm: "minmax(0, 1fr) auto" },
-                borderRadius: "24px",
+                borderRadius: cardRadii.inset,
                 bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.05),
                 border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
               }}
@@ -68,7 +69,7 @@ export function HostSessionCard({
                       onClick={onOpenQrCode}
                       sx={{
                         flexShrink: 0,
-                        borderRadius: 2.5,
+                        borderRadius: cardRadii.panel,
                         bgcolor: alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08),
                         color: isDark ? theme.palette.primary.light : "primary.main",
                         border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.24 : 0.12)}`
@@ -85,7 +86,7 @@ export function HostSessionCard({
                   sx={{
                     p: 1.25,
                     justifySelf: { xs: "flex-start", sm: "end" },
-                    borderRadius: "20px",
+                    borderRadius: cardRadii.inset,
                     bgcolor: "#ffffff",
                     border: `1px solid ${alpha("#1769aa", 0.16)}`
                   }}
@@ -100,7 +101,7 @@ export function HostSessionCard({
               ) : null}
             </Box>
 
-            <Card variant="outlined">
+            <Card variant="outlined" sx={insetCardSx}>
               <CardContent sx={{ p: 2.25 }}>
                 <Stack
                   direction={{ xs: "column", sm: "row" }}

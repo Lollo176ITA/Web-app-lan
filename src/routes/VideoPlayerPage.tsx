@@ -3,6 +3,7 @@ import { Box, CircularProgress, Container, Typography } from "@mui/material";
 import { useParams } from "react-router-dom";
 import type { LibraryItem } from "../../shared/types";
 import { fetchItem } from "../lib/api";
+import { cardRadii } from "../lib/surfaces";
 
 export function VideoPlayerPage() {
   const { itemId } = useParams();
@@ -91,7 +92,7 @@ export function VideoPlayerPage() {
       <Container maxWidth="xl" sx={{ pt: { xs: 1, md: 2 } }}>
         <Box
           sx={{
-            borderRadius: 4,
+            borderRadius: cardRadii.inset,
             overflow: "hidden",
             border: "1px solid rgba(255,255,255,0.08)",
             bgcolor: "#000"

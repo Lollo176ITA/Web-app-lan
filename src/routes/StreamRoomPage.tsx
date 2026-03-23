@@ -39,6 +39,7 @@ import {
   setStreamRoomVideo,
   updateStreamRoomPlayback
 } from "../lib/api";
+import { cardRadii, pageCardSx } from "../lib/surfaces";
 import { useLanLiveState } from "../lib/useLanLiveState";
 
 function formatMessageTime(value: string) {
@@ -285,7 +286,7 @@ export function StreamRoomPage() {
       <Box sx={{ pb: 7 }}>
         <Container maxWidth="md" sx={{ pt: { xs: 2, md: 3 } }}>
           <PageHeader title="Streaming" subtitle="Watch party locale" />
-          <Card sx={{ mt: 3 }}>
+          <Card sx={{ mt: 3, ...pageCardSx }}>
             <CardContent>
               <Stack spacing={2}>
                 <Alert severity="error">{error ?? "Stanza non trovata."}</Alert>
@@ -306,7 +307,7 @@ export function StreamRoomPage() {
         <PageHeader title={room.name} subtitle="Stanza streaming sincronizzata" networkState={liveState} />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
-          <Card>
+          <Card sx={pageCardSx}>
             <CardContent>
               <Stack
                 direction={{ xs: "column", lg: "row" }}
@@ -372,7 +373,7 @@ export function StreamRoomPage() {
             }}
           >
             <Stack spacing={2.5}>
-              <Card>
+              <Card sx={pageCardSx}>
                 <CardContent>
                   <Stack spacing={2}>
                     <Stack
@@ -415,7 +416,7 @@ export function StreamRoomPage() {
                     {room.videoItem?.streamUrl ? (
                       <Box
                         sx={{
-                          borderRadius: 4,
+                          borderRadius: cardRadii.inset,
                           overflow: "hidden",
                           border: "1px solid rgba(255,255,255,0.08)",
                           bgcolor: "#000"
@@ -458,7 +459,7 @@ export function StreamRoomPage() {
                           minHeight: 260,
                           display: "grid",
                           placeItems: "center",
-                          borderRadius: 4,
+                          borderRadius: cardRadii.inset,
                           bgcolor: "#09131d",
                           border: "1px solid rgba(255,255,255,0.08)",
                           p: 3,
@@ -483,7 +484,7 @@ export function StreamRoomPage() {
               </Card>
             </Stack>
 
-            <Card>
+            <Card sx={pageCardSx}>
               <CardContent>
                 <Stack spacing={2}>
                   <Typography variant="h5">Chat stanza</Typography>
@@ -493,7 +494,7 @@ export function StreamRoomPage() {
                       maxHeight: 420,
                       overflowY: "auto",
                       p: 1,
-                      borderRadius: 4,
+                      borderRadius: cardRadii.inset,
                       bgcolor: alpha(theme.palette.primary.main, isDark ? 0.1 : 0.02),
                       border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
                     }}
