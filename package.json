@@ -1,6 +1,6 @@
 {
   "name": "routy",
-  "version": "2.8.0",
+  "version": "2.8.1",
   "androidAppVersion": "0.4.0",
   "license": "UNLICENSED",
   "private": true,
@@ -65,7 +65,7 @@
     "supertest": "^7.1.4",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
-    "vite": "^7.1.3",
-    "vitest": "^3.2.4"
+    "vite": "^8.0.1",
+    "vitest": "^4.1.0"
   }
 }

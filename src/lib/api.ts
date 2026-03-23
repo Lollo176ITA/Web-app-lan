@@ -67,6 +67,15 @@ interface UploadFilesOptions {
   signal?: AbortSignal;
 }
 
+export interface AndroidAppReleaseInfo {
+  assetName: string;
+  downloadUrl: string;
+  version: string;
+  workflowRunUrl?: string | null;
+}
+
+const androidUpdateBaseUrl = "https://raw.githubusercontent.com/Lollo176ITA/Web-app-lan/builds/android-release/latest";
+
 function createAbortError() {
   const error = new Error("Upload aborted");
   error.name = "AbortError";
@@ -305,6 +314,35 @@ export function fetchClientProfile() {
 
 export function fetchSyncOverview() {
   return readJson<SyncOverviewResponse>("/api/sync/overview");
+}
+
+export async function fetchLatestAndroidAppRelease() {
+  const response = await fetch(`${androidUpdateBaseUrl}/build-info.json`, {
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  const metadata = (await response.json()) as {
+    files?: Array<{ name?: string }>;
+    version?: string;
+    workflowRunUrl?: string;
+  };
+  const version = metadata.version?.trim();
+  const assetName = metadata.files?.find((file) => file.name?.trim().toLowerCase().endsWith(".apk"))?.name?.trim();
+
+  if (!version || !assetName) {
+    throw new Error("Invalid Android release metadata");
+  }
+
+  return {
+    version,
+    assetName,
+    downloadUrl: `${androidUpdateBaseUrl}/${assetName}`,
+    workflowRunUrl: metadata.workflowRunUrl?.trim() || null
+  } satisfies AndroidAppReleaseInfo;
 }
 
 export function createSyncPairingCode() {

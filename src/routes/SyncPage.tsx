@@ -1,4 +1,5 @@
 import { startTransition, useEffect, useState } from "react";
+import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import LinkRoundedIcon from "@mui/icons-material/LinkRounded";
 import PhoneAndroidRoundedIcon from "@mui/icons-material/PhoneAndroidRounded";
@@ -24,11 +25,13 @@ import { PageHeader } from "../components/PageHeader";
 import { QrCodeDialog } from "../components/QrCodeDialog";
 import {
   createSyncPairingCode,
+  fetchLatestAndroidAppRelease,
   fetchClientProfile,
   fetchSession,
   fetchSyncOverview,
   revokeSyncDevice
 } from "../lib/api";
+import type { AndroidAppReleaseInfo } from "../lib/api";
 import { copyTextToClipboard } from "../lib/clipboard";
 import { useQrCodeDataUrl } from "../lib/useQrCodeDataUrl";
 import { useLanLiveState } from "../lib/useLanLiveState";
@@ -66,10 +69,15 @@ export function SyncPage() {
   const [creatingPairingCode, setCreatingPairingCode] = useState(false);
   const [revokingDeviceId, setRevokingDeviceId] = useState<string | null>(null);
   const [sessionLanUrl, setSessionLanUrl] = useState<string | null>(null);
+  const [androidRelease, setAndroidRelease] = useState<AndroidAppReleaseInfo | null>(null);
   const [pairingQrOpen, setPairingQrOpen] = useState(false);
+  const [apkQrOpen, setApkQrOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const pairingQrValue = buildSyncPairingQrValue(sessionLanUrl, overview?.activePairingCode?.code ?? null);
   const pairingQrDataUrl = useQrCodeDataUrl(pairingQrValue, { width: 256 });
+  const apkQrDataUrl = useQrCodeDataUrl(androidRelease?.downloadUrl ?? null, { width: 256 });
+  const pageCardSx = { borderRadius: { xs: 2, md: 2.25 } };
+  const nestedCardSx = { borderRadius: { xs: 1.5, md: 1.75 } };
 
   async function syncData() {
     const profile = await fetchClientProfile();
@@ -122,6 +130,30 @@ export function SyncPage() {
       setLoading(false);
       setSnackbar("Area sync non disponibile al momento.");
     });
+
+    let cancelled = false;
+
+    void fetchLatestAndroidAppRelease()
+      .then((release) => {
+        if (cancelled) {
+          return;
+        }
+
+        startTransition(() => {
+          setAndroidRelease(release);
+        });
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setAndroidRelease(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -172,6 +204,91 @@ export function SyncPage() {
     }
   }
 
+  function renderAndroidDownloadCard() {
+    return (
+      <Card
+        variant="outlined"
+        sx={{
+          ...pageCardSx,
+          background: isDark
+            ? `linear-gradient(180deg, ${alpha("#0f9d94", 0.18)} 0%, ${alpha(theme.palette.background.paper, 0.98)} 100%)`
+            : `linear-gradient(180deg, ${alpha("#0f9d94", 0.08)} 0%, rgba(255,255,255,0.97) 100%)`
+        }}
+      >
+        <CardContent>
+          <Stack spacing={2}>
+            <Stack direction="row" spacing={1.25} alignItems="center">
+              <Avatar sx={{ bgcolor: alpha("#0f9d94", 0.12), color: "secondary.main" }}>
+                <PhoneAndroidRoundedIcon />
+              </Avatar>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="h5">APK Android</Typography>
+                <Typography color="text.secondary">
+                  Apri il download diretto dell’ultima build Routy Sync o mostra il QR per installarla da un altro device.
+                </Typography>
+              </Box>
+            </Stack>
+
+            {androidRelease ? (
+              <Box
+                sx={{
+                  p: 2,
+                  ...nestedCardSx,
+                  border: `1px solid ${alpha(theme.palette.secondary.main, isDark ? 0.28 : 0.16)}`,
+                  bgcolor: alpha(theme.palette.background.paper, isDark ? 0.7 : 0.92)
+                }}
+              >
+                <Typography variant="overline" color="secondary.main">
+                  Release corrente
+                </Typography>
+                <Typography variant="h6" sx={{ wordBreak: "break-word" }}>
+                  Routy Sync {androidRelease.version}
+                </Typography>
+                <Typography color="text.secondary" sx={{ wordBreak: "break-word" }}>
+                  {androidRelease.assetName}
+                </Typography>
+              </Box>
+            ) : (
+              <Typography color="text.secondary">
+                Metadata APK non disponibili al momento. Riprova quando la release Android e raggiungibile.
+              </Typography>
+            )}
+
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
+              {androidRelease ? (
+                <Button
+                  variant="contained"
+                  startIcon={<DownloadRoundedIcon />}
+                  href={androidRelease.downloadUrl}
+                  rel="noreferrer"
+                  target="_blank"
+                  sx={{ alignSelf: "flex-start" }}
+                >
+                  Scarica APK
+                </Button>
+              ) : (
+                <Button variant="contained" startIcon={<DownloadRoundedIcon />} disabled sx={{ alignSelf: "flex-start" }}>
+                  Scarica APK
+                </Button>
+              )}
+              <Button
+                variant="outlined"
+                startIcon={<QrCode2RoundedIcon />}
+                disabled={!androidRelease}
+                onClick={() => {
+                  setApkQrOpen(true);
+                }}
+                sx={{ alignSelf: "flex-start" }}
+              >
+                Mostra QR APK
+              </Button>
+            </Stack>
+          </Stack>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Box sx={{ pb: 7 }}>
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
@@ -187,7 +304,7 @@ export function SyncPage() {
                 o revocare device Android.
               </Alert>
 
-              <Card>
+              <Card variant="outlined" sx={pageCardSx}>
                 <CardContent>
                   <Stack spacing={1.5}>
                     <Typography variant="h5">Come funziona</Typography>
@@ -199,6 +316,8 @@ export function SyncPage() {
                   </Stack>
                 </CardContent>
               </Card>
+
+              {renderAndroidDownloadCard()}
             </>
           ) : null}
 
@@ -212,12 +331,13 @@ export function SyncPage() {
                 sx={{
                   display: "grid",
                   gap: 2.5,
-                  gridTemplateColumns: { xs: "1fr", lg: "1.05fr 0.95fr" }
+                  gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))", xl: "1.05fr 0.95fr 0.85fr" }
                 }}
               >
                 <Card
+                  variant="outlined"
                   sx={{
-                    borderRadius: 3,
+                    ...pageCardSx,
                     background: isDark
                       ? `linear-gradient(180deg, ${alpha("#1769aa", 0.22)} 0%, ${alpha(theme.palette.background.paper, 0.98)} 100%)`
                       : `linear-gradient(180deg, ${alpha("#1769aa", 0.1)} 0%, rgba(255,255,255,0.96) 100%)`
@@ -241,7 +361,7 @@ export function SyncPage() {
                         <Box
                           sx={{
                             p: 2,
-                            borderRadius: 2.5,
+                            ...nestedCardSx,
                             border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.3 : 0.14)}`,
                             bgcolor: alpha(theme.palette.background.paper, isDark ? 0.68 : 0.92)
                           }}
@@ -292,7 +412,9 @@ export function SyncPage() {
                   </CardContent>
                 </Card>
 
-                <Card sx={{ borderRadius: 3 }}>
+                {renderAndroidDownloadCard()}
+
+                <Card variant="outlined" sx={pageCardSx}>
                   <CardContent>
                     <Stack spacing={2}>
                       <Stack direction="row" spacing={1.25} alignItems="center">
@@ -319,96 +441,96 @@ export function SyncPage() {
                 </Card>
               </Box>
 
-                <Card sx={{ borderRadius: 3 }}>
-                  <CardContent>
-                    <Stack spacing={2}>
-                      <Stack direction="row" spacing={1.25} alignItems="center">
-                        <Avatar sx={{ bgcolor: alpha("#1769aa", 0.12), color: "primary.main" }}>
-                          <PhoneAndroidRoundedIcon />
-                        </Avatar>
-                        <Box>
-                          <Typography variant="h5">Device registrati</Typography>
-                          <Typography color="text.secondary">Config attiva e mapping delle cartelle.</Typography>
-                        </Box>
-                      </Stack>
-
-                      {overview.devices.length === 0 ? (
-                        <Typography color="text.secondary">Nessun device Android registrato.</Typography>
-                      ) : (
-                        <Box
-                          sx={{
-                            display: "grid",
-                            gap: 1.5,
-                            gridTemplateColumns: { xs: "1fr", lg: "repeat(2, minmax(0, 1fr))" }
-                          }}
-                        >
-                          {overview.devices.map((device) => (
-                            <Card key={device.id} variant="outlined" sx={{ borderRadius: 2.5 }}>
-                              <CardContent>
-                                <Stack spacing={1.5}>
-                                  <Stack direction="row" justifyContent="space-between" spacing={1.5} alignItems="flex-start">
-                                    <Box sx={{ minWidth: 0 }}>
-                                      <Typography variant="h6" sx={{ wordBreak: "break-word" }}>
-                                        {device.deviceName}
-                                      </Typography>
-                                      <Typography color="text.secondary">
-                                        {device.platform.toUpperCase()} • visto {formatDateTime(device.lastSeenAt)}
-                                      </Typography>
-                                      <Typography color="text.secondary">
-                                        Ultima sync {formatDateTime(device.lastSyncAt)}
-                                      </Typography>
-                                    </Box>
-
-                                    <Button
-                                      color="error"
-                                      startIcon={<DeleteOutlineRoundedIcon />}
-                                      disabled={revokingDeviceId === device.id}
-                                      onClick={() => {
-                                        void handleRevokeDevice(device.id);
-                                      }}
-                                    >
-                                      Revoca
-                                    </Button>
-                                  </Stack>
-
-                                  <Box>
-                                    <Typography variant="overline" color="secondary.main">
-                                      Mapping attivi
-                                    </Typography>
-                                    <Stack spacing={0.75} sx={{ mt: 0.75 }}>
-                                      {device.mappings.length > 0 ? (
-                                        device.mappings.map((mapping) => (
-                                          <Box
-                                            key={mapping.id}
-                                            sx={{
-                                              p: 1.2,
-                                              borderRadius: 2,
-                                              bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.04),
-                                              border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
-                                            }}
-                                          >
-                                            <Typography sx={{ fontWeight: 700 }}>{mapping.sourceName}</Typography>
-                                            <Typography color="text.secondary">
-                                              {mapping.trackedFileCount} file tracciati • ultima sync {formatDateTime(mapping.lastSyncedAt)}
-                                            </Typography>
-                                          </Box>
-                                        ))
-                                      ) : (
-                                        <Typography color="text.secondary">Nessuna cartella configurata.</Typography>
-                                      )}
-                                    </Stack>
-                                  </Box>
-                                </Stack>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </Box>
-                      )}
+              <Card variant="outlined" sx={pageCardSx}>
+                <CardContent>
+                  <Stack spacing={2}>
+                    <Stack direction="row" spacing={1.25} alignItems="center">
+                      <Avatar sx={{ bgcolor: alpha("#1769aa", 0.12), color: "primary.main" }}>
+                        <PhoneAndroidRoundedIcon />
+                      </Avatar>
+                      <Box>
+                        <Typography variant="h5">Device registrati</Typography>
+                        <Typography color="text.secondary">Config attiva e mapping delle cartelle.</Typography>
+                      </Box>
                     </Stack>
-                  </CardContent>
-                </Card>
 
-              <Card sx={{ borderRadius: 3 }}>
+                    {overview.devices.length === 0 ? (
+                      <Typography color="text.secondary">Nessun device Android registrato.</Typography>
+                    ) : (
+                      <Box
+                        sx={{
+                          display: "grid",
+                          gap: 1.5,
+                          gridTemplateColumns: { xs: "1fr", lg: "repeat(2, minmax(0, 1fr))" }
+                        }}
+                      >
+                        {overview.devices.map((device) => (
+                          <Card key={device.id} variant="outlined" sx={nestedCardSx}>
+                            <CardContent>
+                              <Stack spacing={1.5}>
+                                <Stack direction="row" justifyContent="space-between" spacing={1.5} alignItems="flex-start">
+                                  <Box sx={{ minWidth: 0 }}>
+                                    <Typography variant="h6" sx={{ wordBreak: "break-word" }}>
+                                      {device.deviceName}
+                                    </Typography>
+                                    <Typography color="text.secondary">
+                                      {device.platform.toUpperCase()} • visto {formatDateTime(device.lastSeenAt)}
+                                    </Typography>
+                                    <Typography color="text.secondary">
+                                      Ultima sync {formatDateTime(device.lastSyncAt)}
+                                    </Typography>
+                                  </Box>
+
+                                  <Button
+                                    color="error"
+                                    startIcon={<DeleteOutlineRoundedIcon />}
+                                    disabled={revokingDeviceId === device.id}
+                                    onClick={() => {
+                                      void handleRevokeDevice(device.id);
+                                    }}
+                                  >
+                                    Revoca
+                                  </Button>
+                                </Stack>
+
+                                <Box>
+                                  <Typography variant="overline" color="secondary.main">
+                                    Mapping attivi
+                                  </Typography>
+                                  <Stack spacing={0.75} sx={{ mt: 0.75 }}>
+                                    {device.mappings.length > 0 ? (
+                                      device.mappings.map((mapping) => (
+                                        <Box
+                                          key={mapping.id}
+                                          sx={{
+                                            p: 1.2,
+                                            ...nestedCardSx,
+                                            bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.04),
+                                            border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`
+                                          }}
+                                        >
+                                          <Typography sx={{ fontWeight: 700 }}>{mapping.sourceName}</Typography>
+                                          <Typography color="text.secondary">
+                                            {mapping.trackedFileCount} file tracciati • ultima sync {formatDateTime(mapping.lastSyncedAt)}
+                                          </Typography>
+                                        </Box>
+                                      ))
+                                    ) : (
+                                      <Typography color="text.secondary">Nessuna cartella configurata.</Typography>
+                                    )}
+                                  </Stack>
+                                </Box>
+                              </Stack>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </Box>
+                    )}
+                  </Stack>
+                </CardContent>
+              </Card>
+
+              <Card variant="outlined" sx={pageCardSx}>
                 <CardContent>
                   <Stack spacing={2}>
                     <Typography variant="h5">Attivita recente</Typography>
@@ -420,7 +542,7 @@ export function SyncPage() {
                             key={`${upload.deviceId}-${upload.mappingId}`}
                             sx={{
                               p: 1.5,
-                              borderRadius: 2.5,
+                              ...nestedCardSx,
                               border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.22 : 0.1)}`,
                               bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.04)
                             }}
@@ -458,7 +580,7 @@ export function SyncPage() {
                             key={job.id}
                             sx={{
                               p: 1.5,
-                              borderRadius: 2.5,
+                              ...nestedCardSx,
                               border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`,
                               bgcolor: alpha(theme.palette.background.paper, isDark ? 0.62 : 0.92)
                             }}
@@ -522,6 +644,36 @@ export function SyncPage() {
             : undefined
         }
         copyLabel="Copia payload QR"
+      />
+
+      <QrCodeDialog
+        open={apkQrOpen}
+        onClose={() => {
+          setApkQrOpen(false);
+        }}
+        title="QR download APK"
+        description="Scansiona questo codice da un altro device Android per aprire subito il download diretto dell’APK Routy Sync."
+        qrCodeAlt="QR download APK Android"
+        qrCodeDataUrl={apkQrDataUrl}
+        subject={androidRelease ? `Routy Sync ${androidRelease.version}` : undefined}
+        url={androidRelease?.downloadUrl}
+        onCopy={
+          androidRelease
+            ? () => {
+                void copyTextToClipboard(androidRelease.downloadUrl)
+                  .then(() => {
+                    setSnackbar("Link APK copiato.");
+                  })
+                  .catch(() => {
+                    setSnackbar("Copia link APK non disponibile.");
+                  });
+              }
+            : undefined
+        }
+        copyLabel="Copia link APK"
+        actionHref={androidRelease?.downloadUrl}
+        actionLabel="Apri download"
+        actionIcon={<DownloadRoundedIcon />}
       />
     </Box>
   );
