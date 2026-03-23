@@ -105,12 +105,13 @@ import com.routy.sync.runtime.SyncForegroundService
 
 private enum class SyncTab(
   val label: String,
-  val icon: ImageVector
+  val icon: ImageVector,
+  val activeIcon: ImageVector
 ) {
-  Qr("QR", Icons.Rounded.QrCodeScanner),
-  Folders("Cartelle", Icons.Rounded.FolderOpen),
-  Activity("Attività", Icons.Rounded.History),
-  Settings("Impost.", Icons.Rounded.Settings)
+  Qr("Scansione", Icons.Rounded.QrCodeScanner, Icons.Filled.QrCodeScanner),
+  Folders("Cartelle", Icons.Rounded.FolderOpen, Icons.Filled.FolderOpen),
+  Activity("Attività", Icons.Rounded.History, Icons.Filled.History),
+  Settings("Impostazioni", Icons.Rounded.Settings, Icons.Filled.Settings)
 }
 
 private enum class ActivityStatus {
@@ -1579,53 +1580,57 @@ private fun FloatingBottomBar(
       .padding(start = 18.dp, end = 18.dp, bottom = bottomPadding + 18.dp, top = 10.dp),
     horizontalArrangement = Arrangement.Center
   ) {
-    Surface(
-      modifier = Modifier.fillMaxWidth(),
-      color = MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.9f),
-      shape = RoundedCornerShape(34.dp),
-      shadowElevation = 18.dp
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(34.dp))
+        .background(MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.9f))
+        .padding(horizontal = 8.dp, vertical = 8.dp),
+      horizontalArrangement = Arrangement.spacedBy(6.dp),
+      verticalAlignment = Alignment.CenterVertically
     ) {
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 8.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        SyncTab.entries.forEach { tab ->
-          val active = tab == selectedTab
-          Box(
-            modifier = Modifier
-              .weight(1f)
-              .clip(RoundedCornerShape(24.dp))
-              .background(
-                if (active) {
-                  Brush.linearGradient(listOf(Color(0xFF6D3CD7), Color(0xFF8152EC)))
-                } else {
-                  Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
-                }
-              )
-              .clickable { onSelectTab(tab) }
-              .padding(horizontal = 8.dp, vertical = 10.dp)
+      SyncTab.entries.forEach { tab ->
+        val active = tab == selectedTab
+        Box(
+          modifier = Modifier
+            .weight(1f)
+            .clickable { onSelectTab(tab) }
+            .padding(horizontal = 8.dp, vertical = 10.dp)
+        ) {
+          Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
           ) {
-            Column(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalAlignment = Alignment.CenterHorizontally,
-              verticalArrangement = Arrangement.spacedBy(4.dp)
+            Box(
+              modifier = Modifier
+                .clip(RoundedCornerShape(18.dp))
+                .background(
+                  if (active) {
+                    Brush.linearGradient(listOf(Color(0xFF6D3CD7), Color(0xFF8152EC)))
+                  } else {
+                    Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                  }
+                )
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+              contentAlignment = Alignment.Center
             ) {
               Icon(
-                imageVector = tab.icon,
+                imageVector = if (active) tab.activeIcon else tab.icon,
                 contentDescription = tab.label,
                 tint = if (active) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
               )
-              Text(
-                text = tab.label,
-                style = MaterialTheme.typography.labelMedium,
-                color = if (active) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
-              )
             }
+            Text(
+              text = tab.label,
+              style = MaterialTheme.typography.labelSmall,
+              color = if (active) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+              fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+              textAlign = TextAlign.Center,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
+            )
           }
         }
       }
