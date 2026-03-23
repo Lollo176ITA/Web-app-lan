@@ -12,6 +12,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -67,8 +68,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -93,8 +92,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -108,6 +109,7 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.routy.sync.AppContainer
 import com.routy.sync.BuildConfig
+import com.routy.sync.R
 import com.routy.sync.data.SyncMappingEntity
 import com.routy.sync.runtime.SyncForegroundService
 
@@ -357,6 +359,9 @@ private fun SyncTopBar(
   notificationsEnabled: Boolean,
   onToggleNotifications: () -> Unit
 ) {
+  val isDarkSurface = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+  val logoRes = if (isDarkSurface) R.drawable.logo_nero else R.drawable.logo_bianco
+
   Row(
     modifier = Modifier
       .fillMaxWidth()
@@ -369,19 +374,13 @@ private fun SyncTopBar(
       horizontalArrangement = Arrangement.spacedBy(12.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
-      Surface(
-        modifier = Modifier.size(42.dp),
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.secondaryContainer
-      ) {
-        Box(contentAlignment = Alignment.Center) {
-          Icon(
-            imageVector = Icons.Rounded.Sync,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSecondaryContainer
-          )
-        }
-      }
+      Image(
+        painter = painterResource(id = logoRes),
+        contentDescription = "Logo Routy Sync",
+        modifier = Modifier
+          .size(44.dp)
+          .clip(RoundedCornerShape(14.dp))
+      )
 
       Column {
         Text(
@@ -1296,35 +1295,50 @@ private fun SettingsRow(
   val iconColor = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
   val resolvedTrailingColor = trailingColor ?: supportingColor
 
-  ListItem(
+  Row(
     modifier = Modifier
       .fillMaxWidth()
-      .clickable(enabled = enabled && onClick != null) { onClick?.invoke() },
-    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-    headlineContent = {
+      .clip(MaterialTheme.shapes.medium)
+      .clickable(enabled = enabled && onClick != null) { onClick?.invoke() }
+      .padding(horizontal = 16.dp, vertical = 14.dp),
+    horizontalArrangement = Arrangement.spacedBy(14.dp),
+    verticalAlignment = Alignment.Top
+  ) {
+    Box(
+      modifier = Modifier
+        .padding(top = 2.dp)
+        .size(22.dp),
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(
+        imageVector = icon,
+        contentDescription = null,
+        tint = iconColor.copy(alpha = if (enabled) 1f else 0.45f)
+      )
+    }
+
+    Column(
+      modifier = Modifier.weight(1f),
+      verticalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
       Text(
         text = title,
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold,
         color = headlineColor
       )
-    },
-    supportingContent = {
       Text(
         text = subtitle,
         style = MaterialTheme.typography.bodyMedium,
         color = supportingColor
       )
-    },
-    leadingContent = {
-      Icon(
-        imageVector = icon,
-        contentDescription = null,
-        tint = iconColor.copy(alpha = if (enabled) 1f else 0.45f)
-      )
-    },
-    trailingContent = trailingText?.let {
-      {
+    }
+
+    if (trailingText != null) {
+      Box(
+        modifier = Modifier.padding(top = 2.dp),
+        contentAlignment = Alignment.TopEnd
+      ) {
         Text(
           text = trailingText,
           style = MaterialTheme.typography.labelLarge,
@@ -1334,7 +1348,7 @@ private fun SettingsRow(
         )
       }
     }
-  )
+  }
 }
 
 @Composable
@@ -1355,39 +1369,54 @@ private fun ToggleRow(
   checked: Boolean,
   onCheckedChange: (Boolean) -> Unit
 ) {
-  ListItem(
+  Row(
     modifier = Modifier
       .fillMaxWidth()
-      .clickable { onCheckedChange(!checked) },
-    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-    headlineContent = {
-      Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold
-      )
-    },
-    supportingContent = {
-      Text(
-        text = subtitle,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-      )
-    },
-    leadingContent = {
+      .clip(MaterialTheme.shapes.medium)
+      .clickable { onCheckedChange(!checked) }
+      .padding(horizontal = 16.dp, vertical = 14.dp),
+    horizontalArrangement = Arrangement.spacedBy(14.dp),
+    verticalAlignment = Alignment.Top
+  ) {
+    Box(
+      modifier = Modifier
+        .padding(top = 2.dp)
+        .size(22.dp),
+      contentAlignment = Alignment.Center
+    ) {
       Icon(
         imageVector = icon,
         contentDescription = null,
         tint = MaterialTheme.colorScheme.primary
       )
-    },
-    trailingContent = {
+    }
+
+    Column(
+      modifier = Modifier.weight(1f),
+      verticalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+      Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold
+      )
+      Text(
+        text = subtitle,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+      )
+    }
+
+    Box(
+      modifier = Modifier.padding(top = 2.dp),
+      contentAlignment = Alignment.TopEnd
+    ) {
       Switch(
         checked = checked,
         onCheckedChange = onCheckedChange
       )
     }
-  )
+  }
 }
 
 @Composable
@@ -1585,8 +1614,6 @@ private fun FloatingBottomBar(
     Row(
       modifier = Modifier
         .fillMaxWidth()
-        .clip(RoundedCornerShape(34.dp))
-        .background(MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.9f))
         .padding(horizontal = 8.dp, vertical = 8.dp),
       horizontalArrangement = Arrangement.spacedBy(6.dp),
       verticalAlignment = Alignment.CenterVertically

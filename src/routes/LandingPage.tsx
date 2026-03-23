@@ -84,6 +84,7 @@ export function LandingPage() {
   const liveState = useLanLiveState({ source: "library" });
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
+  const brandLogoSrc = isDark ? "/logo/logo-nero.png" : "/logo/logo-bianco.png";
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
   const selectedFeature = featureCards[selectedFeatureIndex];
 
@@ -129,12 +130,13 @@ export function LandingPage() {
               <Stack spacing={2.75}>
                 <Box
                   component="img"
-                  src="/brand/routy-logo.svg"
+                  src={brandLogoSrc}
                   alt="Logo Routy"
                   sx={{
-                    width: { xs: 170, sm: 220, md: 250 },
+                    width: { xs: 120, sm: 144, md: 164 },
                     maxWidth: "100%",
                     display: "block",
+                    borderRadius: { xs: 3, md: 4 },
                     filter: isDark ? "drop-shadow(0 22px 40px rgba(0, 0, 0, 0.3))" : "none"
                   }}
                 />

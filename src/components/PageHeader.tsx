@@ -49,6 +49,7 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
   const { mode, toggleColorMode } = useColorMode();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isDark = mode === "dark";
+  const brandLogoSrc = isDark ? "/logo/logo-nero.png" : "/logo/logo-bianco.png";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { identity } = useIdentity();
   const profilePath = identity ? `/utente/${identity.id}` : null;
@@ -156,16 +157,18 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
         <Stack direction="row" spacing={{ xs: 1, md: 2 }} alignItems="center" justifyContent="space-between">
           <Stack direction="row" spacing={{ xs: 0.9, md: 1.25 }} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
             <Avatar
+              variant="rounded"
               sx={{
                 width: { xs: 36, md: 40 },
                 height: { xs: 36, md: 40 },
                 bgcolor: "transparent",
+                borderRadius: 2.5,
                 boxShadow: isDark ? "0 14px 28px rgba(0, 0, 0, 0.32)" : "0 12px 26px rgba(30, 136, 229, 0.2)"
               }}
             >
               <Box
                 component="img"
-                src="/brand/routy-mark.svg"
+                src={brandLogoSrc}
                 alt="Routy"
                 sx={{ width: "100%", height: "100%", display: "block" }}
               />
@@ -300,9 +303,9 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
             <Stack direction="row" spacing={1.25} alignItems="center">
               <Box
                 component="img"
-                src="/brand/routy-mark.svg"
+                src={brandLogoSrc}
                 alt="Routy"
-                sx={{ width: 34, height: 34, display: "block", flexShrink: 0 }}
+                sx={{ width: 34, height: 34, display: "block", flexShrink: 0, borderRadius: 1.75 }}
               />
               <Box>
                 <Typography variant="overline" color="secondary.main">
