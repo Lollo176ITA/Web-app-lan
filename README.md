@@ -5,7 +5,7 @@ Published desktop builds from GitHub Actions.
 - Latest snapshot: `latest/`
 - Archived snapshots: `archives/<run-number>-<commit>/`
 - Current source branch: main
-- Current source commit: 02b4e3f4387dc2d6ce5432c6c2553a2f86d0b312
-- Current workflow run: https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23440696781
+- Current source commit: 2d6b7b2653ecd92f119212d09bdc22e42465a597
+- Current workflow run: https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23441472274
 
-Each successful publish updates `latest/` and also stores an immutable copy in `archives/51-02b4e3f/`.
+Each successful publish updates `latest/` and also stores an immutable copy in `archives/52-2d6b7b2/`.
