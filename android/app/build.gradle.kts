@@ -5,6 +5,15 @@ plugins {
 }
 
 val ciBuild = providers.gradleProperty("ciBuild").orNull == "true"
+val releaseKeystoreFile = providers.environmentVariable("ANDROID_RELEASE_KEYSTORE_FILE").orNull
+val releaseStorePassword = providers.environmentVariable("ANDROID_RELEASE_STORE_PASSWORD").orNull
+val releaseKeyAlias = providers.environmentVariable("ANDROID_RELEASE_KEY_ALIAS").orNull
+val releaseKeyPassword = providers.environmentVariable("ANDROID_RELEASE_KEY_PASSWORD").orNull
+val hasReleaseSigning =
+  !releaseKeystoreFile.isNullOrBlank() &&
+    !releaseStorePassword.isNullOrBlank() &&
+    !releaseKeyAlias.isNullOrBlank() &&
+    !releaseKeyPassword.isNullOrBlank()
 
 android {
   namespace = "com.routy.sync"
@@ -31,11 +40,24 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
+  signingConfigs {
+    if (hasReleaseSigning) {
+      create("release") {
+        storeFile = file(requireNotNull(releaseKeystoreFile))
+        storePassword = releaseStorePassword
+        keyAlias = releaseKeyAlias
+        keyPassword = releaseKeyPassword
+      }
+    }
+  }
+
   buildTypes {
     release {
       isMinifyEnabled = true
       isShrinkResources = true
-      if (ciBuild) {
+      if (hasReleaseSigning) {
+        signingConfig = signingConfigs.getByName("release")
+      } else if (ciBuild) {
         signingConfig = signingConfigs.getByName("debug")
       }
       proguardFiles(

@@ -24,6 +24,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      release_signing_available: ${{ steps.signing.outputs.available }}
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
@@ -69,10 +71,41 @@ jobs:
             echo "version_code=${version_code}"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Prepare release signing
+        id: signing
+        shell: bash
+        env:
+          ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
+          ANDROID_RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_STORE_PASSWORD }}
+          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+          ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "${ANDROID_RELEASE_KEYSTORE_BASE64}" ] && \
+             [ -n "${ANDROID_RELEASE_STORE_PASSWORD}" ] && \
+             [ -n "${ANDROID_RELEASE_KEY_ALIAS}" ] && \
+             [ -n "${ANDROID_RELEASE_KEY_PASSWORD}" ]; then
+            keystore_path="${RUNNER_TEMP}/android-release.jks"
+            printf '%s' "${ANDROID_RELEASE_KEYSTORE_BASE64}" | base64 --decode > "${keystore_path}"
+
+            {
+              echo "available=true"
+              echo "keystore_path=${keystore_path}"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Release signing secrets not configured; build will use fallback signing and publish will be skipped."
+          fi
+
       - name: Build release APK and run unit tests
         env:
           ANDROID_VERSION_NAME: ${{ steps.android_version.outputs.version_name }}
           ANDROID_VERSION_CODE: ${{ steps.android_version.outputs.version_code }}
+          ANDROID_RELEASE_KEYSTORE_FILE: ${{ steps.signing.outputs.keystore_path }}
+          ANDROID_RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_STORE_PASSWORD }}
+          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+          ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
         run: >-
           gradle -p android --no-daemon
           :app:assembleRelease
@@ -90,7 +123,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish build branch
-        if: success() && github.event_name != 'pull_request'
+        if: success() && github.event_name != 'pull_request' && steps.signing.outputs.available == 'true'
         shell: bash
         env:
           ANDROID_VERSION_NAME: ${{ steps.android_version.outputs.version_name }}
