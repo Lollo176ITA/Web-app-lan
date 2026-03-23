@@ -17,6 +17,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -38,6 +39,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Devices
@@ -57,10 +62,13 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -638,6 +646,24 @@ private fun SettingsTab(
   onRefreshStatus: () -> Unit,
   onDisconnect: () -> Unit
 ) {
+  val hostStatusLabel = when (state.hostReachable) {
+    true -> "Online"
+    false -> "Offline"
+    null -> "Non configurato"
+  }
+  val hostStatusColor = when (state.hostReachable) {
+    true -> Color(0xFF1E8E3E)
+    false -> MaterialTheme.colorScheme.error
+    null -> MaterialTheme.colorScheme.onSurfaceVariant
+  }
+  val hostSubtitle = state.dashboard.hostUrl.ifBlank { "Nessun host collegato" }
+  val deviceTitle = state.dashboard.deviceName.ifBlank { "Android device" }
+  val deviceSubtitle = state.dashboard.deviceId.ifBlank { "Dispositivo non ancora registrato" }
+  val updateTitle = state.appUpdate?.let { "Aggiornamento disponibile" } ?: "App aggiornata"
+  val updateSubtitle = state.appUpdate?.let { availableUpdate ->
+    "Routy Sync ${availableUpdate.versionName} pronta da scaricare."
+  } ?: "Controlla nuove build GitHub senza uscire dall'app."
+
   LazyColumn(
     modifier = Modifier.fillMaxSize(),
     contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 140.dp),
@@ -646,139 +672,86 @@ private fun SettingsTab(
     item {
       ScreenHeading(
         title = "Impostazioni app",
-        subtitle = "Stato dispositivo, connessione host e gestione della sync."
+        subtitle = "Preferenze, stato della connessione e gestione dell'app."
       )
     }
 
     item {
-      SectionLabel(icon = Icons.Rounded.Person, text = "Dispositivo")
+      SettingsSectionTitle("Panoramica")
     }
 
     item {
-      Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLowest,
-        shape = MaterialTheme.shapes.medium
-      ) {
+      SettingsCard {
+        SettingsRow(
+          icon = Icons.Rounded.Devices,
+          title = deviceTitle,
+          subtitle = deviceSubtitle,
+          trailingText = "v${BuildConfig.VERSION_NAME}"
+        )
+        SettingsDivider()
+        SettingsRow(
+          icon = Icons.Rounded.Link,
+          title = "Host LAN",
+          subtitle = hostSubtitle,
+          trailingText = hostStatusLabel,
+          trailingColor = hostStatusColor
+        )
+        SettingsDivider()
+        SettingsRow(
+          icon = Icons.Rounded.FolderOpen,
+          title = "Cartelle collegate",
+          subtitle = if (state.dashboard.mappings.isEmpty()) {
+            "Nessuna cartella configurata su questo dispositivo."
+          } else {
+            "${state.dashboard.mappings.size} cartelle pronte per la sincronizzazione."
+          },
+          trailingText = state.dashboard.mappings.size.toString()
+        )
+      }
+    }
+
+    item {
+      SettingsSectionTitle("Preferenze")
+    }
+
+    item {
+      SettingsCard {
+        ToggleRow(
+          icon = Icons.Rounded.DarkMode,
+          title = "Tema scuro",
+          subtitle = "Usa sempre la modalità scura nell'app.",
+          checked = state.darkModeEnabled,
+          onCheckedChange = onToggleDarkMode
+        )
+        SettingsDivider()
+        ToggleRow(
+          icon = Icons.Rounded.Wifi,
+          title = "Sync in background",
+          subtitle = "Continua a sincronizzare anche quando l'app non è aperta.",
+          checked = state.backgroundSyncEnabled,
+          onCheckedChange = onToggleBackgroundSync
+        )
+      }
+    }
+
+    item {
+      SettingsSectionTitle("Aggiornamenti")
+    }
+
+    item {
+      SettingsCard {
+        SettingsRow(
+          icon = Icons.Rounded.Notifications,
+          title = updateTitle,
+          subtitle = updateSubtitle
+        )
+        SettingsDivider()
         Column(
           modifier = Modifier.padding(20.dp),
-          verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-          Text(
-            text = state.dashboard.deviceName.ifBlank { "Android device" },
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-          )
-          Text(
-            text = "Versione app ${BuildConfig.VERSION_NAME}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-          )
-          Text(
-            text = state.dashboard.deviceId.ifBlank { "Non ancora registrato" },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-          )
-          StatusPill(
-            text = when (state.hostReachable) {
-              true -> "Host raggiungibile"
-              false -> "Host offline"
-              null -> "Host non configurato"
-            },
-            background = when (state.hostReachable) {
-              true -> Color(0xFFE7F6EC)
-              false -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.18f)
-              null -> MaterialTheme.colorScheme.surfaceContainerHigh
-            },
-            contentColor = when (state.hostReachable) {
-              true -> Color(0xFF1E8E3E)
-              false -> MaterialTheme.colorScheme.error
-              null -> MaterialTheme.colorScheme.onSurfaceVariant
-            }
-          )
-        }
-      }
-    }
-
-    item {
-      SectionLabel(icon = Icons.Rounded.DarkMode, text = "Aspetto")
-    }
-
-    item {
-      Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = MaterialTheme.shapes.medium
-      ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-          ToggleRow(
-            icon = Icons.Rounded.DarkMode,
-            title = "Dark mode",
-            subtitle = "Usa sempre il tema scuro nell'app Android.",
-            checked = state.darkModeEnabled,
-            onCheckedChange = onToggleDarkMode
-          )
-        }
-      }
-    }
-
-    item {
-      SectionLabel(icon = Icons.Rounded.Sync, text = "Comportamento")
-    }
-
-    item {
-      Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = MaterialTheme.shapes.medium
-      ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-          ToggleRow(
-            icon = Icons.Rounded.Wifi,
-            title = "Sync in background",
-            subtitle = "Continua a sincronizzare quando l'app non è aperta.",
-            checked = state.backgroundSyncEnabled,
-            onCheckedChange = onToggleBackgroundSync
-          )
-          SettingsRow(
-            icon = Icons.Rounded.FolderOpen,
-            title = "Cartelle collegate",
-            subtitle = "${state.dashboard.mappings.size} configurate su questo dispositivo"
-          )
-        }
-      }
-    }
-
-    item {
-      SectionLabel(icon = Icons.Rounded.Notifications, text = "Aggiornamenti")
-    }
-
-    item {
-      Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = MaterialTheme.shapes.medium
-      ) {
-        Column(
-          modifier = Modifier.padding(20.dp),
-          verticalArrangement = Arrangement.spacedBy(14.dp)
+          verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
           val availableUpdate = state.appUpdate
 
-          Text(
-            text = if (availableUpdate != null) {
-              "È disponibile Routy Sync ${availableUpdate.versionName}"
-            } else {
-              "Nessun aggiornamento disponibile"
-            },
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-          )
-          Text(
-            text = if (availableUpdate != null) {
-              "Scarica l'APK pubblicato su GitHub e apri l'installer appena il download termina."
-            } else {
-              "Controlla le build pubblicate su GitHub senza uscire dall'app."
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-          )
           Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -800,38 +773,35 @@ private fun SettingsTab(
     }
 
     item {
-      SectionLabel(icon = Icons.Rounded.Info, text = "Azioni")
+      SettingsSectionTitle("Azioni")
     }
 
     item {
-      Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = MaterialTheme.shapes.medium
-      ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-          ActionRow(
-            icon = Icons.Rounded.Sync,
-            title = "Sincronizza ora",
-            subtitle = "Forza subito un ciclo di upload verso l'host.",
-            onClick = onSyncNow,
-            enabled = !state.busy && state.dashboard.isConfigured
-          )
-          ActionRow(
-            icon = Icons.Rounded.Sync,
-            title = "Aggiorna stato host",
-            subtitle = "Ricarica configurazione remota e reachability",
-            onClick = onRefreshStatus,
-            enabled = !state.busy && state.dashboard.isConfigured
-          )
-          ActionRow(
-            icon = Icons.Rounded.PowerSettingsNew,
-            title = "Disconnetti",
-            subtitle = "Rimuove token locale, host e cartelle registrate",
-            onClick = onDisconnect,
-            enabled = !state.busy && state.dashboard.isConfigured,
-            destructive = true
-          )
-        }
+      SettingsCard {
+        ActionRow(
+          icon = Icons.Rounded.Sync,
+          title = "Sincronizza ora",
+          subtitle = "Forza subito un ciclo di upload verso l'host.",
+          onClick = onSyncNow,
+          enabled = !state.busy && state.dashboard.isConfigured
+        )
+        SettingsDivider()
+        ActionRow(
+          icon = Icons.Rounded.Link,
+          title = "Aggiorna stato host",
+          subtitle = "Ricarica configurazione e raggiungibilità dell'host.",
+          onClick = onRefreshStatus,
+          enabled = !state.busy && state.dashboard.isConfigured
+        )
+        SettingsDivider()
+        ActionRow(
+          icon = Icons.Rounded.PowerSettingsNew,
+          title = "Disconnetti",
+          subtitle = "Rimuove host, token e cartelle registrate da questo dispositivo.",
+          onClick = onDisconnect,
+          enabled = !state.busy && state.dashboard.isConfigured,
+          destructive = true
+        )
       }
     }
   }
@@ -1310,33 +1280,70 @@ private data class ActivityBadgeSpec(
 private fun SettingsRow(
   icon: ImageVector,
   title: String,
-  subtitle: String
+  subtitle: String,
+  trailingText: String? = null,
+  trailingColor: Color? = null,
+  onClick: (() -> Unit)? = null,
+  enabled: Boolean = true,
+  destructive: Boolean = false
 ) {
-  Row(
+  val headlineColor = when {
+    !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+    destructive -> MaterialTheme.colorScheme.error
+    else -> MaterialTheme.colorScheme.onSurface
+  }
+  val supportingColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.55f)
+  val iconColor = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+  val resolvedTrailingColor = trailingColor ?: supportingColor
+
+  ListItem(
     modifier = Modifier
       .fillMaxWidth()
-      .padding(horizontal = 12.dp, vertical = 12.dp),
-    horizontalArrangement = Arrangement.spacedBy(14.dp),
-    verticalAlignment = Alignment.CenterVertically
-  ) {
-    Surface(
-      modifier = Modifier.size(42.dp),
-      color = MaterialTheme.colorScheme.surfaceContainerLowest,
-      shape = RoundedCornerShape(16.dp)
-    ) {
-      Box(contentAlignment = Alignment.Center) {
-        Icon(
-          imageVector = icon,
-          contentDescription = null,
-          tint = MaterialTheme.colorScheme.primary
+      .clickable(enabled = enabled && onClick != null) { onClick?.invoke() },
+    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+    headlineContent = {
+      Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = headlineColor
+      )
+    },
+    supportingContent = {
+      Text(
+        text = subtitle,
+        style = MaterialTheme.typography.bodyMedium,
+        color = supportingColor
+      )
+    },
+    leadingContent = {
+      Icon(
+        imageVector = icon,
+        contentDescription = null,
+        tint = iconColor.copy(alpha = if (enabled) 1f else 0.45f)
+      )
+    },
+    trailingContent = trailingText?.let {
+      {
+        Text(
+          text = trailingText,
+          style = MaterialTheme.typography.labelLarge,
+          fontWeight = FontWeight.Medium,
+          color = resolvedTrailingColor,
+          textAlign = TextAlign.End
         )
       }
     }
+  )
+}
 
-    Column(modifier = Modifier.weight(1f)) {
-      Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-      Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
+@Composable
+private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
+  Surface(
+    color = MaterialTheme.colorScheme.surfaceContainerLow,
+    shape = MaterialTheme.shapes.large
+  ) {
+    Column(modifier = Modifier.fillMaxWidth(), content = content)
   }
 }
 
@@ -1348,37 +1355,39 @@ private fun ToggleRow(
   checked: Boolean,
   onCheckedChange: (Boolean) -> Unit
 ) {
-  Row(
+  ListItem(
     modifier = Modifier
       .fillMaxWidth()
-      .padding(horizontal = 12.dp, vertical = 12.dp),
-    horizontalArrangement = Arrangement.spacedBy(14.dp),
-    verticalAlignment = Alignment.CenterVertically
-  ) {
-    Surface(
-      modifier = Modifier.size(42.dp),
-      color = MaterialTheme.colorScheme.surfaceContainerLowest,
-      shape = RoundedCornerShape(16.dp)
-    ) {
-      Box(contentAlignment = Alignment.Center) {
-        Icon(
-          imageVector = icon,
-          contentDescription = null,
-          tint = MaterialTheme.colorScheme.primary
-        )
-      }
+      .clickable { onCheckedChange(!checked) },
+    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+    headlineContent = {
+      Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold
+      )
+    },
+    supportingContent = {
+      Text(
+        text = subtitle,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+      )
+    },
+    leadingContent = {
+      Icon(
+        imageVector = icon,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.primary
+      )
+    },
+    trailingContent = {
+      Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange
+      )
     }
-
-    Column(modifier = Modifier.weight(1f)) {
-      Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-      Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-
-    Switch(
-      checked = checked,
-      onCheckedChange = onCheckedChange
-    )
-  }
+  )
 }
 
 @Composable
@@ -1390,40 +1399,33 @@ private fun ActionRow(
   enabled: Boolean,
   destructive: Boolean = false
 ) {
-  val contentColor = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+  SettingsRow(
+    icon = icon,
+    title = title,
+    subtitle = subtitle,
+    onClick = onClick,
+    enabled = enabled,
+    destructive = destructive
+  )
+}
 
-  Row(
-    modifier = Modifier
-      .fillMaxWidth()
-      .clip(MaterialTheme.shapes.small)
-      .clickable(enabled = enabled, onClick = onClick)
-      .padding(horizontal = 12.dp, vertical = 14.dp),
-    horizontalArrangement = Arrangement.spacedBy(14.dp),
-    verticalAlignment = Alignment.CenterVertically
-  ) {
-    Surface(
-      modifier = Modifier.size(42.dp),
-      color = if (destructive) {
-        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.18f)
-      } else {
-        MaterialTheme.colorScheme.surfaceContainerLowest
-      },
-      shape = RoundedCornerShape(16.dp)
-    ) {
-      Box(contentAlignment = Alignment.Center) {
-        Icon(
-          imageVector = icon,
-          contentDescription = null,
-          tint = contentColor
-        )
-      }
-    }
+@Composable
+private fun SettingsDivider() {
+  HorizontalDivider(
+    modifier = Modifier.padding(horizontal = 16.dp),
+    color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.65f)
+  )
+}
 
-    Column(modifier = Modifier.weight(1f)) {
-      Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = contentColor)
-      Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-  }
+@Composable
+private fun SettingsSectionTitle(text: String) {
+  Text(
+    text = text,
+    style = MaterialTheme.typography.titleSmall,
+    fontWeight = FontWeight.SemiBold,
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    modifier = Modifier.padding(horizontal = 4.dp)
+  )
 }
 
 @Composable
@@ -1683,14 +1685,6 @@ private fun ManualPairingDialog(
       }
     }
   )
-}
-
-@Composable
-private fun SectionLabel(icon: ImageVector, text: String) {
-  Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-    Text(text = text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-  }
 }
 
 @Composable
