@@ -128,18 +128,6 @@ export function LandingPage() {
               }}
             >
               <Stack spacing={2.75}>
-                <Box
-                  component="img"
-                  src={brandLogoSrc}
-                  alt="Logo Routy"
-                  sx={{
-                    width: { xs: 120, sm: 144, md: 164 },
-                    maxWidth: "100%",
-                    display: "block",
-                    borderRadius: { xs: 3, md: 4 },
-                    filter: isDark ? "drop-shadow(0 22px 40px rgba(0, 0, 0, 0.3))" : "none"
-                  }}
-                />
                 <Typography variant="h1" sx={{ maxWidth: 760 }}>
                  Condividi file, player e streaming in tutta la LAN.
                 </Typography>
