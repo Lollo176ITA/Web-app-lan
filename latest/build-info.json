@@ -1,24 +1,24 @@
 {
   "target": "linux-x64",
-  "version": "2.9.2",
+  "version": "2.9.3",
   "sourceBranch": "main",
-  "sourceCommit": "afedc3c359dcb1b683e628201e15168708d9184f",
-  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23514294377",
+  "sourceCommit": "9c83bc5faafe87fa411a95e4eac2c20ea04f89bd",
+  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23514729918",
   "files": [
     {
-      "name": "Routy-2.9.2.AppImage",
-      "originalName": "Routy-2.9.2.AppImage",
-      "size": 125519010,
-      "sha256": "8b390e95f904be3e7d945c0d6f292f2183f17c9ff3947f70a129008700874a67",
+      "name": "Routy-2.9.3.AppImage",
+      "originalName": "Routy-2.9.3.AppImage",
+      "size": 125518947,
+      "sha256": "3011abc9b1399473f945815aece3ff39f20ce9f8f0a0672742f68877e50c2870",
       "split": true,
       "parts": [
         {
-          "name": "Routy-2.9.2.AppImage.part-000",
+          "name": "Routy-2.9.3.AppImage.part-000",
           "size": 99614720
         },
         {
-          "name": "Routy-2.9.2.AppImage.part-001",
-          "size": 25904290
+          "name": "Routy-2.9.3.AppImage.part-001",
+          "size": 25904227
         }
       ]
     },
@@ -26,7 +26,7 @@
       "name": "latest-linux.yml",
       "originalName": "latest-linux.yml",
       "size": 362,
-      "sha256": "90af017793f8cc14cd59a28933b1e1f3176722412ff0d0cf5ac6eaed02518be5",
+      "sha256": "dd88c762599e9c767474790598d6e1f3ad995eb68bdd9e14656fe48ec1d7083b",
       "split": false
     }
   ]
