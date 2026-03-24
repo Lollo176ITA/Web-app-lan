@@ -1,26 +1,54 @@
 {
   "target": "mac-arm64",
-  "version": "2.9.1",
+  "version": "2.9.2",
   "sourceBranch": "main",
-  "sourceCommit": "988a241330412eb0c707720eda841016c2c05ffe",
-  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23509165565",
+  "sourceCommit": "afedc3c359dcb1b683e628201e15168708d9184f",
+  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23514294377",
   "files": [
     {
-      "name": "Routy-2.9.1-arm64.dmg",
-      "originalName": "Routy-2.9.1-arm64.dmg",
-      "size": 119772254,
-      "sha256": "53bb43c7afd341465e5f062145fc26235b2b11f5db7f8ceafcd93492a1a4a28d",
+      "name": "Routy-2.9.2-arm64.dmg",
+      "originalName": "Routy-2.9.2-arm64.dmg",
+      "size": 120023482,
+      "sha256": "0d23d819cd56ba4726a31eaa72f3f8627048e57bb4fe756e9987c07df3e49c90",
       "split": true,
       "parts": [
         {
-          "name": "Routy-2.9.1-arm64.dmg.part-000",
+          "name": "Routy-2.9.2-arm64.dmg.part-000",
           "size": 99614720
         },
         {
-          "name": "Routy-2.9.1-arm64.dmg.part-001",
-          "size": 20157534
+          "name": "Routy-2.9.2-arm64.dmg.part-001",
+          "size": 20408762
         }
       ]
+    },
+    {
+      "name": "Routy-2.9.2-arm64.dmg.blockmap",
+      "originalName": "Routy-2.9.2-arm64.dmg.blockmap",
+      "size": 127637,
+      "sha256": "c19a90b84044d1b6a9514fde44190eee7e7d554a2acfadfd66e8e6442ebf6513",
+      "split": false
+    },
+    {
+      "name": "latest-mac.yml",
+      "originalName": "latest-mac.yml",
+      "size": 339,
+      "sha256": "aa1a39d7834ef0ca18db1a5ac64377b39e17ea55f18d811639317050b3acfd7f",
+      "split": false
+    },
+    {
+      "name": "mac-arm64__Routy.app__Contents__Resources__app-update.yml",
+      "originalName": "mac-arm64/Routy.app/Contents/Resources/app-update.yml",
+      "size": 89,
+      "sha256": "43368692781e8064aa92a3abf0712997a00a4a36490e082951668335ba3a828f",
+      "split": false
+    },
+    {
+      "name": "mac-arm64__Routy.app__Contents__Resources__app.asar.unpacked__node_modules__jszip__.codeclimate.yml",
+      "originalName": "mac-arm64/Routy.app/Contents/Resources/app.asar.unpacked/node_modules/jszip/.codeclimate.yml",
+      "size": 208,
+      "sha256": "3641875e15f3cf7a09a245414d7717f88831d41c1ee0d241be1b33465b89b582",
+      "split": false
     }
   ]
 }
