@@ -1,24 +1,24 @@
 {
   "target": "win-x64",
-  "version": "2.8.4",
+  "version": "2.9.1",
   "sourceBranch": "main",
-  "sourceCommit": "588a43bb668d02228e92f5e8c108a4edf66376c9",
-  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23508739412",
+  "sourceCommit": "988a241330412eb0c707720eda841016c2c05ffe",
+  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23509165565",
   "files": [
     {
-      "name": "Routy Setup 2.8.4.exe",
-      "originalName": "Routy Setup 2.8.4.exe",
-      "size": 103912137,
-      "sha256": "2083a003c7c69018f120e5633e0dd21225e51baeb2da2194e71eef383791e154",
+      "name": "Routy Setup 2.9.1.exe",
+      "originalName": "Routy Setup 2.9.1.exe",
+      "size": 103912114,
+      "sha256": "e51f4fda363fba01cac18720a0421314c20b98dafd77352ae366835c13ef25c1",
       "split": true,
       "parts": [
         {
-          "name": "Routy Setup 2.8.4.exe.part-000",
+          "name": "Routy Setup 2.9.1.exe.part-000",
           "size": 99614720
         },
         {
-          "name": "Routy Setup 2.8.4.exe.part-001",
-          "size": 4297417
+          "name": "Routy Setup 2.9.1.exe.part-001",
+          "size": 4297394
         }
       ]
     }
