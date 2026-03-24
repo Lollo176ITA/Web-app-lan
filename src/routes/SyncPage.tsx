@@ -33,7 +33,7 @@ import {
 import type { AndroidAppReleaseInfo } from "../lib/api";
 import { copyTextToClipboard } from "../lib/clipboard";
 import { insetCardSx, pageCardSx } from "../lib/surfaces";
-import { useQrCodeDataUrl } from "../lib/useQrCodeDataUrl";
+import { useQrDialog } from "../lib/useQrDialog";
 import { useLanLiveState } from "../lib/useLanLiveState";
 
 function formatDateTime(value: string | null) {
@@ -70,12 +70,10 @@ export function SyncPage() {
   const [revokingDeviceId, setRevokingDeviceId] = useState<string | null>(null);
   const [sessionLanUrl, setSessionLanUrl] = useState<string | null>(null);
   const [androidRelease, setAndroidRelease] = useState<AndroidAppReleaseInfo | null>(null);
-  const [pairingQrOpen, setPairingQrOpen] = useState(false);
-  const [apkQrOpen, setApkQrOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const pairingQrValue = buildSyncPairingQrValue(sessionLanUrl, overview?.activePairingCode?.code ?? null);
-  const pairingQrDataUrl = useQrCodeDataUrl(pairingQrValue, { width: 256 });
-  const apkQrDataUrl = useQrCodeDataUrl(androidRelease?.downloadUrl ?? null, { width: 256 });
+  const pairingQrDialog = useQrDialog(pairingQrValue, { width: 256 });
+  const apkQrDialog = useQrDialog(androidRelease?.downloadUrl ?? null, { width: 256 });
 
   async function syncData() {
     const profile = await fetchClientProfile();
@@ -268,9 +266,7 @@ export function SyncPage() {
                 variant="outlined"
                 startIcon={<QrCode2RoundedIcon />}
                 disabled={!androidRelease}
-                onClick={() => {
-                  setApkQrOpen(true);
-                }}
+                onClick={apkQrDialog.openDialog}
                 sx={{ alignSelf: "flex-start" }}
               >
                 Mostra QR APK
@@ -384,9 +380,7 @@ export function SyncPage() {
                           <Button
                             variant="outlined"
                             startIcon={<QrCode2RoundedIcon />}
-                            onClick={() => {
-                              setPairingQrOpen(true);
-                            }}
+                            onClick={pairingQrDialog.openDialog}
                             sx={{ alignSelf: "flex-start" }}
                           >
                             Mostra QR pairing
@@ -578,14 +572,10 @@ export function SyncPage() {
       />
 
       <QrCodeDialog
-        open={pairingQrOpen}
-        onClose={() => {
-          setPairingQrOpen(false);
-        }}
+        {...pairingQrDialog.dialogProps}
         title="QR pairing Android"
         description="Scansiona questo codice dalla schermata Sync Android per compilare host LAN e pairing code."
         qrCodeAlt="QR pairing Android"
-        qrCodeDataUrl={pairingQrDataUrl}
         onCopy={
           pairingQrValue
             ? () => {
@@ -603,14 +593,10 @@ export function SyncPage() {
       />
 
       <QrCodeDialog
-        open={apkQrOpen}
-        onClose={() => {
-          setApkQrOpen(false);
-        }}
+        {...apkQrDialog.dialogProps}
         title="QR download APK"
         description="Scansiona questo codice da un altro device Android per aprire subito il download diretto dell’APK Routy Sync."
         qrCodeAlt="QR download APK Android"
-        qrCodeDataUrl={apkQrDataUrl}
         subject={androidRelease ? `Routy Sync ${androidRelease.version}` : undefined}
         url={androidRelease?.downloadUrl}
         onCopy={

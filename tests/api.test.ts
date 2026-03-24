@@ -17,6 +17,7 @@ async function createTemporaryStorage() {
 }
 
 afterEach(async () => {
+  vi.useRealTimers();
   await Promise.all(
     temporaryDirectories.splice(0).map((directory) =>
       fs.rm(directory, { recursive: true, force: true })
@@ -50,7 +51,7 @@ describe("Routeroom API", () => {
 
     const response = await request(app).get("/api/session").expect(200);
 
-    expect(response.body.appName).toBe("Routeroom");
+    expect(response.body.appName).toBe("Routy");
     expect(response.body.storagePath).toBe(storageRoot);
     expect(response.body.lanUrl).toContain("http://");
     expect(response.body.availableArchiveFormats).toContain("zip");
@@ -230,13 +231,13 @@ describe("Routeroom API", () => {
 
   it("rejects expired pairing codes and keeps sync overview host-only", async () => {
     const storageRoot = await createTemporaryStorage();
-    const { app, close, sync } = await createApp({ storageRoot });
+    const { app, close } = await createApp({ storageRoot });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T12:00:00.000Z"));
 
     const pairingResponse = await request(app).post("/api/sync/pairing-code").expect(201);
-    (sync as { activePairingCode: { expiresAt: string } | null }).activePairingCode = {
-      ...(sync as { activePairingCode: { code: string; issuedAt: string; expiresAt: string } }).activePairingCode!,
-      expiresAt: new Date(Date.now() - 1_000).toISOString()
-    };
+    vi.setSystemTime(new Date(new Date(pairingResponse.body.expiresAt as string).getTime() + 1_000));
 
     await request(app)
       .post("/api/sync/register")

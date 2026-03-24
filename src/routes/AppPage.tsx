@@ -37,7 +37,7 @@ import {
 import { copyTextToClipboard } from "../lib/clipboard";
 import { buildLibraryPreviewShareUrl, buildVideoPlayerShareUrl } from "../lib/share-links";
 import { useLanLiveState } from "../lib/useLanLiveState";
-import { useQrCodeDataUrl } from "../lib/useQrCodeDataUrl";
+import { useQrDialog } from "../lib/useQrDialog";
 
 interface AppPageProps {
   lastUploadSettledAt: number;
@@ -60,19 +60,19 @@ export function AppPage({
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterValue>("all");
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
-  const [hostQrDialogOpen, setHostQrDialogOpen] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [loading, setLoading] = useState(true);
-  const [snackbar, setSnackbar] = useState<string | null>(null);
   const [qrItemTarget, setQrItemTarget] = useState<{ item: LibraryItem; url: string } | null>(null);
+  const [snackbar, setSnackbar] = useState<string | null>(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const layoutMode: LibraryLayoutMode = isMobile ? "minimal" : "compact";
   const detailPanelRef = useRef<HTMLDivElement | null>(null);
   const appliedDeepLinkRef = useRef<string | null>(null);
   const handledUploadSettlementRef = useRef(lastUploadSettledAt);
-  const hostQrCodeDataUrl = useQrCodeDataUrl(session?.lanUrl ?? null, { width: 192 });
-  const qrItemDataUrl = useQrCodeDataUrl(qrItemTarget?.url ?? null, { width: 256 });
+  const hostQrDialog = useQrDialog(session?.lanUrl ?? null, { width: 192 });
+  const itemQrUrl = qrItemTarget?.url ?? null;
+  const itemQrDialog = useQrDialog(itemQrUrl, { width: 256 });
 
   function applyLinkedSelection(nextItems: LibraryItem[]) {
     const linkedItemId = searchParams.get("item");
@@ -181,6 +181,7 @@ export function AppPage({
     ? (items.find((item) => item.id === currentFolderId && item.kind === "folder") ?? null)
     : null;
   const folderPath = buildFolderPath(items, currentFolderId);
+  const itemQrHref = itemQrUrl ?? undefined;
 
   const currentFolderItems = sortFolderContents(
     items.filter((item) => item.parentId === currentFolderId)
@@ -309,6 +310,12 @@ export function AppPage({
           ? buildVideoPlayerShareUrl(session.lanUrl, item.id)
           : buildLibraryPreviewShareUrl(session.lanUrl, item.id)
     });
+    itemQrDialog.openDialog();
+  }
+
+  function handleCloseItemQrDialog() {
+    itemQrDialog.closeDialog();
+    setQrItemTarget(null);
   }
 
   return (
@@ -328,10 +335,8 @@ export function AppPage({
             <HostSessionCard
               isMobile={isMobile}
               loading={loading}
-              onOpenQrCode={() => {
-                setHostQrDialogOpen(true);
-              }}
-              qrCodeDataUrl={hostQrCodeDataUrl}
+              onOpenQrCode={hostQrDialog.openDialog}
+              qrCodeDataUrl={hostQrDialog.qrCodeDataUrl}
               session={session}
             />
 
@@ -435,14 +440,10 @@ export function AppPage({
       </Container>
 
       <QrCodeDialog
-        open={hostQrDialogOpen}
-        onClose={() => {
-          setHostQrDialogOpen(false);
-        }}
+        {...hostQrDialog.dialogProps}
         title="QR code URL LAN"
         description="Inquadra questo codice dalla stessa LAN per aprire subito Routy sul device."
         qrCodeAlt="QR code URL LAN"
-        qrCodeDataUrl={hostQrCodeDataUrl}
         url={session?.lanUrl}
         copyLabel="Copia URL"
         onCopy={
@@ -455,10 +456,8 @@ export function AppPage({
       />
 
       <QrCodeDialog
-        open={Boolean(qrItemTarget)}
-        onClose={() => {
-          setQrItemTarget(null);
-        }}
+        {...itemQrDialog.dialogProps}
+        onClose={handleCloseItemQrDialog}
         title={qrItemTarget?.item.kind === "video" ? "QR code player video" : "QR code anteprima"}
         description={
           qrItemTarget?.item.kind === "video"
@@ -466,9 +465,8 @@ export function AppPage({
             : "Inquadra questo codice dalla stessa LAN per aprire direttamente l'anteprima del file."
         }
         qrCodeAlt={`QR code ${qrItemTarget?.item.name ?? "contenuto condiviso"}`}
-        qrCodeDataUrl={qrItemDataUrl}
         subject={qrItemTarget?.item.name}
-        url={qrItemTarget?.url}
+        url={itemQrHref}
         onCopy={
           qrItemTarget
             ? () => {
@@ -476,12 +474,12 @@ export function AppPage({
               }
             : undefined
         }
-        actionHref={qrItemTarget?.url}
-        actionLabel={qrItemTarget ? (qrItemTarget.item.kind === "video" ? "Apri player" : "Apri anteprima") : undefined}
+        actionHref={itemQrHref}
+        actionLabel={
+          qrItemTarget ? (qrItemTarget.item.kind === "video" ? "Apri player" : "Apri anteprima") : undefined
+        }
         actionIcon={qrItemTarget?.item.kind === "video" ? <QrCode2RoundedIcon /> : <OpenInNewRoundedIcon />}
-        onAction={() => {
-          setQrItemTarget(null);
-        }}
+        onAction={handleCloseItemQrDialog}
       />
 
       <CreateFolderDialog

@@ -27,7 +27,7 @@ import { QrCodeDialog } from "../components/QrCodeDialog";
 import { copyTextToClipboard } from "../lib/clipboard";
 import { buildStreamRoomShareUrl } from "../lib/share-links";
 import { insetCardSx, pageCardSx } from "../lib/surfaces";
-import { useQrCodeDataUrl } from "../lib/useQrCodeDataUrl";
+import { useQrDialog } from "../lib/useQrDialog";
 import { createStreamRoom, deleteStreamRoom, fetchSession, fetchStreamRooms } from "../lib/api";
 import { useLanLiveState } from "../lib/useLanLiveState";
 
@@ -47,11 +47,12 @@ export function StreamRoomsPage() {
   const [loading, setLoading] = useState(true);
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [deletingRoomId, setDeletingRoomId] = useState<string | null>(null);
+  const [qrRoomTarget, setQrRoomTarget] = useState<StreamRoomSummary | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [sessionLanUrl, setSessionLanUrl] = useState<string | null>(null);
-  const [qrRoomTarget, setQrRoomTarget] = useState<StreamRoomSummary | null>(null);
-  const qrRoomShareUrl = qrRoomTarget ? buildStreamRoomShareUrl(qrRoomTarget.id, sessionLanUrl) : null;
-  const qrCodeDataUrl = useQrCodeDataUrl(qrRoomShareUrl, { width: 256 });
+  const roomQrUrl = qrRoomTarget ? buildStreamRoomShareUrl(qrRoomTarget.id, sessionLanUrl) : null;
+  const roomQrDialog = useQrDialog(roomQrUrl, { width: 256 });
+  const roomQrHref = roomQrUrl ?? undefined;
 
   const liveState = useLanLiveState({
     handlers: {
@@ -227,6 +228,7 @@ export function StreamRoomsPage() {
                               aria-label={`Mostra QR code stanza ${room.name}`}
                               onClick={() => {
                                 setQrRoomTarget(room);
+                                roomQrDialog.openDialog();
                               }}
                             >
                               <QrCode2RoundedIcon fontSize="small" />
@@ -317,20 +319,20 @@ export function StreamRoomsPage() {
       />
 
       <QrCodeDialog
-        open={Boolean(qrRoomTarget)}
+        {...roomQrDialog.dialogProps}
         onClose={() => {
+          roomQrDialog.closeDialog();
           setQrRoomTarget(null);
         }}
         title="QR code stanza"
         description="Inquadra questo codice dalla stessa LAN per aprire subito la stanza."
         qrCodeAlt={`QR code ${qrRoomTarget?.name ?? "stanza streaming"}`}
-        qrCodeDataUrl={qrCodeDataUrl}
         subject={qrRoomTarget?.name}
-        url={qrRoomShareUrl}
+        url={roomQrHref}
         onCopy={
-          qrRoomShareUrl
+          roomQrHref
             ? () => {
-                void copyTextToClipboard(qrRoomShareUrl)
+                void copyTextToClipboard(roomQrHref)
                   .then(() => {
                     setSnackbar("Link stanza copiato.");
                   })
