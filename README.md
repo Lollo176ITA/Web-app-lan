@@ -269,13 +269,15 @@ npm run desktop:dist:mac
 npm run desktop:dist:linux:x64
 ```
 
-Configurazione packaging in [electron-builder.json](electron-builder.json):
+Configurazione packaging in [electron-builder.config.cjs](electron-builder.config.cjs):
 
 - `appId`: `it.routy.desktop`
 - output: `release/`
-- target Windows: `nsis`
+- target Windows: `nsis-web`
 - target macOS: `dmg`
 - target Linux: `AppImage`
+
+Le build Windows pubblicate da CI includono il feed per `electron-updater`: il primo download avviene tramite `Web Setup.exe`, gli update successivi arrivano dentro l'app installata.
 
 ## Test e QA
 

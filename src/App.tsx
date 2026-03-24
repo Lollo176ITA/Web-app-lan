@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { Box, CircularProgress, Snackbar, useMediaQuery } from "@mui/material";
+import { Box, Button, CircularProgress, Snackbar, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import type { LanIdentity } from "../shared/types";
@@ -7,7 +7,8 @@ import { NicknameDialog } from "./components/NicknameDialog";
 import { UploadProgressCard } from "./components/UploadProgressCard";
 import { createIdentityFromNickname, persistIdentity, readStoredIdentity } from "./lib/identity";
 import { IdentityContext } from "./lib/identity-context";
-import { type UploadProgress, uploadFiles } from "./lib/api";
+import { fetchSession, type UploadProgress, uploadFiles } from "./lib/api";
+import { compareVersions } from "./lib/updates";
 
 const LandingPage = lazy(async () => import("./routes/LandingPage").then((module) => ({ default: module.LandingPage })));
 const AppPage = lazy(async () => import("./routes/AppPage").then((module) => ({ default: module.AppPage })));
@@ -51,6 +52,7 @@ export default function App() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [uploadSnackbar, setUploadSnackbar] = useState<string | null>(null);
+  const [availableHostWebVersion, setAvailableHostWebVersion] = useState<string | null>(null);
   const [uploadState, setUploadState] = useState<AppUploadState>({
     lastUploadedItemId: null,
     settledAt: 0
@@ -77,6 +79,53 @@ export default function App() {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [uploading]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkForHostWebUpdate() {
+      try {
+        const session = await fetchSession();
+
+        if (cancelled) {
+          return;
+        }
+
+        if (compareVersions(session.appVersion, __APP_VERSION__) > 0) {
+          setAvailableHostWebVersion(session.appVersion);
+          return;
+        }
+
+        setAvailableHostWebVersion(null);
+      } catch {
+        if (!cancelled) {
+          setAvailableHostWebVersion(null);
+        }
+      }
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void checkForHostWebUpdate();
+      }
+    };
+
+    void checkForHostWebUpdate();
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void checkForHostWebUpdate();
+      }
+    }, 60_000);
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   function setIdentity(nextIdentity: LanIdentity) {
     persistIdentity(nextIdentity);
@@ -207,6 +256,32 @@ export default function App() {
           setUploadSnackbar(null);
         }}
         message={uploadSnackbar}
+      />
+
+      <Snackbar
+        open={Boolean(availableHostWebVersion)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        onClose={() => {
+          setAvailableHostWebVersion(null);
+        }}
+        message={
+          availableHostWebVersion
+            ? `Web app aggiornata sull'host: Routy ${availableHostWebVersion}.`
+            : undefined
+        }
+        action={
+          availableHostWebVersion ? (
+            <Button
+              color="secondary"
+              size="small"
+              onClick={() => {
+                window.location.reload();
+              }}
+            >
+              Ricarica
+            </Button>
+          ) : undefined
+        }
       />
     </IdentityContext.Provider>
   );

@@ -47,11 +47,12 @@ function resolveStoredPath(storageRoot: string, storedName: string) {
 describe("Routeroom API", () => {
   it("returns session details with LAN metadata", async () => {
     const storageRoot = await createTemporaryStorage();
-    const { app, close } = await createApp({ port: 8787, storageRoot });
+    const { app, close } = await createApp({ port: 8787, storageRoot, appVersion: "9.9.9" });
 
     const response = await request(app).get("/api/session").expect(200);
 
     expect(response.body.appName).toBe("Routy");
+    expect(response.body.appVersion).toBe("9.9.9");
     expect(response.body.storagePath).toBe(storageRoot);
     expect(response.body.lanUrl).toContain("http://");
     expect(response.body.availableArchiveFormats).toContain("zip");

@@ -19,7 +19,7 @@ import {
   Typography
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
-import type { ClientProfileResponse, SyncOverviewResponse } from "../../shared/types";
+import type { ClientProfileResponse, SessionInfo, SyncOverviewResponse } from "../../shared/types";
 import { PageHeader } from "../components/PageHeader";
 import { QrCodeDialog } from "../components/QrCodeDialog";
 import {
@@ -33,6 +33,14 @@ import {
 import type { AndroidAppReleaseInfo } from "../lib/api";
 import { copyTextToClipboard } from "../lib/clipboard";
 import { insetCardSx, pageCardSx } from "../lib/surfaces";
+import {
+  compareVersions,
+  downloadDesktopReleaseAsset,
+  fetchLatestDesktopRelease,
+  type DesktopReleaseInfo,
+  type WindowsDesktopBuildTarget,
+  windowsDesktopBuildTargets
+} from "../lib/updates";
 import { useQrDialog } from "../lib/useQrDialog";
 import { useLanLiveState } from "../lib/useLanLiveState";
 
@@ -68,32 +76,35 @@ export function SyncPage() {
   const [loading, setLoading] = useState(true);
   const [creatingPairingCode, setCreatingPairingCode] = useState(false);
   const [revokingDeviceId, setRevokingDeviceId] = useState<string | null>(null);
-  const [sessionLanUrl, setSessionLanUrl] = useState<string | null>(null);
+  const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
   const [androidRelease, setAndroidRelease] = useState<AndroidAppReleaseInfo | null>(null);
+  const [desktopReleases, setDesktopReleases] = useState<Partial<Record<WindowsDesktopBuildTarget, DesktopReleaseInfo>>>({});
+  const [downloadingDesktopTarget, setDownloadingDesktopTarget] = useState<WindowsDesktopBuildTarget | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const sessionLanUrl = sessionInfo?.lanUrl ?? null;
   const pairingQrValue = buildSyncPairingQrValue(sessionLanUrl, overview?.activePairingCode?.code ?? null);
   const pairingQrDialog = useQrDialog(pairingQrValue, { width: 256 });
   const apkQrDialog = useQrDialog(androidRelease?.downloadUrl ?? null, { width: 256 });
 
   async function syncData() {
-    const profile = await fetchClientProfile();
+    const [profile, session] = await Promise.all([fetchClientProfile(), fetchSession()]);
 
     if (!profile.isHost) {
       startTransition(() => {
         setClientProfile(profile);
         setOverview(null);
-        setSessionLanUrl(null);
+        setSessionInfo(session);
         setLoading(false);
       });
       return;
     }
 
-    const [nextOverview, session] = await Promise.all([fetchSyncOverview(), fetchSession()]);
+    const nextOverview = await fetchSyncOverview();
 
     startTransition(() => {
       setClientProfile(profile);
       setOverview(nextOverview);
-      setSessionLanUrl(session.lanUrl);
+      setSessionInfo(session);
       setLoading(false);
     });
   }
@@ -146,6 +157,29 @@ export function SyncPage() {
 
         setAndroidRelease(null);
       });
+
+    void Promise.allSettled([
+      fetchLatestDesktopRelease("win-x64"),
+      fetchLatestDesktopRelease("win-arm64")
+    ]).then((results) => {
+      if (cancelled) {
+        return;
+      }
+
+      const nextReleases: Partial<Record<WindowsDesktopBuildTarget, DesktopReleaseInfo>> = {};
+
+      for (const [index, result] of results.entries()) {
+        const target = index === 0 ? "win-x64" : "win-arm64";
+
+        if (result.status === "fulfilled") {
+          nextReleases[target] = result.value;
+        }
+      }
+
+      startTransition(() => {
+        setDesktopReleases(nextReleases);
+      });
+    });
 
     return () => {
       cancelled = true;
@@ -200,6 +234,40 @@ export function SyncPage() {
     }
   }
 
+  const publishedDesktopVersion = (Object.values(desktopReleases) as DesktopReleaseInfo[]).reduce<string | null>(
+    (currentLatestVersion, release) => {
+      if (!currentLatestVersion) {
+        return release.version;
+      }
+
+      return compareVersions(release.version, currentLatestVersion) > 0 ? release.version : currentLatestVersion;
+    },
+    null
+  );
+  const hostVersion = sessionInfo?.appVersion ?? null;
+  const webAppNeedsRefresh = hostVersion ? compareVersions(hostVersion, __APP_VERSION__) > 0 : false;
+  const hostBehindPublishedVersion =
+    hostVersion && publishedDesktopVersion ? compareVersions(publishedDesktopVersion, hostVersion) > 0 : false;
+
+  async function handleDownloadDesktopRelease(target: WindowsDesktopBuildTarget) {
+    const release = desktopReleases[target];
+
+    if (!release) {
+      return;
+    }
+
+    setDownloadingDesktopTarget(target);
+
+    try {
+      await downloadDesktopReleaseAsset(release.asset);
+      setSnackbar(`Download ${windowsDesktopBuildTargets[target].label} avviato nel browser.`);
+    } catch {
+      setSnackbar(`Download ${windowsDesktopBuildTargets[target].label} non riuscito.`);
+    } finally {
+      setDownloadingDesktopTarget(null);
+    }
+  }
+
   function renderAndroidDownloadCard() {
     return (
       <Card
@@ -229,9 +297,6 @@ export function SyncPage() {
                   bgcolor: alpha(theme.palette.background.paper, isDark ? 0.7 : 0.92)
                 }}
               >
-                <Typography variant="overline" color="secondary.main">
-                  Release corrente
-                </Typography>
                 <Typography variant="h6" sx={{ wordBreak: "break-word" }}>
                   Routy Sync {androidRelease.version}
                 </Typography>
@@ -240,9 +305,7 @@ export function SyncPage() {
                 </Typography>
               </Box>
             ) : (
-              <Typography color="text.secondary">
-                Metadata APK non disponibili al momento. Riprova quando la release Android e raggiungibile.
-              </Typography>
+              <Typography color="text.secondary">APK non disponibile.</Typography>
             )}
 
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
@@ -269,7 +332,7 @@ export function SyncPage() {
                 onClick={apkQrDialog.openDialog}
                 sx={{ alignSelf: "flex-start" }}
               >
-                Mostra QR APK
+                QR APK
               </Button>
             </Stack>
           </Stack>
@@ -278,49 +341,162 @@ export function SyncPage() {
     );
   }
 
+  function renderDesktopDownloadCard() {
+    const desktopTargets = ["win-x64", "win-arm64"] as const;
+
+    return (
+      <Card
+        variant="outlined"
+        sx={{
+          ...pageCardSx,
+          bgcolor: alpha(theme.palette.primary.main, isDark ? 0.1 : 0.04)
+        }}
+      >
+        <CardContent>
+          <Stack spacing={2}>
+            <Stack direction="row" spacing={1.25} alignItems="center">
+              <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.12), color: "primary.main" }}>
+                <DownloadRoundedIcon />
+              </Avatar>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="h5">Desktop Windows</Typography>
+              </Box>
+            </Stack>
+
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
+              {desktopTargets.map((target) => {
+                const release = desktopReleases[target] ?? null;
+                const isDownloading = downloadingDesktopTarget === target;
+                const label = target === "win-x64" ? "Scarica per x64" : "Scarica ARM";
+
+                return (
+                  <Button
+                    key={target}
+                    variant="contained"
+                    startIcon={<DownloadRoundedIcon />}
+                    disabled={!release || Boolean(downloadingDesktopTarget)}
+                    onClick={() => {
+                      void handleDownloadDesktopRelease(target);
+                    }}
+                    sx={{ alignSelf: "flex-start" }}
+                  >
+                    {isDownloading ? `${label}...` : label}
+                  </Button>
+                );
+              })}
+            </Stack>
+          </Stack>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  function renderWebUpdateCard() {
+    return (
+      <Card
+        variant="outlined"
+        sx={{
+          ...pageCardSx,
+          bgcolor: alpha(theme.palette.secondary.main, isDark ? 0.08 : 0.035)
+        }}
+      >
+        <CardContent>
+          <Stack spacing={2}>
+            <Stack direction="row" spacing={1.25} alignItems="center">
+              <Avatar sx={{ bgcolor: alpha(theme.palette.secondary.main, 0.12), color: "secondary.main" }}>
+                <SyncRoundedIcon />
+              </Avatar>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="h5">Web app</Typography>
+              </Box>
+            </Stack>
+
+            <Box
+              sx={{
+                p: 2,
+                ...insetCardSx,
+                border: `1px solid ${alpha(theme.palette.secondary.main, isDark ? 0.24 : 0.12)}`,
+                bgcolor: alpha(theme.palette.background.paper, isDark ? 0.68 : 0.92)
+              }}
+            >
+              <Stack spacing={0.5}>
+                <Typography color="text.secondary">Tab: Routy {__APP_VERSION__}</Typography>
+                <Typography color="text.secondary">Host: {hostVersion ? `Routy ${hostVersion}` : "n/d"}</Typography>
+                <Typography color="text.secondary">Release: {publishedDesktopVersion ? `Routy ${publishedDesktopVersion}` : "n/d"}</Typography>
+              </Stack>
+            </Box>
+
+            {webAppNeedsRefresh ? (
+              <Alert
+                severity="warning"
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => {
+                      window.location.reload();
+                    }}
+                  >
+                    Ricarica
+                  </Button>
+                }
+              >
+                Host aggiornato. Ricarica la pagina.
+              </Alert>
+            ) : hostBehindPublishedVersion && publishedDesktopVersion ? (
+              <Alert severity="info">Aggiorna prima l'host a Routy {publishedDesktopVersion}.</Alert>
+            ) : (
+              <Alert severity="success">Web app allineata.</Alert>
+            )}
+          </Stack>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  function renderReleaseUtilities() {
+    return (
+      <Box
+        sx={{
+          display: "grid",
+          gap: 2.5,
+          gridTemplateColumns: { xs: "1fr", xl: "repeat(3, minmax(0, 1fr))" }
+        }}
+      >
+        {renderAndroidDownloadCard()}
+        {renderDesktopDownloadCard()}
+        {renderWebUpdateCard()}
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ pb: 7 }}>
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
-        <PageHeader title="Sync Host" subtitle="Android autosync" networkState={liveState} />
+        <PageHeader title="Sync Host" subtitle="sync e update" networkState={liveState} />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
           {loading ? <Typography color="text.secondary">Caricamento area sync...</Typography> : null}
 
           {!loading && !clientProfile?.isHost ? (
             <>
-              <Alert severity="info">
-                Questa sezione si configura solo dal device host. I client LAN possono usare Routy, ma non generare pairing code
-                o revocare device Android.
-              </Alert>
+              <Alert severity="info">Solo l'host può creare codici e gestire i device.</Alert>
 
-              <Card variant="outlined" sx={pageCardSx}>
-                <CardContent>
-                  <Stack spacing={1.5}>
-                    <Typography variant="h5">Come funziona</Typography>
-                    <Typography color="text.secondary">
-                      L’host genera un pairing code temporaneo. L’app Android puo anche scansionare un QR che compila host e
-                      codice in un colpo solo. Dopo il pairing, l’autosync parte quando il telefono torna sulla LAN e l’host
-                      risponde.
-                    </Typography>
-                  </Stack>
-                </CardContent>
-              </Card>
-
-              {renderAndroidDownloadCard()}
+              {renderReleaseUtilities()}
             </>
           ) : null}
 
           {!loading && clientProfile?.isHost && overview ? (
             <>
               {liveState === "fallback" ? (
-                <Alert severity="warning">Connessione live non disponibile. Sto aggiornando la sezione Sync con polling.</Alert>
+                <Alert severity="warning">Connessione live non disponibile. Aggiornamento con polling.</Alert>
               ) : null}
 
               <Box
                 sx={{
                   display: "grid",
                   gap: 2.5,
-                  gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))", xl: "1.05fr 0.95fr 0.85fr" }
+                  gridTemplateColumns: { xs: "1fr", xl: "minmax(0, 1fr)" }
                 }}
               >
                 <Card
@@ -354,14 +530,14 @@ export function SyncPage() {
                             {overview.activePairingCode.code}
                           </Typography>
                           <Typography color="text.secondary">
-                            Scade alle {formatDateTime(overview.activePairingCode.expiresAt)}
+                            Scade {formatDateTime(overview.activePairingCode.expiresAt)}
                           </Typography>
                           {sessionLanUrl ? (
-                            <Typography color="text.secondary">Host LAN: {sessionLanUrl}</Typography>
+                            <Typography color="text.secondary">{sessionLanUrl}</Typography>
                           ) : null}
                         </Box>
                       ) : (
-                        <Typography color="text.secondary">Nessun pairing code attivo al momento.</Typography>
+                        <Typography color="text.secondary">Nessun codice attivo.</Typography>
                       )}
 
                       <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
@@ -374,7 +550,7 @@ export function SyncPage() {
                           }}
                           sx={{ alignSelf: "flex-start" }}
                         >
-                          {overview.activePairingCode ? "Rigenera pairing code" : "Genera pairing code"}
+                          {overview.activePairingCode ? "Rigenera codice" : "Genera codice"}
                         </Button>
                         {overview.activePairingCode && pairingQrValue ? (
                           <Button
@@ -383,15 +559,16 @@ export function SyncPage() {
                             onClick={pairingQrDialog.openDialog}
                             sx={{ alignSelf: "flex-start" }}
                           >
-                            Mostra QR pairing
+                            QR pairing
                           </Button>
                         ) : null}
                       </Stack>
                     </Stack>
                   </CardContent>
                 </Card>
-                {renderAndroidDownloadCard()}
               </Box>
+
+              {renderReleaseUtilities()}
 
               <Card variant="outlined" sx={pageCardSx}>
                 <CardContent>
@@ -402,7 +579,6 @@ export function SyncPage() {
                       </Avatar>
                       <Box>
                         <Typography variant="h5">Device registrati</Typography>
-                        <Typography color="text.secondary">Config attiva e mapping delle cartelle.</Typography>
                       </Box>
                     </Stack>
 
@@ -574,28 +750,28 @@ export function SyncPage() {
       <QrCodeDialog
         {...pairingQrDialog.dialogProps}
         title="QR pairing Android"
-        description="Scansiona questo codice dalla schermata Sync Android per compilare host LAN e pairing code."
+        description="Scansiona per aprire il pairing."
         qrCodeAlt="QR pairing Android"
         onCopy={
           pairingQrValue
             ? () => {
                 void copyTextToClipboard(pairingQrValue)
                   .then(() => {
-                    setSnackbar("Payload QR pairing copiato.");
+                    setSnackbar("QR pairing copiato.");
                   })
                   .catch(() => {
-                    setSnackbar("Copia payload pairing non disponibile.");
+                    setSnackbar("Copia non disponibile.");
                   });
               }
             : undefined
         }
-        copyLabel="Copia payload QR"
+        copyLabel="Copia QR"
       />
 
       <QrCodeDialog
         {...apkQrDialog.dialogProps}
         title="QR download APK"
-        description="Scansiona questo codice da un altro device Android per aprire subito il download diretto dell’APK Routy Sync."
+        description="Scansiona per aprire il download APK."
         qrCodeAlt="QR download APK Android"
         subject={androidRelease ? `Routy Sync ${androidRelease.version}` : undefined}
         url={androidRelease?.downloadUrl}
@@ -607,7 +783,7 @@ export function SyncPage() {
                     setSnackbar("Link APK copiato.");
                   })
                   .catch(() => {
-                    setSnackbar("Copia link APK non disponibile.");
+                    setSnackbar("Copia non disponibile.");
                   });
               }
             : undefined

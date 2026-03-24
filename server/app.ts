@@ -2,6 +2,7 @@ import { createReadStream, existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express";
 import mammoth from "mammoth";
 import multer from "multer";
@@ -67,6 +68,7 @@ interface CreateAppOptions {
   storageRoot?: string;
   staticDir?: string;
   listenHost?: string;
+  appVersion?: string;
 }
 
 const wordExtractor = new WordExtractor();
@@ -217,10 +219,52 @@ async function createItemPreview(
   };
 }
 
+async function resolveAppVersion(explicitVersion?: string) {
+  const normalizedExplicitVersion = explicitVersion?.trim();
+
+  if (normalizedExplicitVersion) {
+    return normalizedExplicitVersion;
+  }
+
+  const envVersion = process.env.npm_package_version?.trim();
+
+  if (envVersion) {
+    return envVersion;
+  }
+
+  const packageJsonCandidates = [
+    path.resolve(process.cwd(), "package.json"),
+    fileURLToPath(new URL("../package.json", import.meta.url)),
+    fileURLToPath(new URL("../../package.json", import.meta.url))
+  ];
+
+  for (const candidatePath of packageJsonCandidates) {
+    if (!existsSync(candidatePath)) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(await readFile(candidatePath, "utf8")) as {
+        version?: string;
+      };
+      const fileVersion = parsed.version?.trim();
+
+      if (fileVersion) {
+        return fileVersion;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return "0.0.0";
+}
+
 export async function createApp(options: CreateAppOptions = {}) {
   const port = options.port ?? 8787;
   const listenHost = options.listenHost ?? "0.0.0.0";
   const storageRoot = options.storageRoot ?? path.resolve(process.cwd(), "storage");
+  const appVersion = await resolveAppVersion(options.appVersion);
   const urls = getSessionUrls(port);
   const store = new LibraryStore(storageRoot);
   const collaboration = new CollaborationStore(storageRoot);
@@ -473,6 +517,7 @@ export async function createApp(options: CreateAppOptions = {}) {
     const summary = store.getSummary();
     const sessionInfo: SessionInfo = {
       appName: "Routy",
+      appVersion,
       hostName: os.hostname(),
       lanUrl: urls.lanUrl,
       storagePath: store.rootDir,

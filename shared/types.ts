@@ -69,6 +69,7 @@ export type ItemPreview =
 
 export interface SessionInfo {
   appName: string;
+  appVersion: string;
   hostName: string;
   lanUrl: string;
   storagePath: string;

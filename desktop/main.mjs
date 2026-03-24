@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createApp } from "../dist/server/app.js";
-import { maybePromptForDesktopUpdate } from "./updater.mjs";
+import { startDesktopAutoUpdater } from "./updater.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDevelopment = !app.isPackaged;
@@ -26,7 +26,8 @@ async function startRouteroomServer() {
     seedDemo: true,
     staticDir,
     storageRoot,
-    listenHost: desktopHost
+    listenHost: desktopHost,
+    appVersion: app.getVersion()
   });
 
   await new Promise((resolve, reject) => {
@@ -85,7 +86,10 @@ async function createMainWindow() {
     mainWindow.webContents.openDevTools({ mode: "detach" });
   }
 
-  void maybePromptForDesktopUpdate(mainWindow);
+  startDesktopAutoUpdater({
+    getParentWindow: () => mainWindow,
+    stopBeforeInstall: stopRouteroomServer
+  });
 }
 
 app.whenReady().then(async () => {

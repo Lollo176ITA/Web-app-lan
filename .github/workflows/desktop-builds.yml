@@ -8,7 +8,7 @@ on:
     paths:
       - ".github/workflows/desktop-builds.yml"
       - "desktop/**"
-      - "electron-builder.json"
+      - "electron-builder.config.cjs"
       - "index.html"
       - "package-lock.json"
       - "package.json"
@@ -48,21 +48,25 @@ jobs:
             runner: windows-latest
             script: desktop:dist:win:x64
             branch: builds/win-x64
+            publish_url_suffix: builds/win-x64/latest
           - name: Windows ARM64
             id: win-arm64
             runner: windows-latest
             script: desktop:dist:win:arm64
             branch: builds/win-arm64
+            publish_url_suffix: builds/win-arm64/latest
           - name: macOS ARM64
             id: mac-arm64
             runner: macos-latest
             script: desktop:dist:mac:arm64
             branch: builds/mac-arm64
+            publish_url_suffix: ""
           - name: Linux x64
             id: linux-x64
             runner: ubuntu-latest
             script: desktop:dist:linux:x64
             branch: builds/linux-x64
+            publish_url_suffix: ""
 
     steps:
       - name: Checkout
@@ -80,7 +84,7 @@ jobs:
           path: |
             ${{ env.ELECTRON_CACHE }}
             ${{ env.ELECTRON_BUILDER_CACHE }}
-          key: ${{ runner.os }}-${{ matrix.target.id }}-electron-${{ hashFiles('package-lock.json', 'package.json', 'electron-builder.json') }}
+          key: ${{ runner.os }}-${{ matrix.target.id }}-electron-${{ hashFiles('package-lock.json', 'package.json', 'electron-builder.config.cjs') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.target.id }}-electron-
             ${{ runner.os }}-electron-
@@ -89,6 +93,8 @@ jobs:
         run: npm ci
 
       - name: Build target
+        env:
+          ROUTY_WINDOWS_PUBLISH_URL: ${{ matrix.target.publish_url_suffix != '' && format('https://raw.githubusercontent.com/{0}/{1}', github.repository, matrix.target.publish_url_suffix) || '' }}
         run: npm run ${{ matrix.target.script }}
 
       - name: Remove unpacked outputs
@@ -103,6 +109,9 @@ jobs:
           name: ${{ matrix.target.id }}
           path: |
             release/*.exe
+            release/*.7z
+            release/*.yml
+            release/*.blockmap
             release/*.dmg
             release/*.AppImage
             release/*.zip
@@ -153,8 +162,11 @@ jobs:
 
           allowed_suffixes = {
               ".AppImage",
+              ".7z",
+              ".blockmap",
               ".dmg",
               ".exe",
+              ".yml",
               ".zip",
           }
 
@@ -176,6 +188,12 @@ jobs:
               size = item.stat().st_size
               digest = sha256_for(item)
               relative_name = item.relative_to(release_dir).as_posix().replace("/", "__")
+
+              if os.environ["TARGET_ID"].startswith("win-") and item.suffix == ".7z" and size > max_chunk_size:
+                  raise SystemExit(
+                      f"Windows web installer package {item.name} is {size} bytes and exceeds the GitHub branch publish limit. "
+                      "Move Windows packages to a host with larger single-file support if this package grows further."
+                  )
 
               if size <= max_chunk_size:
                   destination = publish_dir / relative_name
