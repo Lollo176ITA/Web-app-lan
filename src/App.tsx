@@ -50,7 +50,6 @@ export default function App() {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
-  const [uploadTargetLabel, setUploadTargetLabel] = useState("Radice LAN");
   const [uploadSnackbar, setUploadSnackbar] = useState<string | null>(null);
   const [uploadState, setUploadState] = useState<AppUploadState>({
     lastUploadedItemId: null,
@@ -95,7 +94,6 @@ export default function App() {
     uploadAbortControllerRef.current = abortController;
     setUploading(true);
     setUploadProgress(null);
-    setUploadTargetLabel(targetLabel);
 
     try {
       const response = await uploadFiles(files, parentId, {
@@ -196,7 +194,6 @@ export default function App() {
               compact={isMobile}
               onCancel={cancelUpload}
               progress={uploadProgress}
-              targetLabel={uploadTargetLabel}
             />
           ) : null}
         </Box>

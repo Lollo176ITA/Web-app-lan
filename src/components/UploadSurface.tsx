@@ -1,14 +1,11 @@
 import { useEffect, useId, useRef, useState } from "react";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
-import FlashOnRoundedIcon from "@mui/icons-material/FlashOnRounded";
-import FolderZipRoundedIcon from "@mui/icons-material/FolderZipRounded";
 import {
   Avatar,
   Box,
   Button,
   Card,
   CardContent,
-  Chip,
   CircularProgress,
   Stack,
   Typography,

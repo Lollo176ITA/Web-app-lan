@@ -19,7 +19,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import { Link as RouterLink } from "react-router-dom";
 import type { StreamRoomSummary } from "../../shared/types";
 import { PageHeader } from "../components/PageHeader";
@@ -41,6 +41,7 @@ function formatRoomTime(value: string) {
 }
 
 export function StreamRoomsPage() {
+  const theme = useTheme();
   const [rooms, setRooms] = useState<StreamRoomSummary[]>([]);
   const [roomName, setRoomName] = useState("");
   const [loading, setLoading] = useState(true);

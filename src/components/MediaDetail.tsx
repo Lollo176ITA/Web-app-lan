@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import CircularProgress from "@mui/material/CircularProgress";
-import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
-import LanRoundedIcon from "@mui/icons-material/LanRounded";
 import MovieRoundedIcon from "@mui/icons-material/MovieRounded";
 import MusicNoteRoundedIcon from "@mui/icons-material/MusicNoteRounded";
 import SourceRoundedIcon from "@mui/icons-material/SourceRounded";
@@ -17,7 +15,6 @@ import {
   CardActions,
   CardContent,
   CardHeader,
-  Chip,
   Divider,
   Stack,
   Typography,
@@ -31,7 +28,6 @@ import { getItemKindAccent } from "../lib/item-kind-accent";
 
 interface MediaDetailProps {
   item: LibraryItem | null;
-  onCopyLink: (url: string) => Promise<void>;
 }
 
 const detailIcons = {
@@ -125,7 +121,7 @@ function DocumentPreview({
   );
 }
 
-export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
+export function MediaDetail({ item }: MediaDetailProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isDark = theme.palette.mode === "dark";
@@ -192,8 +188,6 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
 
   const Icon = detailIcons[item.kind];
   const accent = getItemKindAccent(theme, item.kind);
-  const shareUrl = item.downloadUrl ?? item.contentUrl ?? "";
-
   return (
     <Card sx={{ minWidth: 0 }}>
       <CardHeader

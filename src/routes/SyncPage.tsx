@@ -5,7 +5,6 @@ import LinkRoundedIcon from "@mui/icons-material/LinkRounded";
 import PhoneAndroidRoundedIcon from "@mui/icons-material/PhoneAndroidRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import SyncRoundedIcon from "@mui/icons-material/SyncRounded";
-import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import {
   Alert,
   Avatar,

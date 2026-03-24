@@ -29,7 +29,6 @@ interface ComparisonSeries {
   label: string;
   color: string;
   values: number[];
-  showMark: boolean;
 }
 
 interface ComparisonMetricCardProps {
@@ -51,11 +50,6 @@ function formatThroughput(value: number) {
   return `${formatBytes(Math.max(value, 0))}/s`;
 }
 
-function formatTime(value: string) {
-  return new Intl.DateTimeFormat("it-IT", {
-    timeStyle: "medium"
-  }).format(new Date(value));
-}
 const chartTimeFormatter = new Intl.DateTimeFormat("it-IT", {
   hour: "2-digit",
   minute: "2-digit",
@@ -234,9 +228,6 @@ function getHostMemoryPercent(usedBytes: number, totalBytes: number) {
 }
 
 export function DiagnosticsRealtimePanel({ loading, stats, unavailable }: DiagnosticsRealtimePanelProps) {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === "dark";
-
   if (!stats && loading) {
     return <RealtimeSkeleton />;
   }
@@ -258,15 +249,13 @@ export function DiagnosticsRealtimePanel({ loading, stats, unavailable }: Diagno
       id: "host-cpu",
       label: "Host",
       color: "#1f7ae0",
-      values: stats.history.map((sample) => sample.hostCpuUsagePercent),
-      showMark: false
+      values: stats.history.map((sample) => sample.hostCpuUsagePercent)
     },
     {
       id: "routy-cpu",
       label: "Routy",
       color: "#ef6c00",
-      values: stats.history.map((sample) => sample.processCpuUsagePercent),
-      showMark: true
+      values: stats.history.map((sample) => sample.processCpuUsagePercent)
     }
   ];
   const ramSeries: [ComparisonSeries, ComparisonSeries] = [
@@ -274,15 +263,13 @@ export function DiagnosticsRealtimePanel({ loading, stats, unavailable }: Diagno
       id: "host-ram",
       label: "Host",
       color: "#2e7d32",
-      values: stats.history.map((sample) => getHostMemoryPercent(sample.hostMemoryUsedBytes, sample.memoryTotalBytes)),
-      showMark: false
+      values: stats.history.map((sample) => getHostMemoryPercent(sample.hostMemoryUsedBytes, sample.memoryTotalBytes))
     },
     {
       id: "routy-ram",
       label: "Routy",
       color: "#8d6e63",
-      values: stats.history.map((sample) => getHostMemoryPercent(sample.processMemoryBytes, sample.memoryTotalBytes)),
-      showMark: true
+      values: stats.history.map((sample) => getHostMemoryPercent(sample.processMemoryBytes, sample.memoryTotalBytes))
     }
   ];
   const bandwidthSeries: [ComparisonSeries, ComparisonSeries] = [
@@ -290,15 +277,13 @@ export function DiagnosticsRealtimePanel({ loading, stats, unavailable }: Diagno
       id: "host-bandwidth",
       label: "Host",
       color: "#00838f",
-      values: stats.history.map((sample) => sample.hostTotalBytesPerSecond),
-      showMark: false
+      values: stats.history.map((sample) => sample.hostTotalBytesPerSecond)
     },
     {
       id: "routy-bandwidth",
       label: "Routy",
       color: "#c62828",
-      values: stats.history.map((sample) => sample.processTotalBytesPerSecond),
-      showMark: true
+      values: stats.history.map((sample) => sample.processTotalBytesPerSecond)
     }
   ];
   const historyDates = stats.history.map((sample) => new Date(sample.recordedAt));

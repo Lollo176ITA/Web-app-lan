@@ -3,7 +3,6 @@ import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ForumRoundedIcon from "@mui/icons-material/ForumRounded";
-import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import {
   Alert,
@@ -13,7 +12,6 @@ import {
   ButtonBase,
   Card,
   CardContent,
-  Chip,
   Container,
   IconButton,
   InputAdornment,

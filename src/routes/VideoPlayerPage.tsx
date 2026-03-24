@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Box, CircularProgress, Container, Typography } from "@mui/material";
-import { alpha, useTheme } from "@mui/material/styles";
+import { useTheme } from "@mui/material/styles";
 import { useParams } from "react-router-dom";
 import type { LibraryItem } from "../../shared/types";
 import { fetchItem } from "../lib/api";

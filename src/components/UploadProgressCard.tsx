@@ -1,7 +1,5 @@
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import PendingRoundedIcon from "@mui/icons-material/PendingRounded";
-import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
 import {
   Box,
   Card,
@@ -20,14 +18,12 @@ interface UploadProgressCardProps {
   compact?: boolean;
   onCancel?: () => void;
   progress: UploadProgress;
-  targetLabel: string;
 }
 
 export function UploadProgressCard({
   compact = false,
   onCancel,
-  progress,
-  targetLabel
+  progress
 }: UploadProgressCardProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";

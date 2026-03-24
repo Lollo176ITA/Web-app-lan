@@ -30,10 +30,6 @@ interface ProfileMeta {
   userAgent: string | null;
 }
 
-function buildProfileInitial(nickname: string) {
-  return nickname.trim().charAt(0).toUpperCase() || "?";
-}
-
 export function UserProfilePage() {
   const { userId } = useParams();
   const theme = useTheme();

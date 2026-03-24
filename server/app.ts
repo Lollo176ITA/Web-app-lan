@@ -1241,7 +1241,7 @@ export async function createApp(options: CreateAppOptions = {}) {
     await sendResolvedFile(request, response, resolved);
   });
 
-  app.get("/api/items/:id/preview", async (request, response, next) => {
+  app.get("/api/items/:id/preview", async (request, response) => {
     try {
       const item = store.findItem(request.params.id);
 

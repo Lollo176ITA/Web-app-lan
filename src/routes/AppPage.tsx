@@ -426,7 +426,7 @@ export function AppPage({
                   />
                 ) : null}
                 <Box ref={detailPanelRef}>
-                  <MediaDetail item={selectedItem} onCopyLink={copyText} />
+                  <MediaDetail item={selectedItem} />
                 </Box>
               </Box>
             </CardContent>
