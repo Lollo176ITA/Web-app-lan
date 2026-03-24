@@ -1,0 +1,23 @@
+{
+  "target": "win-x64",
+  "version": "2.9.3",
+  "sourceBranch": "main",
+  "sourceCommit": "9c83bc5faafe87fa411a95e4eac2c20ea04f89bd",
+  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23514729918",
+  "files": [
+    {
+      "name": "nsis-web__latest.yml",
+      "originalName": "nsis-web/latest.yml",
+      "size": 566,
+      "sha256": "0a50996f49a5fd7714a7aff800ac06e9fc14c1a49b470461d7c628d693dee379",
+      "split": false
+    },
+    {
+      "name": "nsis-web__Routy Web Setup 2.9.3 x64.exe",
+      "originalName": "nsis-web/Routy Web Setup 2.9.3 x64.exe",
+      "size": 631550,
+      "sha256": "c65ce16df9aa8a0f44ef992efc941bcc62be3229ac4fba86415f098556af2f94",
+      "split": false
+    }
+  ]
+}
