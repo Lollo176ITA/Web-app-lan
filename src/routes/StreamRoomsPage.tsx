@@ -248,7 +248,7 @@ export function StreamRoomsPage() {
                                 sx={{
                                   width: 36,
                                   height: 36,
-                                  bgcolor: alpha("#1769aa", 0.12),
+                                  bgcolor: alpha(theme.palette.primary.main, 0.12),
                                   color: "primary.main"
                                 }}
                               >

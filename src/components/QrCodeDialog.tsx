@@ -9,7 +9,7 @@ import {
   Stack,
   Typography
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 
 interface QrCodeDialogProps {
   actionHref?: string;
@@ -44,6 +44,8 @@ export function QrCodeDialog({
   title,
   url
 }: QrCodeDialogProps) {
+  const theme = useTheme();
+
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
       <DialogTitle>{title}</DialogTitle>
@@ -57,7 +59,8 @@ export function QrCodeDialog({
               p: 1.5,
               borderRadius: 2,
               bgcolor: "#ffffff",
-              border: `1px solid ${alpha("#1769aa", 0.16)}`
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.16)}`,
+              boxShadow: `0 12px 28px ${alpha(theme.palette.primary.main, 0.08)}`
             }}
           >
             {qrCodeDataUrl ? (

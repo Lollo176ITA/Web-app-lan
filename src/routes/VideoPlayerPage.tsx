@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Box, CircularProgress, Container, Typography } from "@mui/material";
+import { alpha, useTheme } from "@mui/material/styles";
 import { useParams } from "react-router-dom";
 import type { LibraryItem } from "../../shared/types";
 import { fetchItem } from "../lib/api";
@@ -7,6 +8,7 @@ import { cardRadii } from "../lib/surfaces";
 
 export function VideoPlayerPage() {
   const { itemId } = useParams();
+  const theme = useTheme();
   const [item, setItem] = useState<LibraryItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export function VideoPlayerPage() {
           minHeight: "100vh",
           display: "grid",
           placeItems: "center",
-          bgcolor: "#04090f"
+          bgcolor: theme.palette.background.default
         }}
       >
         <CircularProgress />
@@ -76,7 +78,7 @@ export function VideoPlayerPage() {
           minHeight: "100vh",
           display: "grid",
           placeItems: "center",
-          bgcolor: "#04090f",
+          bgcolor: theme.palette.background.default,
           px: 3
         }}
       >
@@ -88,7 +90,13 @@ export function VideoPlayerPage() {
   }
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#04090f", pb: 3 }}>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        bgcolor: theme.palette.background.default,
+        pb: 3
+      }}
+    >
       <Container maxWidth="xl" sx={{ pt: { xs: 1, md: 2 } }}>
         <Box
           sx={{

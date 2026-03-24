@@ -1,26 +1,94 @@
 import type { PaletteMode } from "@mui/material";
 import { alpha, createTheme } from "@mui/material/styles";
 
+const themeTokens = {
+  light: {
+    primary: {
+      main: "#6D3CD7",
+      light: "#9F78FF",
+      dark: "#5127AE"
+    },
+    secondary: {
+      main: "#6053A6",
+      light: "#8F81D0",
+      dark: "#403284"
+    },
+    background: {
+      default: "#FAF9FC",
+      paper: "#F3F3F7"
+    },
+    text: {
+      primary: "#2F3337",
+      secondary: "#5C5F64"
+    },
+    error: {
+      main: "#A8364B",
+      light: "#F97386",
+      dark: "#6E0523"
+    },
+    warning: {
+      main: "#B76A15",
+      light: "#E4A34E",
+      dark: "#7C4700"
+    },
+    info: {
+      main: "#7862D9",
+      light: "#AA99F3",
+      dark: "#5841AE"
+    },
+    success: {
+      main: "#2F8A63",
+      light: "#66C99A",
+      dark: "#205F46"
+    }
+  },
+  dark: {
+    primary: {
+      main: "#9F78FF",
+      light: "#D8CBFF",
+      dark: "#6D3CD7"
+    },
+    secondary: {
+      main: "#D7CEFF",
+      light: "#F1ECFF",
+      dark: "#403284"
+    },
+    background: {
+      default: "#111218",
+      paper: "#17181F"
+    },
+    text: {
+      primary: "#F1F1F4",
+      secondary: "#C3C5CC"
+    },
+    error: {
+      main: "#F97386",
+      light: "#FFD8DF",
+      dark: "#6B0221"
+    },
+    warning: {
+      main: "#F2BE66",
+      light: "#FFE1B2",
+      dark: "#8B5A13"
+    },
+    info: {
+      main: "#C4B3FF",
+      light: "#ECE5FF",
+      dark: "#7B63D9"
+    },
+    success: {
+      main: "#75D2A7",
+      light: "#BFF0D8",
+      dark: "#2A6A4E"
+    }
+  }
+} as const;
+
 export function createAppTheme(mode: PaletteMode) {
   const isDark = mode === "dark";
-  const primary = {
-    main: isDark ? "#6caeff" : "#1769aa",
-    light: isDark ? "#9bcbff" : "#4393d6",
-    dark: isDark ? "#2d7bc3" : "#00467d"
-  };
-  const secondary = {
-    main: isDark ? "#56d7ca" : "#0f9d94",
-    light: isDark ? "#8ff0e4" : "#4fcfc3",
-    dark: isDark ? "#119489" : "#006d66"
-  };
-  const background = {
-    default: isDark ? "#07111a" : "#eef4f8",
-    paper: isDark ? "#0d1924" : "#fbfdff"
-  };
-  const text = {
-    primary: isDark ? "#edf5fb" : "#10273a",
-    secondary: isDark ? "#96aec1" : "#4d6578"
-  };
+  const { primary, secondary, background, text, error, warning, info, success } = themeTokens[mode];
+  const elevatedSurface = isDark ? "#1b1d24" : "#f6f1ff";
+  const drawerSurface = isDark ? "#15161d" : "#fbf9ff";
 
   return createTheme({
     palette: {
@@ -29,7 +97,11 @@ export function createAppTheme(mode: PaletteMode) {
       secondary,
       background,
       text,
-      divider: alpha(primary.main, isDark ? 0.18 : 0.08),
+      error,
+      warning,
+      info,
+      success,
+      divider: alpha(isDark ? secondary.main : primary.main, isDark ? 0.22 : 0.08),
       action: {
         hover: alpha(primary.main, isDark ? 0.12 : 0.06),
         selected: alpha(primary.main, isDark ? 0.18 : 0.1),
@@ -81,17 +153,7 @@ export function createAppTheme(mode: PaletteMode) {
             minWidth: "320px",
             minHeight: "100vh",
             color: text.primary,
-            background: isDark
-              ? `
-                  radial-gradient(circle at 0 0, ${alpha(primary.light, 0.16)}, transparent 18%),
-                  radial-gradient(circle at 100% 0, ${alpha(secondary.light, 0.12)}, transparent 18%),
-                  linear-gradient(180deg, #07111a 0%, #09131d 55%, #0b1823 100%)
-                `
-              : `
-                  radial-gradient(circle at 0 0, ${alpha(primary.light, 0.18)}, transparent 18%),
-                  radial-gradient(circle at 100% 0, ${alpha(secondary.main, 0.14)}, transparent 18%),
-                  linear-gradient(180deg, #eef4f8 0%, #f7fafc 55%, #edf4f8 100%)
-                `,
+            backgroundColor: background.default,
             backgroundAttachment: "fixed"
           },
           a: {
@@ -126,7 +188,7 @@ export function createAppTheme(mode: PaletteMode) {
             minHeight: 48
           },
           contained: {
-            boxShadow: isDark ? "0 18px 36px rgba(0, 0, 0, 0.32)" : undefined
+            boxShadow: `0 18px 36px ${alpha(primary.dark, isDark ? 0.34 : 0.18)}`
           }
         }
       },
@@ -142,11 +204,11 @@ export function createAppTheme(mode: PaletteMode) {
         styleOverrides: {
           root: {
             borderRadius: 20,
-            background: isDark
-              ? `linear-gradient(180deg, ${alpha(background.paper, 0.98)} 0%, ${alpha("#0a1621", 0.94)} 100%)`
-              : "rgba(255,255,255,0.88)",
+            backgroundColor: isDark ? elevatedSurface : alpha(background.paper, 0.96),
             border: `1px solid ${alpha(primary.main, isDark ? 0.16 : 0.08)}`,
-            boxShadow: isDark ? "0 24px 60px rgba(0, 0, 0, 0.34)" : "0 18px 50px rgba(16, 39, 58, 0.06)"
+            boxShadow: isDark
+              ? `0 24px 60px ${alpha("#000000", 0.34)}`
+              : `0 18px 50px ${alpha(primary.dark, 0.08)}`
           }
         }
       },
@@ -163,27 +225,21 @@ export function createAppTheme(mode: PaletteMode) {
       MuiDialog: {
         styleOverrides: {
           paper: {
-            background: isDark
-              ? `linear-gradient(180deg, ${alpha(background.paper, 0.98)} 0%, ${alpha("#0a1621", 0.98)} 100%)`
-              : undefined
+            backgroundColor: isDark ? drawerSurface : background.paper
           }
         }
       },
       MuiDrawer: {
         styleOverrides: {
           paper: {
-            background: isDark
-              ? `linear-gradient(180deg, ${alpha(background.paper, 0.98)} 0%, ${alpha("#08131d", 0.98)} 100%)`
-              : undefined
+            backgroundColor: isDark ? drawerSurface : background.paper
           }
         }
       },
       MuiMenu: {
         styleOverrides: {
           paper: {
-            background: isDark
-              ? `linear-gradient(180deg, ${alpha(background.paper, 0.98)} 0%, ${alpha("#0a1621", 0.98)} 100%)`
-              : undefined
+            backgroundColor: isDark ? drawerSurface : background.paper
           }
         }
       },

@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
+import { useTheme } from "@mui/material/styles";
 import QRCode from "qrcode";
 
 interface UseQrCodeDataUrlOptions {
   width?: number;
 }
 
-const qrCodeColors = {
-  dark: "#10273a",
-  light: "#ffffff"
-};
-
 export function useQrCodeDataUrl(value: string | null, options: UseQrCodeDataUrlOptions = {}) {
+  const theme = useTheme();
   const { width = 256 } = options;
   const [dataUrl, setDataUrl] = useState("");
+  const qrCodeColors = {
+    dark: theme.palette.mode === "dark" ? theme.palette.secondary.dark : theme.palette.primary.dark,
+    light: "#ffffff"
+  };
 
   useEffect(() => {
     if (!value) {
@@ -41,7 +42,7 @@ export function useQrCodeDataUrl(value: string | null, options: UseQrCodeDataUrl
     return () => {
       isCurrent = false;
     };
-  }, [value, width]);
+  }, [qrCodeColors.dark, qrCodeColors.light, value, width]);
 
   return dataUrl;
 }

@@ -228,7 +228,7 @@ export function DiagnosticsPage() {
                                         sx={{
                                           width: 34,
                                           height: 34,
-                                          bgcolor: alpha("#1769aa", 0.12),
+                                          bgcolor: alpha(theme.palette.primary.main, 0.12),
                                           color: "primary.main"
                                         }}
                                       >

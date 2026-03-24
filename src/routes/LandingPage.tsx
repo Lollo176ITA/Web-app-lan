@@ -84,7 +84,6 @@ export function LandingPage() {
   const liveState = useLanLiveState({ source: "library" });
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
-  const brandLogoSrc = isDark ? "/logo/logo-nero.png" : "/logo/logo-bianco.png";
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
   const selectedFeature = featureCards[selectedFeatureIndex];
 
@@ -98,26 +97,9 @@ export function LandingPage() {
             mt: 3,
             overflow: "hidden",
             position: "relative",
-            background: isDark
-              ? "linear-gradient(180deg, rgba(8, 19, 29, 0.96) 0%, rgba(7, 17, 26, 0.98) 100%)"
-              : "linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(246, 251, 255, 0.92) 100%)"
+            bgcolor: alpha(theme.palette.background.paper, isDark ? 0.96 : 0.94)
           }}
         >
-          <Box
-            sx={{
-              position: "absolute",
-              inset: 0,
-              background: isDark
-                ? `
-                    radial-gradient(circle at 14% 18%, ${alpha(theme.palette.primary.light, 0.24)}, transparent 28%),
-                    radial-gradient(circle at 88% 12%, ${alpha(theme.palette.secondary.main, 0.22)}, transparent 24%)
-                  `
-                : `
-                    radial-gradient(circle at 14% 18%, ${alpha(theme.palette.primary.light, 0.18)}, transparent 24%),
-                    radial-gradient(circle at 88% 12%, ${alpha(theme.palette.secondary.main, 0.18)}, transparent 22%)
-                  `
-            }}
-          />
           <CardContent sx={{ p: { xs: 2.5, md: 4.5 }, position: "relative" }}>
             <Box
               sx={{
@@ -144,8 +126,8 @@ export function LandingPage() {
                     variant="contained"
                     endIcon={<ArrowOutwardRoundedIcon />}
                     sx={{
-                      background: "linear-gradient(135deg, #1769aa 0%, #0f9d94 100%)",
-                      boxShadow: "0 18px 34px rgba(23, 105, 170, 0.22)"
+                      bgcolor: "primary.main",
+                      boxShadow: `0 18px 34px ${alpha(theme.palette.primary.dark, 0.24)}`
                     }}
                   >
                     Apri la libreria
@@ -161,7 +143,7 @@ export function LandingPage() {
                   variant="outlined"
                   sx={{
                     overflow: "hidden",
-                    bgcolor: "#08131e",
+                    bgcolor: isDark ? theme.palette.background.default : theme.palette.background.paper,
                     borderColor: alpha(theme.palette.primary.main, isDark ? 0.24 : 0.1)
                   }}
                 >
@@ -233,9 +215,7 @@ export function LandingPage() {
               <Card
                 variant="outlined"
                 sx={{
-                  background: isDark
-                    ? `linear-gradient(180deg, ${alpha(theme.palette.background.paper, 0.84)} 0%, ${alpha("#08131d", 0.9)} 100%)`
-                    : "rgba(255,255,255,0.76)",
+                  bgcolor: alpha(theme.palette.background.paper, isDark ? 0.76 : 0.9),
                   minHeight: 150
                 }}
               >

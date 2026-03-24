@@ -27,6 +27,7 @@ import { alpha, useTheme } from "@mui/material/styles";
 import type { ItemPreview, LibraryItem } from "../../shared/types";
 import { fetchItemPreview } from "../lib/api";
 import { formatBytes, formatDate } from "../lib/format";
+import { getItemKindAccent } from "../lib/item-kind-accent";
 
 interface MediaDetailProps {
   item: LibraryItem | null;
@@ -43,16 +44,6 @@ const detailIcons = {
   other: SourceRoundedIcon
 } as const;
 
-const detailAccent = {
-  folder: "#1769aa",
-  video: "#1769aa",
-  image: "#0f9d94",
-  audio: "#4553c7",
-  document: "#c47917",
-  archive: "#8b4fcf",
-  other: "#5a7184"
-} as const;
-
 function DocumentPreview({
   item,
   isDark,
@@ -64,6 +55,8 @@ function DocumentPreview({
   loading: boolean;
   preview: ItemPreview | null;
 }) {
+  const theme = useTheme();
+
   if (loading) {
     return (
       <Stack spacing={1.5} alignItems="center">
@@ -109,7 +102,7 @@ function DocumentPreview({
           overflow: "auto",
           p: 2,
           borderRadius: 1.5,
-          border: `1px solid ${alpha("#1769aa", isDark ? 0.2 : 0.12)}`,
+          border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.2 : 0.12)}`,
           bgcolor: "background.paper",
           fontFamily: '"Roboto Mono", "SFMono-Regular", monospace',
           fontSize: "0.92rem",
@@ -198,7 +191,7 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
   }
 
   const Icon = detailIcons[item.kind];
-  const accent = detailAccent[item.kind];
+  const accent = getItemKindAccent(theme, item.kind);
   const shareUrl = item.downloadUrl ?? item.contentUrl ?? "";
 
   return (
@@ -265,7 +258,13 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
             }}
           >
             {item.kind === "video" ? (
-              <Box sx={{ width: "100%", aspectRatio: "16 / 9", bgcolor: "#08131e" }}>
+              <Box
+                sx={{
+                  width: "100%",
+                  aspectRatio: "16 / 9",
+                  bgcolor: isDark ? theme.palette.background.default : theme.palette.background.paper
+                }}
+              >
                 <Box
                   component="video"
                   controls
@@ -274,7 +273,7 @@ export function MediaDetail({ item, onCopyLink }: MediaDetailProps) {
                     width: "100%",
                     height: "100%",
                     display: "block",
-                    bgcolor: "#08131e",
+                    bgcolor: isDark ? theme.palette.background.default : theme.palette.background.paper,
                     objectFit: "contain"
                   }}
                 />

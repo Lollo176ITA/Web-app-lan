@@ -16,7 +16,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import { Navigate, useParams } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
 import { fetchClientProfile } from "../lib/api";
@@ -36,6 +36,7 @@ function buildProfileInitial(nickname: string) {
 
 export function UserProfilePage() {
   const { userId } = useParams();
+  const theme = useTheme();
   const { identity, setIdentity } = useIdentity();
   const [nicknameDraft, setNicknameDraft] = useState(identity?.nickname ?? "");
   const [profileMeta, setProfileMeta] = useState<ProfileMeta | null>(null);
@@ -76,7 +77,7 @@ export function UserProfilePage() {
               <CardContent>
                 <Stack spacing={2}>
                   <Stack direction="row" spacing={1.25} alignItems="center">
-                    <Avatar sx={{ bgcolor: alpha("#1769aa", 0.12), color: "primary.main" }}>
+                    <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.12), color: "primary.main" }}>
                       <ManageAccountsRoundedIcon />
                     </Avatar>
                     <Typography variant="h5">Modificabili</Typography>
@@ -124,7 +125,7 @@ export function UserProfilePage() {
               <CardContent>
                 <Stack spacing={2}>
                   <Stack direction="row" spacing={1.25} alignItems="center">
-                    <Avatar sx={{ bgcolor: alpha("#0f9d94", 0.12), color: "secondary.main" }}>
+                    <Avatar sx={{ bgcolor: alpha(theme.palette.secondary.main, 0.12), color: "secondary.main" }}>
                       <BadgeRoundedIcon />
                     </Avatar>
                     <Typography variant="h5">Identita</Typography>
@@ -145,7 +146,7 @@ export function UserProfilePage() {
             <CardContent>
               <Stack spacing={2}>
                 <Stack direction="row" spacing={1.25} alignItems="center">
-                  <Avatar sx={{ bgcolor: alpha("#1769aa", 0.12), color: "primary.main" }}>
+                  <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.12), color: "primary.main" }}>
                     <LanRoundedIcon />
                   </Avatar>
                   <Typography variant="h5">Rete</Typography>

@@ -18,6 +18,7 @@ import {
 import { alpha, useTheme } from "@mui/material/styles";
 import type { ArchiveFormat, LibraryItem, LibraryLayoutMode } from "../../shared/types";
 import { formatBytes, formatDate } from "../lib/format";
+import { getItemKindAccent } from "../lib/item-kind-accent";
 import { ItemActionsMenu } from "./ItemActionsMenu";
 
 interface LibraryGridProps {
@@ -34,13 +35,13 @@ interface LibraryGridProps {
 }
 
 const kindConfig = {
-  folder: { label: "Cartella", icon: FolderRoundedIcon, accent: "#1769aa" },
-  video: { label: "Video", icon: MovieRoundedIcon, accent: "#1769aa" },
-  image: { label: "Immagine", icon: ImageRoundedIcon, accent: "#0f9d94" },
-  audio: { label: "Audio", icon: AudiotrackRoundedIcon, accent: "#4553c7" },
-  document: { label: "Documento", icon: DescriptionRoundedIcon, accent: "#c47917" },
-  archive: { label: "Archivio", icon: ArchiveRoundedIcon, accent: "#8b4fcf" },
-  other: { label: "Altro", icon: MoreHorizRoundedIcon, accent: "#5a7184" }
+  folder: { label: "Cartella", icon: FolderRoundedIcon },
+  video: { label: "Video", icon: MovieRoundedIcon },
+  image: { label: "Immagine", icon: ImageRoundedIcon },
+  audio: { label: "Audio", icon: AudiotrackRoundedIcon },
+  document: { label: "Documento", icon: DescriptionRoundedIcon },
+  archive: { label: "Archivio", icon: ArchiveRoundedIcon },
+  other: { label: "Altro", icon: MoreHorizRoundedIcon }
 } as const;
 
 function sortVisibleItems(items: LibraryItem[]) {
@@ -123,6 +124,7 @@ export function LibraryGrid({
     >
       {sortVisibleItems(items).map((item) => {
         const config = kindConfig[item.kind];
+        const accent = getItemKindAccent(theme, item.kind);
         const Icon = config.icon;
         const isSelected = item.id === selectedId;
         const isFolder = item.kind === "folder";
@@ -137,9 +139,9 @@ export function LibraryGrid({
                 overflow: "hidden",
                 width: "100%",
                 minWidth: 0,
-                borderColor: isSelected ? alpha(config.accent, isDark ? 0.46 : 0.36) : alpha(theme.palette.text.primary, isDark ? 0.16 : 0.08),
+                borderColor: isSelected ? alpha(accent, isDark ? 0.46 : 0.36) : alpha(theme.palette.text.primary, isDark ? 0.16 : 0.08),
                 boxShadow: isSelected
-                  ? `0 12px 28px ${alpha(config.accent, isDark ? 0.22 : 0.14)}`
+                  ? `0 12px 28px ${alpha(accent, isDark ? 0.22 : 0.14)}`
                   : isDark
                     ? "0 10px 28px rgba(0, 0, 0, 0.24)"
                     : "0 8px 22px rgba(16, 39, 58, 0.04)"
@@ -182,8 +184,8 @@ export function LibraryGrid({
                     sx={{
                       width: 36,
                       height: 36,
-                      bgcolor: alpha(config.accent, 0.12),
-                      color: config.accent
+                      bgcolor: alpha(accent, 0.12),
+                      color: accent
                     }}
                   >
                     <Icon fontSize="small" />
@@ -211,9 +213,9 @@ export function LibraryGrid({
             sx={{
               position: "relative",
               overflow: "hidden",
-              borderColor: isSelected ? alpha(config.accent, isDark ? 0.46 : 0.36) : alpha(theme.palette.text.primary, isDark ? 0.16 : 0.08),
+              borderColor: isSelected ? alpha(accent, isDark ? 0.46 : 0.36) : alpha(theme.palette.text.primary, isDark ? 0.16 : 0.08),
               boxShadow: isSelected
-                ? `0 16px 36px ${alpha(config.accent, isDark ? 0.24 : 0.16)}`
+                ? `0 16px 36px ${alpha(accent, isDark ? 0.24 : 0.16)}`
                 : isDark
                   ? "0 12px 32px rgba(0, 0, 0, 0.26)"
                   : "0 10px 28px rgba(16, 39, 58, 0.05)"
@@ -264,7 +266,7 @@ export function LibraryGrid({
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    bgcolor: alpha(config.accent, 0.08)
+                    bgcolor: alpha(accent, 0.08)
                   }}
                 >
                   <Stack spacing={1} alignItems="center">
@@ -272,8 +274,8 @@ export function LibraryGrid({
                       sx={{
                         width: layoutMode === "compact" ? 48 : 60,
                         height: layoutMode === "compact" ? 48 : 60,
-                        bgcolor: alpha(config.accent, 0.14),
-                        color: config.accent
+                        bgcolor: alpha(accent, 0.14),
+                        color: accent
                       }}
                     >
                       <Icon />

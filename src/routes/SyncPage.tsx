@@ -209,15 +209,13 @@ export function SyncPage() {
         variant="outlined"
         sx={{
           ...pageCardSx,
-          background: isDark
-            ? `linear-gradient(180deg, ${alpha("#0f9d94", 0.18)} 0%, ${alpha(theme.palette.background.paper, 0.98)} 100%)`
-            : `linear-gradient(180deg, ${alpha("#0f9d94", 0.08)} 0%, rgba(255,255,255,0.97) 100%)`
+          bgcolor: alpha(theme.palette.secondary.main, isDark ? 0.1 : 0.04)
         }}
       >
         <CardContent>
           <Stack spacing={2}>
             <Stack direction="row" spacing={1.25} alignItems="center">
-              <Avatar sx={{ bgcolor: alpha("#0f9d94", 0.12), color: "secondary.main" }}>
+              <Avatar sx={{ bgcolor: alpha(theme.palette.secondary.main, 0.12), color: "secondary.main" }}>
                 <PhoneAndroidRoundedIcon />
               </Avatar>
               <Box sx={{ flex: 1 }}>
@@ -334,15 +332,13 @@ export function SyncPage() {
                   variant="outlined"
                   sx={{
                     ...pageCardSx,
-                    background: isDark
-                      ? `linear-gradient(180deg, ${alpha("#1769aa", 0.22)} 0%, ${alpha(theme.palette.background.paper, 0.98)} 100%)`
-                      : `linear-gradient(180deg, ${alpha("#1769aa", 0.1)} 0%, rgba(255,255,255,0.96) 100%)`
+                    bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.05)
                   }}
                 >
                   <CardContent>
                     <Stack spacing={2}>
                       <Stack direction="row" spacing={1.25} alignItems="center">
-                        <Avatar sx={{ bgcolor: alpha("#1769aa", 0.12), color: "primary.main" }}>
+                        <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.12), color: "primary.main" }}>
                           <LinkRoundedIcon />
                         </Avatar>
                         <Box sx={{ flex: 1 }}>
@@ -408,7 +404,7 @@ export function SyncPage() {
                 <CardContent>
                   <Stack spacing={2}>
                     <Stack direction="row" spacing={1.25} alignItems="center">
-                      <Avatar sx={{ bgcolor: alpha("#1769aa", 0.12), color: "primary.main" }}>
+                      <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.12), color: "primary.main" }}>
                         <PhoneAndroidRoundedIcon />
                       </Avatar>
                       <Box>

@@ -106,9 +106,7 @@ function ComparisonMetricCard({
         height: "100%",
         ...pageCardSx,
         border: `1px solid ${alpha(accent, isDark ? 0.28 : 0.16)}`,
-        background: isDark
-          ? `linear-gradient(180deg, ${alpha(accent, 0.12)} 0%, ${alpha(theme.palette.background.paper, 0.96)} 100%)`
-          : `linear-gradient(180deg, ${alpha(accent, 0.07)} 0%, ${alpha("#ffffff", 0.98)} 100%)`
+        bgcolor: isDark ? alpha(accent, 0.1) : alpha(accent, 0.05)
       }}
     >
       <CardContent>

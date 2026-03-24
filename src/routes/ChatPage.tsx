@@ -361,15 +361,13 @@ export function ChatPage() {
                           textAlign: "left",
                           borderRadius: cardRadii.panel,
                           border: `1px solid ${globalThreadActive ? alpha(theme.palette.primary.main, isDark ? 0.3 : 0.24) : alpha(theme.palette.text.primary, isDark ? 0.16 : 0.08)}`,
-                          background: globalThreadActive
-                            ? isDark
-                              ? "linear-gradient(135deg, rgba(108,174,255,0.22), rgba(86,215,202,0.14))"
-                              : "linear-gradient(135deg, rgba(23,105,170,0.14), rgba(15,157,148,0.08))"
+                          backgroundColor: globalThreadActive
+                            ? alpha(theme.palette.primary.main, isDark ? 0.24 : 0.12)
                             : alpha(theme.palette.background.paper, isDark ? 0.76 : 0.72)
                         }}
                       >
                         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ px: 1.5, py: 1.35 }}>
-                          <Avatar sx={{ bgcolor: alpha("#1769aa", 0.14), color: "primary.main" }}>
+                          <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.14), color: "primary.main" }}>
                             <ForumRoundedIcon />
                           </Avatar>
                           <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -527,11 +525,7 @@ export function ChatPage() {
                         py: 0.75,
                         borderRadius: cardRadii.inset,
                         bgcolor: alpha(theme.palette.background.paper, isDark ? 0.82 : 0.92),
-                        border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.1)}`,
-                        backgroundImage:
-                          isDark
-                            ? "linear-gradient(180deg, rgba(14,24,35,0.98), rgba(9,18,29,0.94)), radial-gradient(circle at top, rgba(108,174,255,0.14), transparent 34%)"
-                            : "linear-gradient(180deg, rgba(255,255,255,0.78), rgba(240,247,251,0.92)), radial-gradient(circle at top, rgba(23,105,170,0.08), transparent 34%)"
+                        border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.1)}`
                       }}
                     >
                       {loading ? (
@@ -593,7 +587,7 @@ export function ChatPage() {
                                       sx={{
                                         whiteSpace: "pre-wrap",
                                         wordBreak: "break-word",
-                                        color: isDark ? alpha(theme.palette.common.white, 0.92) : "#173042"
+                                        color: isDark ? alpha(theme.palette.common.white, 0.92) : theme.palette.text.primary
                                       }}
                                     >
                                       {message.text}

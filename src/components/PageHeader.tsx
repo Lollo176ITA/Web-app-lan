@@ -97,9 +97,7 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
         ]
       : [])
   ];
-  const panelBackground = isDark
-    ? `linear-gradient(180deg, ${alpha(theme.palette.background.paper, 0.9)} 0%, ${alpha("#08131d", 0.86)} 100%)`
-    : "rgba(255,255,255,0.78)";
+  const panelBackground = alpha(theme.palette.background.paper, isDark ? 0.92 : 0.88);
 
   function toggleMobileMenu() {
     setMobileMenuOpen((currentValue) => !currentValue);
@@ -163,7 +161,9 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
                 height: { xs: 36, md: 40 },
                 bgcolor: "transparent",
                 borderRadius: 2.5,
-                boxShadow: isDark ? "0 14px 28px rgba(0, 0, 0, 0.32)" : "0 12px 26px rgba(30, 136, 229, 0.2)"
+                boxShadow: isDark
+                  ? "0 14px 28px rgba(0, 0, 0, 0.32)"
+                  : `0 12px 26px ${alpha(theme.palette.primary.main, 0.18)}`
               }}
             >
               <Box

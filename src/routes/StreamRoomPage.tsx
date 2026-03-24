@@ -317,7 +317,7 @@ export function StreamRoomPage() {
               >
                 <Box>
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                    <Avatar sx={{ bgcolor: alpha("#1769aa", 0.12), color: "primary.main", width: 40, height: 40 }}>
+                    <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.12), color: "primary.main", width: 40, height: 40 }}>
                       <MeetingRoomRoundedIcon />
                     </Avatar>
                     <Typography variant="h5">{room.name}</Typography>
@@ -460,20 +460,25 @@ export function StreamRoomPage() {
                           display: "grid",
                           placeItems: "center",
                           borderRadius: cardRadii.inset,
-                          bgcolor: "#09131d",
-                          border: "1px solid rgba(255,255,255,0.08)",
+                          bgcolor: isDark ? theme.palette.background.default : theme.palette.background.paper,
+                          border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.08)}`,
                           p: 3,
                           textAlign: "center"
                         }}
                       >
                         <Stack spacing={1.5} alignItems="center">
-                          <Avatar sx={{ bgcolor: alpha("#0f9d94", 0.18), color: "#8ae6da" }}>
+                          <Avatar
+                            sx={{
+                              bgcolor: alpha(theme.palette.secondary.main, isDark ? 0.18 : 0.12),
+                              color: isDark ? theme.palette.secondary.light : theme.palette.secondary.main
+                            }}
+                          >
                             <MovieRoundedIcon />
                           </Avatar>
-                          <Typography color="common.white" variant="h6">
+                          <Typography color="text.primary" variant="h6">
                             Seleziona un video per iniziare la stanza
                           </Typography>
-                          <Typography color="rgba(255,255,255,0.72)">
+                          <Typography color="text.secondary">
                             I contenuti arrivano dalla libreria Routy gia caricata sull’host.
                           </Typography>
                         </Stack>

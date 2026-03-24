@@ -39,10 +39,6 @@ export function UploadProgressCard({
       sx={{
         borderColor: alpha(theme.palette.secondary.main, isDark ? 0.3 : 0.22),
         bgcolor: alpha(theme.palette.secondary.main, isDark ? 0.12 : 0.06),
-        backgroundImage: `linear-gradient(135deg, ${alpha(theme.palette.secondary.main, isDark ? 0.2 : 0.11)} 0%, ${alpha(
-          theme.palette.primary.main,
-          isDark ? 0.08 : 0.05
-        )} 100%)`,
         boxShadow: compact ? "0 18px 34px rgba(12, 16, 24, 0.24)" : "none"
       }}
     >

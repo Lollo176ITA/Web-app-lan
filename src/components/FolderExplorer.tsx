@@ -21,6 +21,7 @@ import {
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import type { ArchiveFormat, LibraryItem } from "../../shared/types";
+import { getItemKindAccent } from "../lib/item-kind-accent";
 import { ItemActionsMenu } from "./ItemActionsMenu";
 
 interface FolderExplorerProps {
@@ -44,16 +45,6 @@ const itemIcons = {
   document: DescriptionRoundedIcon,
   archive: DescriptionRoundedIcon,
   other: DescriptionRoundedIcon
-} as const;
-
-const itemAccents = {
-  folder: "#1769aa",
-  video: "#1769aa",
-  image: "#0f9d94",
-  audio: "#4553c7",
-  document: "#c47917",
-  archive: "#8b4fcf",
-  other: "#5a7184"
 } as const;
 
 function sortExplorerItems(items: LibraryItem[]) {
@@ -203,7 +194,7 @@ export function FolderExplorer({
 
                 {column.items.map((item) => {
                   const Icon = itemIcons[item.kind];
-                  const accent = itemAccents[item.kind];
+                  const accent = getItemKindAccent(theme, item.kind);
                   const isCurrentFolder = item.kind === "folder" && item.id === currentFolderId;
                   const isPathFolder = item.kind === "folder" && pathFolderIds.has(item.id);
                   const isSelectedFile = item.kind !== "folder" && item.id === selectedId;
