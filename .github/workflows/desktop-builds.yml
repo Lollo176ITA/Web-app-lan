@@ -103,6 +103,193 @@ jobs:
           set -euo pipefail
           find release -maxdepth 1 -type d -name '*-unpacked' -exec rm -rf {} +
 
+      - name: Externalize Windows web package
+        if: startsWith(matrix.target.id, 'win-')
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_ID: ${{ matrix.target.id }}
+        run: |
+          set -euo pipefail
+
+          node --input-type=module <<'NODE'
+          import fs from "node:fs/promises";
+          import path from "node:path";
+          import yaml from "js-yaml";
+
+          const releaseDir = path.resolve("release");
+          const packageJson = JSON.parse(await fs.readFile("package.json", "utf8"));
+          const version = String(packageJson.version ?? "").trim();
+          const targetId = String(process.env.TARGET_ID ?? "").trim();
+          const repository = String(process.env.GITHUB_REPOSITORY ?? "").trim();
+          const githubToken = String(process.env.GITHUB_TOKEN ?? "").trim();
+          const githubSha = String(process.env.GITHUB_SHA ?? "").trim();
+          const payloadTag = `desktop-payloads-v${version}`;
+          const payloadReleaseName = `Desktop payloads v${version}`;
+
+          if (!version || !targetId || !repository || !githubToken || !githubSha) {
+            throw new Error("Missing required GitHub release metadata for Windows payload publish");
+          }
+
+          const releaseFiles = await fs.readdir(releaseDir);
+          const payloadFiles = releaseFiles.filter((fileName) => fileName.endsWith(".7z"));
+
+          if (payloadFiles.length === 0) {
+            console.log("No Windows payload archive found, skipping external publish.");
+            process.exit(0);
+          }
+
+          async function githubJson(url, init = {}) {
+            const response = await fetch(url, {
+              ...init,
+              headers: {
+                Accept: "application/vnd.github+json",
+                Authorization: `Bearer ${githubToken}`,
+                "User-Agent": "routy-desktop-builds",
+                ...init.headers
+              }
+            });
+
+            if (response.status === 404) {
+              return null;
+            }
+
+            if (!response.ok) {
+              throw new Error(`GitHub API ${response.status} ${response.statusText}: ${await response.text()}`);
+            }
+
+            return response.status === 204 ? null : response.json();
+          }
+
+          async function getOrCreateRelease() {
+            const releaseUrl = `https://api.github.com/repos/${repository}/releases/tags/${payloadTag}`;
+            const existing = await githubJson(releaseUrl);
+
+            if (existing) {
+              return existing;
+            }
+
+            const created = await githubJson(`https://api.github.com/repos/${repository}/releases`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                tag_name: payloadTag,
+                target_commitish: githubSha,
+                name: payloadReleaseName,
+                body: "Large desktop payloads referenced by Windows web installers and auto-update metadata.",
+                draft: false,
+                prerelease: false,
+                generate_release_notes: false
+              })
+            }).catch(async (error) => {
+              if (!String(error.message).includes("422")) {
+                throw error;
+              }
+
+              return githubJson(releaseUrl);
+            });
+
+            if (!created) {
+              throw new Error(`Unable to resolve GitHub release ${payloadTag}`);
+            }
+
+            return created;
+          }
+
+          let release = await getOrCreateRelease();
+          const uploadedAssets = new Map();
+
+          for (const fileName of payloadFiles) {
+            const filePath = path.join(releaseDir, fileName);
+            const fileBytes = await fs.readFile(filePath);
+            const existingAsset = Array.isArray(release.assets)
+              ? release.assets.find((asset) => asset?.name === fileName)
+              : null;
+
+            if (existingAsset?.id) {
+              await githubJson(`https://api.github.com/repos/${repository}/releases/assets/${existingAsset.id}`, {
+                method: "DELETE"
+              });
+            }
+
+            const uploadBaseUrl = String(release.upload_url ?? "").replace(/\{.*$/, "");
+            const uploadUrl = `${uploadBaseUrl}?name=${encodeURIComponent(fileName)}`;
+            const uploadResponse = await fetch(uploadUrl, {
+              method: "POST",
+              headers: {
+                Accept: "application/vnd.github+json",
+                Authorization: `Bearer ${githubToken}`,
+                "Content-Type": "application/octet-stream",
+                "Content-Length": String(fileBytes.byteLength),
+                "User-Agent": "routy-desktop-builds"
+              },
+              body: fileBytes
+            });
+
+            if (!uploadResponse.ok) {
+              throw new Error(
+                `GitHub upload ${uploadResponse.status} ${uploadResponse.statusText}: ${await uploadResponse.text()}`
+              );
+            }
+
+            const uploadedAsset = await uploadResponse.json();
+            uploadedAssets.set(fileName, String(uploadedAsset.browser_download_url ?? "").trim());
+          }
+
+          const yamlFiles = releaseFiles.filter((fileName) => fileName.endsWith(".yml"));
+
+          for (const fileName of yamlFiles) {
+            const yamlPath = path.join(releaseDir, fileName);
+            const parsed = yaml.load(await fs.readFile(yamlPath, "utf8"));
+
+            if (!parsed || typeof parsed !== "object") {
+              continue;
+            }
+
+            const document = parsed;
+            const fileEntries = Array.isArray(document.files) ? document.files : [];
+
+            for (const entry of fileEntries) {
+              if (!entry || typeof entry !== "object") {
+                continue;
+              }
+
+              const currentUrl = typeof entry.url === "string" ? entry.url.trim() : "";
+              const externalUrl = uploadedAssets.get(path.basename(currentUrl));
+
+              if (externalUrl) {
+                entry.url = externalUrl;
+              }
+            }
+
+            if (document.packages && typeof document.packages === "object") {
+              for (const packageEntry of Object.values(document.packages)) {
+                if (!packageEntry || typeof packageEntry !== "object") {
+                  continue;
+                }
+
+                const currentPath = typeof packageEntry.path === "string" ? packageEntry.path.trim() : "";
+                const externalUrl = uploadedAssets.get(path.basename(currentPath));
+
+                if (externalUrl) {
+                  packageEntry.path = externalUrl;
+                }
+              }
+            }
+
+            const deprecatedPath = typeof document.path === "string" ? document.path.trim() : "";
+            const externalUrl = uploadedAssets.get(path.basename(deprecatedPath));
+
+            if (externalUrl) {
+              document.path = externalUrl;
+            }
+
+            await fs.writeFile(yamlPath, yaml.dump(document, { lineWidth: -1, noRefs: true }));
+          }
+          NODE
+
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v6
         with:
@@ -177,6 +364,8 @@ jobs:
                   return False
               if path.name.startswith("builder-debug"):
                   return False
+              if os.environ["TARGET_ID"].startswith("win-") and path.suffix == ".7z":
+                  return False
               if path.suffix not in allowed_suffixes:
                   return False
               return True
@@ -188,12 +377,6 @@ jobs:
               size = item.stat().st_size
               digest = sha256_for(item)
               relative_name = item.relative_to(release_dir).as_posix().replace("/", "__")
-
-              if os.environ["TARGET_ID"].startswith("win-") and item.suffix == ".7z" and size > max_chunk_size:
-                  raise SystemExit(
-                      f"Windows web installer package {item.name} is {size} bytes and exceeds the GitHub branch publish limit. "
-                      "Move Windows packages to a host with larger single-file support if this package grows further."
-                  )
 
               if size <= max_chunk_size:
                   destination = publish_dir / relative_name
