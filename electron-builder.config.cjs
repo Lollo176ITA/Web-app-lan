@@ -1,4 +1,11 @@
+const packageJson = require("./package.json");
+
 const windowsPublishUrl = process.env.ROUTY_WINDOWS_PUBLISH_URL?.trim();
+const windowsAppPackageUrl =
+  process.env.ROUTY_WINDOWS_APP_PACKAGE_URL?.trim() ||
+  (process.env.GITHUB_REPOSITORY?.trim() && packageJson.version?.trim()
+    ? `https://github.com/${process.env.GITHUB_REPOSITORY.trim()}/releases/download/desktop-payloads-v${packageJson.version.trim()}`
+    : undefined);
 
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
@@ -31,6 +38,11 @@ module.exports = {
       : {})
   },
   nsisWeb: {
+    ...(windowsAppPackageUrl
+      ? {
+          appPackageUrl: windowsAppPackageUrl
+        }
+      : {}),
     artifactName: "${productName} Web Setup ${version} ${arch}.${ext}"
   },
   mac: {
