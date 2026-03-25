@@ -1,0 +1,14 @@
+version: 2.9.5
+files:
+  - url: Routy Web Setup 2.9.5 arm64.exe
+    sha512: QOufbpIn04v6wWYg0DBx7hQmXG4eNo0MOIoLJMBgst0xFSIy0z7cr/AhEzYRkJh6vUTkNNdzioTzGhiTEQ7AQg==
+path: Routy Web Setup 2.9.5 arm64.exe
+sha512: QOufbpIn04v6wWYg0DBx7hQmXG4eNo0MOIoLJMBgst0xFSIy0z7cr/AhEzYRkJh6vUTkNNdzioTzGhiTEQ7AQg==
+packages:
+  arm64:
+    size: 105122480
+    sha512: /WPrfVY3bz5Jt/h08NLsokfYBX5g/6zwsM+Dv8a983yThTeP78Nd5dXCc9Iy0N2ppWVKJ2BbRr13HARyKl1CsQ==
+    blockMapSize: 110127
+    path: https://github.com/Lollo176ITA/Web-app-lan/releases/download/desktop-payloads-v2.9.5/routy-2.9.5-arm64.nsis.7z
+    file: routy-2.9.5-arm64.nsis.7z
+releaseDate: '2026-03-25T09:00:56.042Z'
