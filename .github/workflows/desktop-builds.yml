@@ -48,13 +48,13 @@ jobs:
             runner: windows-latest
             script: desktop:dist:win:x64
             branch: builds/win-x64
-            publish_url_suffix: builds/win-x64/latest
+            publish_url_suffix: builds/win-x64/latest/nsis-web
           - name: Windows ARM64
             id: win-arm64
             runner: windows-latest
             script: desktop:dist:win:arm64
             branch: builds/win-arm64
-            publish_url_suffix: builds/win-arm64/latest
+            publish_url_suffix: builds/win-arm64/latest/nsis-web
           - name: macOS ARM64
             id: mac-arm64
             runner: macos-latest
@@ -94,7 +94,7 @@ jobs:
 
       - name: Build target
         env:
-          ROUTY_WINDOWS_PUBLISH_URL: ${{ matrix.target.publish_url_suffix != '' && format('https://raw.githubusercontent.com/{0}/{1}', github.repository, matrix.target.publish_url_suffix) || '' }}
+          ROUTY_WINDOWS_PUBLISH_URL: ${{ matrix.target.publish_url_suffix != '' && format('https://raw.githubusercontent.com/{0}/refs/heads/{1}', github.repository, matrix.target.publish_url_suffix) || '' }}
         run: npm run ${{ matrix.target.script }}
 
       - name: Remove unpacked outputs
@@ -131,8 +131,28 @@ jobs:
             throw new Error("Missing required GitHub release metadata for Windows payload publish");
           }
 
-          const releaseFiles = await fs.readdir(releaseDir);
-          const payloadFiles = releaseFiles.filter((fileName) => fileName.endsWith(".7z"));
+          async function listFiles(rootDir) {
+            const entries = await fs.readdir(rootDir, { withFileTypes: true });
+            const files = [];
+
+            for (const entry of entries) {
+              const fullPath = path.join(rootDir, entry.name);
+
+              if (entry.isDirectory()) {
+                files.push(...(await listFiles(fullPath)));
+                continue;
+              }
+
+              if (entry.isFile()) {
+                files.push(fullPath);
+              }
+            }
+
+            return files;
+          }
+
+          const releaseFiles = await listFiles(releaseDir);
+          const payloadFiles = releaseFiles.filter((filePath) => filePath.endsWith(".7z"));
 
           if (payloadFiles.length === 0) {
             console.log("No Windows payload archive found, skipping external publish.");
@@ -201,8 +221,8 @@ jobs:
           let release = await getOrCreateRelease();
           const uploadedAssets = new Map();
 
-          for (const fileName of payloadFiles) {
-            const filePath = path.join(releaseDir, fileName);
+          for (const filePath of payloadFiles) {
+            const fileName = path.basename(filePath);
             const fileBytes = await fs.readFile(filePath);
             const existingAsset = Array.isArray(release.assets)
               ? release.assets.find((asset) => asset?.name === fileName)
@@ -238,10 +258,9 @@ jobs:
             uploadedAssets.set(fileName, String(uploadedAsset.browser_download_url ?? "").trim());
           }
 
-          const yamlFiles = releaseFiles.filter((fileName) => fileName.endsWith(".yml"));
+          const yamlFiles = releaseFiles.filter((filePath) => filePath.endsWith(".yml"));
 
-          for (const fileName of yamlFiles) {
-            const yamlPath = path.join(releaseDir, fileName);
+          for (const yamlPath of yamlFiles) {
             const parsed = yaml.load(await fs.readFile(yamlPath, "utf8"));
 
             if (!parsed || typeof parsed !== "object") {
@@ -376,10 +395,11 @@ jobs:
 
               size = item.stat().st_size
               digest = sha256_for(item)
-              relative_name = item.relative_to(release_dir).as_posix().replace("/", "__")
+              relative_name = item.relative_to(release_dir).as_posix()
 
               if size <= max_chunk_size:
                   destination = publish_dir / relative_name
+                  destination.parent.mkdir(parents=True, exist_ok=True)
                   shutil.copy2(item, destination)
                   metadata["files"].append({
                       "name": relative_name,
@@ -398,7 +418,9 @@ jobs:
                       if not chunk:
                           break
                       part_name = f"{relative_name}.part-{index:03d}"
-                      (publish_dir / part_name).write_bytes(chunk)
+                      destination = publish_dir / part_name
+                      destination.parent.mkdir(parents=True, exist_ok=True)
+                      destination.write_bytes(chunk)
                       parts.append({
                           "name": part_name,
                           "size": len(chunk),

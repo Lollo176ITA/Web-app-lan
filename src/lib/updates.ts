@@ -63,7 +63,7 @@ export const windowsDesktopBuildTargets: Record<
 
 const githubOwner = "Lollo176ITA";
 const githubRepo = "Web-app-lan";
-const githubRawBaseUrl = `https://raw.githubusercontent.com/${githubOwner}/${githubRepo}`;
+const githubRawBaseUrl = `https://raw.githubusercontent.com/${githubOwner}/${githubRepo}/refs/heads`;
 
 function normalizeVersion(version: string) {
   return version.trim().replace(/^[^\d]*/, "");

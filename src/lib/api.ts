@@ -74,7 +74,8 @@ export interface AndroidAppReleaseInfo {
   workflowRunUrl?: string | null;
 }
 
-const androidUpdateBaseUrl = "https://raw.githubusercontent.com/Lollo176ITA/Web-app-lan/builds/android-release/latest";
+const androidUpdateBaseUrl =
+  "https://raw.githubusercontent.com/Lollo176ITA/Web-app-lan/refs/heads/builds/android-release/latest";
 
 function createAbortError() {
   const error = new Error("Upload aborted");
