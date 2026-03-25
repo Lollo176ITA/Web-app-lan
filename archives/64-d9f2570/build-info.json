@@ -1,0 +1,54 @@
+{
+  "target": "mac-arm64",
+  "version": "2.9.4",
+  "sourceBranch": "main",
+  "sourceCommit": "d9f25709fabadda90dcdadf20f191f61a6b7ba86",
+  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23532157581",
+  "files": [
+    {
+      "name": "Routy-2.9.4-arm64.dmg",
+      "originalName": "Routy-2.9.4-arm64.dmg",
+      "size": 119979946,
+      "sha256": "2e73b3fe56b05411d57b1d9563c32f5199a9533004b26f55176955521a87ecc4",
+      "split": true,
+      "parts": [
+        {
+          "name": "Routy-2.9.4-arm64.dmg.part-000",
+          "size": 99614720
+        },
+        {
+          "name": "Routy-2.9.4-arm64.dmg.part-001",
+          "size": 20365226
+        }
+      ]
+    },
+    {
+      "name": "Routy-2.9.4-arm64.dmg.blockmap",
+      "originalName": "Routy-2.9.4-arm64.dmg.blockmap",
+      "size": 125586,
+      "sha256": "a47729d9b2b3874b38d4ae3a594f145c1daf5d31248b44498d4ac5ecb6904d23",
+      "split": false
+    },
+    {
+      "name": "latest-mac.yml",
+      "originalName": "latest-mac.yml",
+      "size": 339,
+      "sha256": "00f537eb5a03acc57cac8779345e928d2a51f046bdbb5e3830574f5b8f745f67",
+      "split": false
+    },
+    {
+      "name": "mac-arm64__Routy.app__Contents__Resources__app-update.yml",
+      "originalName": "mac-arm64/Routy.app/Contents/Resources/app-update.yml",
+      "size": 89,
+      "sha256": "43368692781e8064aa92a3abf0712997a00a4a36490e082951668335ba3a828f",
+      "split": false
+    },
+    {
+      "name": "mac-arm64__Routy.app__Contents__Resources__app.asar.unpacked__node_modules__jszip__.codeclimate.yml",
+      "originalName": "mac-arm64/Routy.app/Contents/Resources/app.asar.unpacked/node_modules/jszip/.codeclimate.yml",
+      "size": 208,
+      "sha256": "3641875e15f3cf7a09a245414d7717f88831d41c1ee0d241be1b33465b89b582",
+      "split": false
+    }
+  ]
+}

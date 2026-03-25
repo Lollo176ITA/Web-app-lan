@@ -1,39 +1,39 @@
 {
   "target": "mac-arm64",
-  "version": "2.9.3",
+  "version": "2.9.4",
   "sourceBranch": "main",
-  "sourceCommit": "9c83bc5faafe87fa411a95e4eac2c20ea04f89bd",
-  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23514729918",
+  "sourceCommit": "d9f25709fabadda90dcdadf20f191f61a6b7ba86",
+  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23532157581",
   "files": [
     {
-      "name": "Routy-2.9.3-arm64.dmg",
-      "originalName": "Routy-2.9.3-arm64.dmg",
-      "size": 120023724,
-      "sha256": "34a035841b2d024b9f5d8af8244c4a11fcb2a5955482e866f810ab5648231511",
+      "name": "Routy-2.9.4-arm64.dmg",
+      "originalName": "Routy-2.9.4-arm64.dmg",
+      "size": 119979946,
+      "sha256": "2e73b3fe56b05411d57b1d9563c32f5199a9533004b26f55176955521a87ecc4",
       "split": true,
       "parts": [
         {
-          "name": "Routy-2.9.3-arm64.dmg.part-000",
+          "name": "Routy-2.9.4-arm64.dmg.part-000",
           "size": 99614720
         },
         {
-          "name": "Routy-2.9.3-arm64.dmg.part-001",
-          "size": 20409004
+          "name": "Routy-2.9.4-arm64.dmg.part-001",
+          "size": 20365226
         }
       ]
     },
     {
-      "name": "Routy-2.9.3-arm64.dmg.blockmap",
-      "originalName": "Routy-2.9.3-arm64.dmg.blockmap",
-      "size": 127612,
-      "sha256": "5e2c934e265577f7be133da71239e42ca467501cdba09e066fcafe7b50d752ab",
+      "name": "Routy-2.9.4-arm64.dmg.blockmap",
+      "originalName": "Routy-2.9.4-arm64.dmg.blockmap",
+      "size": 125586,
+      "sha256": "a47729d9b2b3874b38d4ae3a594f145c1daf5d31248b44498d4ac5ecb6904d23",
       "split": false
     },
     {
       "name": "latest-mac.yml",
       "originalName": "latest-mac.yml",
       "size": 339,
-      "sha256": "c5276b2fcbd12b473d29f97eee7b50d216b243aa3efb1b6980c3532dabf4cb99",
+      "sha256": "00f537eb5a03acc57cac8779345e928d2a51f046bdbb5e3830574f5b8f745f67",
       "split": false
     },
     {
