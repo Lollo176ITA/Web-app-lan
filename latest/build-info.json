@@ -1,26 +1,23 @@
 {
   "target": "win-arm64",
-  "version": "2.9.1",
+  "version": "2.9.4",
   "sourceBranch": "main",
-  "sourceCommit": "988a241330412eb0c707720eda841016c2c05ffe",
-  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23509165565",
+  "sourceCommit": "d9f25709fabadda90dcdadf20f191f61a6b7ba86",
+  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23532157581",
   "files": [
     {
-      "name": "Routy Setup 2.9.1.exe",
-      "originalName": "Routy Setup 2.9.1.exe",
-      "size": 105371971,
-      "sha256": "cf4c71d7930f99828786d74d9ee3e1d67d55a6912314926a64cddcf211892fe5",
-      "split": true,
-      "parts": [
-        {
-          "name": "Routy Setup 2.9.1.exe.part-000",
-          "size": 99614720
-        },
-        {
-          "name": "Routy Setup 2.9.1.exe.part-001",
-          "size": 5757251
-        }
-      ]
+      "name": "nsis-web__latest.yml",
+      "originalName": "nsis-web/latest.yml",
+      "size": 576,
+      "sha256": "dab91d59b1d21812619c855f97be24cee7b390aec8b770df7160c4a67fe90ad5",
+      "split": false
+    },
+    {
+      "name": "nsis-web__Routy Web Setup 2.9.4 arm64.exe",
+      "originalName": "nsis-web/Routy Web Setup 2.9.4 arm64.exe",
+      "size": 631028,
+      "sha256": "c1b1a88a45cdd4a565482092eeeebb72bafdb6c8ec68e21fd5f0fc282d4d1759",
+      "split": false
     }
   ]
 }

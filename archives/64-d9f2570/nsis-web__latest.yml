@@ -1,0 +1,14 @@
+version: 2.9.4
+files:
+  - url: Routy Web Setup 2.9.4 arm64.exe
+    sha512: hhhPRnWCyumAZFT7WJeTDeGNUlG1PUcMP2OZD0p1gdWhV/5vaPT8FZoCj06qsQGRxG+S1hC3fM1gGy9r09/lYA==
+path: Routy Web Setup 2.9.4 arm64.exe
+sha512: hhhPRnWCyumAZFT7WJeTDeGNUlG1PUcMP2OZD0p1gdWhV/5vaPT8FZoCj06qsQGRxG+S1hC3fM1gGy9r09/lYA==
+packages:
+  arm64:
+    size: 105122552
+    sha512: ANywMKPYybXGDTID+5A2EwKoPleTU/0zYV9Vhyg+mQ9yOGPddPXVFoJ6oMlO23bpF6ULYQMyVCH6nXcuXDi+bA==
+    blockMapSize: 110464
+    path: routy-2.9.4-arm64.nsis.7z
+    file: routy-2.9.4-arm64.nsis.7z
+releaseDate: '2026-03-25T08:41:02.165Z'
