@@ -1,8 +1,8 @@
-version: 2.9.5
+version: 2.9.6
 files:
-  - url: Routy-2.9.5-arm64.dmg
-    sha512: I9JrPanwN4+akyikd2UFUyMgd6yq/lSfebCwyGINXkckGx+rOtKLhPzpKIHiWxJduuJ+u5giQgHJCcyTkm4pog==
-    size: 119979992
-path: Routy-2.9.5-arm64.dmg
-sha512: I9JrPanwN4+akyikd2UFUyMgd6yq/lSfebCwyGINXkckGx+rOtKLhPzpKIHiWxJduuJ+u5giQgHJCcyTkm4pog==
-releaseDate: '2026-03-25T08:59:36.793Z'
+  - url: Routy-2.9.6-arm64.dmg
+    sha512: 5uv536GQ+DZRgZ4kqp4SLmxTpZT+Y/v41c3H8T1w0i4H9VECJIocY2D2C9+x6X7T7rN0JlbrgozHX71ZjGccVA==
+    size: 120072976
+path: Routy-2.9.6-arm64.dmg
+sha512: 5uv536GQ+DZRgZ4kqp4SLmxTpZT+Y/v41c3H8T1w0i4H9VECJIocY2D2C9+x6X7T7rN0JlbrgozHX71ZjGccVA==
+releaseDate: '2026-03-31T20:20:50.954Z'
