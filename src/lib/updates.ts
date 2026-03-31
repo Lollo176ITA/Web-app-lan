@@ -96,6 +96,10 @@ function buildRawUrl(branch: string, relativePath: string) {
   return `${githubRawBaseUrl}/${branch}/latest/${relativePath}`;
 }
 
+function normalizeSize(value: number | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
 function resolveDesktopAsset(target: WindowsDesktopBuildTarget, metadata: BuildInfoMetadata) {
   const branch = windowsDesktopBuildTargets[target].branch;
   const asset = metadata.files?.find((entry) => entry.name?.trim().toLowerCase().endsWith(".exe"));
@@ -118,10 +122,10 @@ function resolveDesktopAsset(target: WindowsDesktopBuildTarget, metadata: BuildI
               .map((part) => ({
                 downloadUrl: buildRawUrl(branch, part.name),
                 name: part.name,
-                sizeBytes: part.size
+                sizeBytes: normalizeSize(part.size)
               }))
           : [],
-      sizeBytes: Number.isFinite(asset.size) ? asset.size : 0,
+      sizeBytes: normalizeSize(asset.size),
       split: Boolean(asset.split)
     },
     target,
@@ -259,6 +263,14 @@ export async function downloadDesktopReleaseAsset(
     assembledChunks.push(partBytes);
   }
 
-  triggerBrowserDownload(new Blob(assembledChunks, { type: "application/octet-stream" }), suggestedFilename);
+  const merged = new Uint8Array(loadedBytes);
+  let offset = 0;
+
+  for (const chunk of assembledChunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  triggerBrowserDownload(new Blob([merged], { type: "application/octet-stream" }), suggestedFilename);
   onProgress?.(totalBytes, totalBytes);
 }

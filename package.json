@@ -1,6 +1,6 @@
 {
   "name": "routy",
-  "version": "2.9.5",
+  "version": "2.9.6",
   "androidAppVersion": "0.5.3",
   "license": "UNLICENSED",
   "private": true,
@@ -9,6 +9,9 @@
   "scripts": {
     "fixtures": "node scripts/generate-media-fixtures.mjs",
     "dev": "concurrently \"tsx watch server/index.ts\" \"vite\"",
+    "lint": "npm run lint:client && npm run lint:server",
+    "lint:client": "tsc --noEmit -p tsconfig.json",
+    "lint:server": "tsc --noEmit -p tsconfig.server.json",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build --outDir dist/client",
     "build:server": "rm -rf dist/server dist/shared && tsc -p tsconfig.server.json",
@@ -56,17 +59,17 @@
     "@vitejs/plugin-react": "^6.0.1",
     "concurrently": "^9.2.1",
     "docx": "^9.6.1",
-    "electron": "^41.0.3",
+    "electron": "^41.1.0",
     "electron-builder": "^26.8.1",
     "jsdom": "^29.0.1",
     "qrcode": "^1.5.4",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-router-dom": "^7.13.1",
+    "react-router-dom": "^7.13.2",
     "supertest": "^7.2.2",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
-    "vite": "^8.0.2",
-    "vitest": "^4.1.0"
+    "typescript": "^6.0.2",
+    "vite": "^8.0.3",
+    "vitest": "^4.1.2"
   }
 }
