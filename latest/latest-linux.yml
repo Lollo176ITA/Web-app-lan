@@ -1,9 +1,9 @@
-version: 2.9.5
+version: 2.9.6
 files:
-  - url: Routy-2.9.5.AppImage
-    sha512: MzEQGK33Z02IPTUQU6Cm1/0lU0wxRBkcYnAUS8ZObJlHD12iT7QP/jp8KhfMIhCkR7V0L7vFixqVr7T0CQil0g==
-    size: 125489575
-    blockMapSize: 131515
-path: Routy-2.9.5.AppImage
-sha512: MzEQGK33Z02IPTUQU6Cm1/0lU0wxRBkcYnAUS8ZObJlHD12iT7QP/jp8KhfMIhCkR7V0L7vFixqVr7T0CQil0g==
-releaseDate: '2026-03-25T08:59:21.456Z'
+  - url: Routy-2.9.6.AppImage
+    sha512: 1LwkNG9aKK0W2gwpGOC79jEY4Q4bOE1V0xAJ5eYJhivPwpxgrDa4X8LjN3j4fW58nU2nEk+U2gKDB+yG0mXZmw==
+    size: 125510649
+    blockMapSize: 132109
+path: Routy-2.9.6.AppImage
+sha512: 1LwkNG9aKK0W2gwpGOC79jEY4Q4bOE1V0xAJ5eYJhivPwpxgrDa4X8LjN3j4fW58nU2nEk+U2gKDB+yG0mXZmw==
+releaseDate: '2026-03-31T20:20:19.367Z'
