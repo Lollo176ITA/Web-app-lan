@@ -425,29 +425,6 @@ export function SyncPage() {
                 <Typography color="text.secondary">Release: {publishedDesktopVersion ? `Routy ${publishedDesktopVersion}` : "n/d"}</Typography>
               </Stack>
             </Box>
-
-            {webAppNeedsRefresh ? (
-              <Alert
-                severity="warning"
-                action={
-                  <Button
-                    color="inherit"
-                    size="small"
-                    onClick={() => {
-                      window.location.reload();
-                    }}
-                  >
-                    Ricarica
-                  </Button>
-                }
-              >
-                Host aggiornato. Ricarica la pagina.
-              </Alert>
-            ) : hostBehindPublishedVersion && publishedDesktopVersion ? (
-              <Alert severity="info">Aggiorna prima l'host a Routy {publishedDesktopVersion}.</Alert>
-            ) : (
-              <Alert severity="success">Web app allineata.</Alert>
-            )}
           </Stack>
         </CardContent>
       </Card>
