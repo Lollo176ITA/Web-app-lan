@@ -7,10 +7,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.os.Build
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -37,6 +38,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -84,6 +87,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -101,10 +105,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.routy.sync.AppContainer
@@ -112,6 +116,7 @@ import com.routy.sync.BuildConfig
 import com.routy.sync.R
 import com.routy.sync.data.SyncMappingEntity
 import com.routy.sync.runtime.SyncForegroundService
+import kotlinx.coroutines.launch
 
 private enum class SyncTab(
   val label: String,
@@ -136,6 +141,7 @@ private data class ActivityFeedItem(
   val status: ActivityStatus
 )
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SyncScreen(container: AppContainer) {
   val viewModel = viewModel<SyncViewModel>(factory = SyncViewModel.factory(container))
@@ -143,13 +149,24 @@ fun SyncScreen(container: AppContainer) {
   val snackbarHostState = remember { SnackbarHostState() }
   val context = LocalContext.current
   val lifecycleOwner = LocalLifecycleOwner.current
-  var selectedTabName by rememberSaveable { mutableStateOf(SyncTab.Qr.name) }
   var manualPairingVisible by rememberSaveable { mutableStateOf(false) }
   var systemNotificationsEnabled by remember { mutableStateOf(container.notificationManager.areNotificationsEnabled()) }
-  val selectedTab = remember(selectedTabName) { SyncTab.valueOf(selectedTabName) }
+  val pagerState = rememberPagerState(
+    initialPage = SyncTab.Qr.ordinal,
+    pageCount = { SyncTab.entries.size }
+  )
+  val coroutineScope = rememberCoroutineScope()
+  val selectedTab = SyncTab.entries[pagerState.currentPage]
   val keepAliveInBackground = state.backgroundSyncEnabled && state.dashboard.isConfigured && state.dashboard.mappings.isNotEmpty()
   val refreshNotificationStatus = remember(container) {
     { systemNotificationsEnabled = container.notificationManager.areNotificationsEnabled() }
+  }
+  val navigateToTab: (SyncTab) -> Unit = { tab ->
+    if (pagerState.currentPage != tab.ordinal) {
+      coroutineScope.launch {
+        pagerState.animateScrollToPage(tab.ordinal)
+      }
+    }
   }
 
   val folderPicker = rememberLauncherForActivityResult(
@@ -161,7 +178,7 @@ fun SyncScreen(container: AppContainer) {
         Intent.FLAG_GRANT_READ_URI_PERMISSION
       )
       viewModel.attachFolder(treeUri)
-      selectedTabName = SyncTab.Folders.name
+      navigateToTab(SyncTab.Folders)
     }
   }
 
@@ -256,7 +273,7 @@ fun SyncScreen(container: AppContainer) {
       bottomBar = {
         FloatingBottomBar(
           selectedTab = selectedTab,
-          onSelectTab = { selectedTabName = it.name }
+          onSelectTab = navigateToTab
         )
       }
     ) { innerPadding ->
@@ -311,33 +328,40 @@ fun SyncScreen(container: AppContainer) {
           )
         }
 
-        when (selectedTab) {
-          SyncTab.Qr -> QrTab(
-            state = state,
-            onScanQr = { cameraPermissionLauncher.launch(Manifest.permission.CAMERA) },
-            onOpenManualPairing = { manualPairingVisible = true },
-            onOpenFolders = { selectedTabName = SyncTab.Folders.name }
-          )
+        HorizontalPager(
+          state = pagerState,
+          modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f)
+        ) { page ->
+          when (SyncTab.entries[page]) {
+            SyncTab.Qr -> QrTab(
+              state = state,
+              onScanQr = { cameraPermissionLauncher.launch(Manifest.permission.CAMERA) },
+              onOpenManualPairing = { manualPairingVisible = true },
+              onOpenFolders = { navigateToTab(SyncTab.Folders) }
+            )
 
-          SyncTab.Folders -> FoldersTab(
-            state = state,
-            onPickFolder = { folderPicker.launch(null) },
-            onRemoveMapping = viewModel::removeMapping,
-            onOpenQr = { selectedTabName = SyncTab.Qr.name }
-          )
+            SyncTab.Folders -> FoldersTab(
+              state = state,
+              onPickFolder = { folderPicker.launch(null) },
+              onRemoveMapping = viewModel::removeMapping,
+              onOpenQr = { navigateToTab(SyncTab.Qr) }
+            )
 
-          SyncTab.Activity -> ActivityTab(state = state)
+            SyncTab.Activity -> ActivityTab(state = state)
 
-          SyncTab.Settings -> SettingsTab(
-            state = state,
-            onToggleDarkMode = viewModel::setDarkModeEnabled,
-            onToggleBackgroundSync = viewModel::setBackgroundSyncEnabled,
-            onCheckForAppUpdate = { viewModel.checkForAppUpdate(showUpToDateMessage = true) },
-            onStartAppUpdate = viewModel::startAppUpdateDownload,
-            onSyncNow = viewModel::syncNow,
-            onRefreshStatus = viewModel::refreshConnectionStatus,
-            onDisconnect = viewModel::disconnect
-          )
+            SyncTab.Settings -> SettingsTab(
+              state = state,
+              onToggleDarkMode = viewModel::setDarkModeEnabled,
+              onToggleBackgroundSync = viewModel::setBackgroundSyncEnabled,
+              onCheckForAppUpdate = { viewModel.checkForAppUpdate(showUpToDateMessage = true) },
+              onStartAppUpdate = viewModel::startAppUpdateDownload,
+              onSyncNow = viewModel::syncNow,
+              onRefreshStatus = viewModel::refreshConnectionStatus,
+              onDisconnect = viewModel::disconnect
+            )
+          }
         }
       }
     }
