@@ -1,0 +1,9 @@
+version: 2.9.6
+files:
+  - url: Routy-2.9.6.AppImage
+    sha512: Ppns9smXVHam49dBdLcZPKOMdZwX3XamSl79ks20VYvwqbzejGUiLK+cTSad5q2pfD/Gmv07h9oEbHYnYMuebg==
+    size: 125510692
+    blockMapSize: 132152
+path: Routy-2.9.6.AppImage
+sha512: Ppns9smXVHam49dBdLcZPKOMdZwX3XamSl79ks20VYvwqbzejGUiLK+cTSad5q2pfD/Gmv07h9oEbHYnYMuebg==
+releaseDate: '2026-04-01T08:11:13.448Z'
