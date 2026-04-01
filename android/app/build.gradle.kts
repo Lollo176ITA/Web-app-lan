@@ -4,6 +4,36 @@ plugins {
   id("com.google.devtools.ksp")
 }
 
+fun resolvePackageJsonAndroidVersion(): String? {
+  val packageJsonFile = rootProject.projectDir.resolve("../package.json").normalize()
+  if (!packageJsonFile.isFile) {
+    return null
+  }
+
+  val match = Regex("\"androidAppVersion\"\\s*:\\s*\"([^\"]+)\"")
+    .find(packageJsonFile.readText())
+
+  return match?.groupValues?.getOrNull(1)
+}
+
+fun semverToVersionCode(version: String?): Int? {
+  val parts = version
+    ?.trim()
+    ?.split(".")
+    ?.mapNotNull { it.toIntOrNull() }
+    ?: return null
+
+  if (parts.isEmpty() || parts.size > 3) {
+    return null
+  }
+
+  val major = parts.getOrElse(0) { 0 }
+  val minor = parts.getOrElse(1) { 0 }
+  val patch = parts.getOrElse(2) { 0 }
+
+  return (major * 10_000) + (minor * 100) + patch
+}
+
 val ciBuild = providers.gradleProperty("ciBuild").orNull == "true"
 val releaseKeystoreFile = providers.environmentVariable("ANDROID_RELEASE_KEYSTORE_FILE").orNull
 val releaseStorePassword = providers.environmentVariable("ANDROID_RELEASE_STORE_PASSWORD").orNull
@@ -30,9 +60,11 @@ android {
 
     // Human-managed version (recommended): pass -PandroidAppVersion=<semver>
     val manualAndroidVersionName = providers.gradleProperty("androidAppVersion").orNull
+    val packageJsonAndroidVersion = resolvePackageJsonAndroidVersion()
+    val resolvedVersionName = ciVersionName ?: manualAndroidVersionName ?: packageJsonAndroidVersion ?: "0.1.0"
 
-    versionCode = ciVersionCode ?: 1
-    versionName = ciVersionName ?: manualAndroidVersionName ?: "0.1.0"
+    versionCode = ciVersionCode ?: semverToVersionCode(resolvedVersionName) ?: 1
+    versionName = resolvedVersionName
     buildConfigField("String", "GITHUB_REPO_OWNER", "\"Lollo176ITA\"")
     buildConfigField("String", "GITHUB_REPO_NAME", "\"Web-app-lan\"")
     buildConfigField("String", "ANDROID_UPDATE_BRANCH", "\"builds/android-release\"")
