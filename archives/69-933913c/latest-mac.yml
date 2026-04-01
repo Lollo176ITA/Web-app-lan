@@ -1,0 +1,8 @@
+version: 2.9.6
+files:
+  - url: Routy-2.9.6-arm64.dmg
+    sha512: 9Z+gYwy/lGTtCUfHBXWm0NeARWfjgEP+X6aW2r0OfbmLm3FcDrtRYPC/7TKeLTZcP7UbBaRoxe4BRmExtuuIgw==
+    size: 119322100
+path: Routy-2.9.6-arm64.dmg
+sha512: 9Z+gYwy/lGTtCUfHBXWm0NeARWfjgEP+X6aW2r0OfbmLm3FcDrtRYPC/7TKeLTZcP7UbBaRoxe4BRmExtuuIgw==
+releaseDate: '2026-04-01T08:39:03.724Z'
