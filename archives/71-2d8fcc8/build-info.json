@@ -1,0 +1,33 @@
+{
+  "target": "linux-x64",
+  "version": "2.9.7",
+  "sourceBranch": "main",
+  "sourceCommit": "2d8fcc862a010c5efa4eb1092856ace267b921a5",
+  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23842630834",
+  "files": [
+    {
+      "name": "Routy-2.9.7.AppImage",
+      "originalName": "Routy-2.9.7.AppImage",
+      "size": 124756231,
+      "sha256": "e83c382df4013cacfb677b253e1428114e6a6b677c007b4d3f41951f192bf373",
+      "split": true,
+      "parts": [
+        {
+          "name": "Routy-2.9.7.AppImage.part-000",
+          "size": 99614720
+        },
+        {
+          "name": "Routy-2.9.7.AppImage.part-001",
+          "size": 25141511
+        }
+      ]
+    },
+    {
+      "name": "latest-linux.yml",
+      "originalName": "latest-linux.yml",
+      "size": 362,
+      "sha256": "0aa605eb7d586e61cfcb748018b53b4f0db2907f4fbda279a5b968520c6b0818",
+      "split": false
+    }
+  ]
+}
