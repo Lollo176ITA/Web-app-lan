@@ -1,3 +1,0 @@
-Routeroom tiene i file nella stessa LAN e li condivide senza cloud.
-Le cartelle aiutano a organizzare documenti, media e archivi per stanza o progetto.
-La preview locale mostra testo e documenti senza passare da servizi esterni.
