@@ -1,0 +1,8 @@
+version: 2.10.0
+files:
+  - url: Routy-2.10.0-arm64.dmg
+    sha512: HAJMiwyQrEp0RRngyoM+JsHIpVgqLr6pHIzrorCNxU8gKga+BjaFP94m8WiEYLvsohRxQkYq5iiq6Ay3acr18Q==
+    size: 119373045
+path: Routy-2.10.0-arm64.dmg
+sha512: HAJMiwyQrEp0RRngyoM+JsHIpVgqLr6pHIzrorCNxU8gKga+BjaFP94m8WiEYLvsohRxQkYq5iiq6Ay3acr18Q==
+releaseDate: '2026-04-03T23:53:45.537Z'
