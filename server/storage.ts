@@ -812,7 +812,7 @@ export class LibraryStore {
       },
       {
         id: rootFolderId,
-        name: "Esempio Routeroom",
+        name: "EsempioRouty",
         storedName: "",
         mimeType: FOLDER_MIME_TYPE,
         kind: "folder",

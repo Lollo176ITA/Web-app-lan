@@ -137,9 +137,9 @@ async function createPdfFixture(destination) {
     await page.setContent(`
       <html>
         <body style="font-family: Arial, sans-serif; padding: 56px; color: #10273a;">
-          <h1 style="margin: 0 0 16px;">Guida Routeroom</h1>
+          <h1 style="margin: 0 0 16px;">Guida Routy</h1>
           <p style="font-size: 16px; line-height: 1.6;">
-            Routeroom usa la rete locale per condividere file, cartelle e preview documenti.
+            Routy usa la rete locale per condividere file, cartelle e preview documenti.
           </p>
           <ul style="font-size: 16px; line-height: 1.7;">
             <li>Upload in cartella corrente</li>
@@ -173,7 +173,7 @@ async function createDocxFixture(destination) {
         children: [
           new Paragraph({
             heading: HeadingLevel.HEADING_1,
-            children: [new TextRun("Brief Routeroom")]
+            children: [new TextRun("BriefRouty")]
           }),
           new Paragraph({
             children: [

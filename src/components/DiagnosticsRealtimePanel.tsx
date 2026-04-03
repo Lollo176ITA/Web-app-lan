@@ -228,6 +228,8 @@ function getHostMemoryPercent(usedBytes: number, totalBytes: number) {
 }
 
 export function DiagnosticsRealtimePanel({ loading, stats, unavailable }: DiagnosticsRealtimePanelProps) {
+  const theme = useTheme();
+
   if (!stats && loading) {
     return <RealtimeSkeleton />;
   }
@@ -244,17 +246,24 @@ export function DiagnosticsRealtimePanel({ loading, stats, unavailable }: Diagno
     return null;
   }
 
+  const cpuAccent = theme.palette.info.main;
+  const cpuProcessColor = theme.palette.primary.main;
+  const ramAccent = theme.palette.success.main;
+  const ramProcessColor = theme.palette.secondary.main;
+  const bandwidthAccent = theme.palette.warning.main;
+  const bandwidthProcessColor = theme.palette.error.main;
+
   const cpuSeries: [ComparisonSeries, ComparisonSeries] = [
     {
       id: "host-cpu",
       label: "Host",
-      color: "#1f7ae0",
+      color: cpuAccent,
       values: stats.history.map((sample) => sample.hostCpuUsagePercent)
     },
     {
       id: "routy-cpu",
       label: "Routy",
-      color: "#ef6c00",
+      color: cpuProcessColor,
       values: stats.history.map((sample) => sample.processCpuUsagePercent)
     }
   ];
@@ -262,13 +271,13 @@ export function DiagnosticsRealtimePanel({ loading, stats, unavailable }: Diagno
     {
       id: "host-ram",
       label: "Host",
-      color: "#2e7d32",
+      color: ramAccent,
       values: stats.history.map((sample) => getHostMemoryPercent(sample.hostMemoryUsedBytes, sample.memoryTotalBytes))
     },
     {
       id: "routy-ram",
       label: "Routy",
-      color: "#8d6e63",
+      color: ramProcessColor,
       values: stats.history.map((sample) => getHostMemoryPercent(sample.processMemoryBytes, sample.memoryTotalBytes))
     }
   ];
@@ -276,13 +285,13 @@ export function DiagnosticsRealtimePanel({ loading, stats, unavailable }: Diagno
     {
       id: "host-bandwidth",
       label: "Host",
-      color: "#00838f",
+      color: bandwidthAccent,
       values: stats.history.map((sample) => sample.hostTotalBytesPerSecond)
     },
     {
       id: "routy-bandwidth",
       label: "Routy",
-      color: "#c62828",
+      color: bandwidthProcessColor,
       values: stats.history.map((sample) => sample.processTotalBytesPerSecond)
     }
   ];
@@ -305,7 +314,7 @@ export function DiagnosticsRealtimePanel({ loading, stats, unavailable }: Diagno
       >
         <ComparisonMetricCard
           title="CPU"
-          accent="#1f7ae0"
+          accent={cpuAccent}
           icon={<SpeedRoundedIcon />}
           chartMax={100}
           axisFormatter={(value) => formatPercent(value)}
@@ -316,7 +325,7 @@ export function DiagnosticsRealtimePanel({ loading, stats, unavailable }: Diagno
 
         <ComparisonMetricCard
           title="RAM"
-          accent="#2e7d32"
+          accent={ramAccent}
           icon={<MemoryRoundedIcon />}
           chartMax={100}
           axisFormatter={(value) => formatPercent(value)}
@@ -327,7 +336,7 @@ export function DiagnosticsRealtimePanel({ loading, stats, unavailable }: Diagno
 
         <ComparisonMetricCard
           title="Banda"
-          accent="#00838f"
+          accent={bandwidthAccent}
           icon={<NetworkPingRoundedIcon />}
           chartMax={Math.max(stats.peaks.hostTotalBytesPerSecond, stats.peaks.processTotalBytesPerSecond, 1)}
           axisFormatter={(value) => formatThroughput(value)}

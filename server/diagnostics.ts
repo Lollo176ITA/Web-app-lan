@@ -565,7 +565,7 @@ export async function collectHostDiagnostics(
         id: "windows-firewall",
         label: "Firewall Windows",
         status: "pass",
-        message: `Regola firewall trovata per Routeroom ${options.port}.`
+        message: `Regola firewall trovata perRouty ${options.port}.`
       });
     } else {
       checks.push({
@@ -579,7 +579,7 @@ export async function collectHostDiagnostics(
         label: "Aggiungi regola firewall",
         shell: "powershell",
         command: `New-NetFirewallRule -DisplayName "Routeroom ${options.port}" -Direction Inbound -Action Allow -Protocol TCP -LocalPort ${options.port} -Profile Private`,
-        reason: "Permette ai dispositivi della rete locale di raggiungere Routeroom."
+        reason: "Permette ai dispositivi della rete locale di raggiungereRouty."
       });
     }
   }

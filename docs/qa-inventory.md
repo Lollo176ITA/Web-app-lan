@@ -1,7 +1,7 @@
-# Routeroom QA Inventory
+#Routy QA Inventory
 
 ## Claims to Sign Off
-- La landing comunica chiaramente che Routeroom funziona solo in LAN e non passa da Internet.
+- La landing comunica chiaramente cheRouty funziona solo in LAN e non passa da Internet.
 - La CTA principale porta all’app operativa senza ambiguità.
 - Un host può caricare file multipli e salvarli in libreria persistente.
 - I video si possono riprodurre nel browser via streaming locale.

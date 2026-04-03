@@ -87,7 +87,7 @@ export function HostSessionCard({
                     p: 1.25,
                     justifySelf: { xs: "flex-start", sm: "end" },
                     borderRadius: cardRadii.inset,
-                    bgcolor: "#ffffff",
+                    bgcolor: theme.palette.common.white,
                     border: `1px solid ${alpha(theme.palette.primary.main, 0.16)}`,
                     boxShadow: `0 12px 28px ${alpha(theme.palette.primary.main, 0.08)}`
                   }}

@@ -58,7 +58,7 @@ export function QrCodeDialog({
             sx={{
               p: 1.5,
               borderRadius: 2,
-              bgcolor: "#ffffff",
+              bgcolor: theme.palette.common.white,
               border: `1px solid ${alpha(theme.palette.primary.main, 0.16)}`,
               boxShadow: `0 12px 28px ${alpha(theme.palette.primary.main, 0.08)}`
             }}

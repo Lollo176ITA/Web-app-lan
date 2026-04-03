@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 880" role="img" aria-labelledby="devices-title devices-desc">
   <title id="devices-title">Routeroom devices</title>
-  <desc id="devices-desc">Desktop, tablet e smartphone con la stessa libreria media Routeroom.</desc>
+  <desc id="devices-desc">Desktop, tablet e smartphone con la stessa libreria mediaRouty.</desc>
   <defs>
     <linearGradient id="devicesBg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#e6f1f7"/>

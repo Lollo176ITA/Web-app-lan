@@ -86,7 +86,6 @@ export function UserProfilePage() {
                     onChange={(event) => {
                       setNicknameDraft(event.target.value);
                     }}
-                    helperText="Puoi cambiarlo qui. L'identificatore utente resta invariato."
                     sx={{
                       "& .MuiOutlinedInput-root": {
                         borderRadius: cardRadii.panel

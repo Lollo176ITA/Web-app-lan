@@ -806,7 +806,6 @@ export async function createApp(options: CreateAppOptions = {}) {
       if (
         !payload ||
         typeof payload.text !== "string" ||
-        typeof payload.identity?.id !== "string" ||
         typeof payload.identity?.nickname !== "string"
       ) {
         response.status(400).json({ message: "Messaggio o nickname non validi." });
@@ -873,7 +872,6 @@ export async function createApp(options: CreateAppOptions = {}) {
       if (
         !payload ||
         typeof payload.text !== "string" ||
-        typeof payload.identity?.id !== "string" ||
         typeof payload.identity?.nickname !== "string"
       ) {
         response.status(400).json({ message: "Messaggio o nickname non validi." });
@@ -888,7 +886,7 @@ export async function createApp(options: CreateAppOptions = {}) {
       }
 
       const message = await collaboration.addPrivateMessage(payload.identity, recipient, payload.text);
-      broadcastPrivateChatUpdated([payload.identity.id, recipient.id]);
+      broadcastPrivateChatUpdated([message.identity.id, recipient.id]);
 
       const result: SendPrivateChatMessageResponse = { message };
       response.status(201).json(result);
@@ -978,7 +976,6 @@ export async function createApp(options: CreateAppOptions = {}) {
       if (
         !payload ||
         typeof payload.text !== "string" ||
-        typeof payload.identity?.id !== "string" ||
         typeof payload.identity?.nickname !== "string"
       ) {
         response.status(400).json({ message: "Messaggio o nickname non validi." });
@@ -1343,10 +1340,11 @@ export async function createApp(options: CreateAppOptions = {}) {
       Connection: "keep-alive",
       "Content-Type": "text/event-stream"
     });
+    response.flushHeaders?.();
     response.write(": connected\n\n");
     events.addClient(response);
 
-    request.on("close", () => {
+    response.on("close", () => {
       events.removeClient(response);
     });
   });

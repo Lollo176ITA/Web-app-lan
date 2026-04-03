@@ -418,8 +418,8 @@ export function StreamRoomPage() {
                         sx={{
                           borderRadius: cardRadii.inset,
                           overflow: "hidden",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          bgcolor: "#000"
+                          border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
+                          bgcolor: theme.palette.common.black
                         }}
                       >
                         <Box
@@ -448,7 +448,7 @@ export function StreamRoomPage() {
                             width: "100%",
                             maxHeight: "calc(100vh - 180px)",
                             display: "block",
-                            bgcolor: "#000",
+                            bgcolor: theme.palette.common.black,
                             objectFit: "contain"
                           }}
                         />

@@ -12,7 +12,7 @@ export function useQrCodeDataUrl(value: string | null, options: UseQrCodeDataUrl
   const [dataUrl, setDataUrl] = useState("");
   const qrCodeColors = {
     dark: theme.palette.mode === "dark" ? theme.palette.secondary.dark : theme.palette.primary.dark,
-    light: "#ffffff"
+    light: theme.palette.common.white
   };
 
   useEffect(() => {

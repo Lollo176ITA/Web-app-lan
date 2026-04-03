@@ -15,6 +15,7 @@ import {
   Stack,
   Typography
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { alpha, useTheme } from "@mui/material/styles";
 import type {
   HostDiagnosticCheck,
@@ -44,20 +45,24 @@ function getCommandsForCheck(checkId: string, commands: HostDiagnosticCommand[])
   }
 }
 
-function getCheckTone(check: HostDiagnosticCheck, isDark: boolean) {
+function getCheckTone(check: HostDiagnosticCheck, theme: Theme) {
+  const isDark = theme.palette.mode === "dark";
+
   if (check.status === "pass") {
+    const accent = theme.palette.success.main;
     return {
-      accent: "#2e7d32",
-      soft: alpha("#2e7d32", isDark ? 0.16 : 0.08),
-      border: alpha("#2e7d32", isDark ? 0.26 : 0.18),
+      accent,
+      soft: alpha(accent, isDark ? 0.16 : 0.08),
+      border: alpha(accent, isDark ? 0.26 : 0.18),
       label: "OK"
     };
   }
 
+  const accent = check.status === "warn" ? theme.palette.warning.main : theme.palette.error.main;
   return {
-    accent: "#c62828",
-    soft: alpha("#c62828", isDark ? 0.16 : 0.08),
-    border: alpha("#c62828", isDark ? 0.26 : 0.18),
+    accent,
+    soft: alpha(accent, isDark ? 0.16 : 0.08),
+    border: alpha(accent, isDark ? 0.26 : 0.18),
     label: check.status === "warn" ? "Da verificare" : "Errore"
   };
 }
@@ -164,7 +169,7 @@ export function DiagnosticsPage() {
                 }}
               >
                 {diagnostics.checks.map((check) => {
-                  const tone = getCheckTone(check, isDark);
+                  const tone = getCheckTone(check, theme);
                   const suggestedCommands = check.status === "pass" ? [] : getCommandsForCheck(check.id, diagnostics.commands);
 
                   return (

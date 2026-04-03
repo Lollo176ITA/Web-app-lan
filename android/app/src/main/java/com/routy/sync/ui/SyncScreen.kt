@@ -410,7 +410,7 @@ private fun SyncTopBar(
         Text(
           text = "Routy Sync",
           style = MaterialTheme.typography.titleLarge,
-          color = Color(0xFF9D7BFF)
+          color = MaterialTheme.colorScheme.primary
         )
         Text(
           text = "LAN sync companion",
@@ -424,12 +424,12 @@ private fun SyncTopBar(
       onClick = onToggleNotifications,
       colors = IconButtonDefaults.iconButtonColors(
         containerColor = if (notificationsEnabled) {
-          Color(0xFFEDE4FF)
+          MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
         } else {
           MaterialTheme.colorScheme.surfaceContainerLow
         },
         contentColor = if (notificationsEnabled) {
-          Color(0xFF7C4DFF)
+          MaterialTheme.colorScheme.primary
         } else {
           MaterialTheme.colorScheme.onSurfaceVariant
         }
@@ -675,7 +675,7 @@ private fun SettingsTab(
     null -> "Non configurato"
   }
   val hostStatusColor = when (state.hostReachable) {
-    true -> Color(0xFF1E8E3E)
+    true -> MaterialTheme.colorScheme.primary
     false -> MaterialTheme.colorScheme.error
     null -> MaterialTheme.colorScheme.onSurfaceVariant
   }
@@ -900,15 +900,20 @@ private fun ScreenHeading(title: String, subtitle: String) {
 }
 
 @Composable
+private fun rememberPrimaryGradient(): Brush {
+  val colorScheme = MaterialTheme.colorScheme
+  return remember(colorScheme.primary, colorScheme.primaryContainer) {
+    Brush.linearGradient(listOf(colorScheme.primary, colorScheme.primaryContainer))
+  }
+}
+
+@Composable
 private fun ScannerCard(
   isBusy: Boolean,
   onScanQr: () -> Unit
 ) {
-  val primaryGradient = remember {
-    Brush.linearGradient(
-      listOf(Color(0xFF6D3CD7), Color(0xFF8152EC))
-    )
-  }
+  val primaryGradient = rememberPrimaryGradient()
+  val colorScheme = MaterialTheme.colorScheme
 
   Box(
     modifier = Modifier
@@ -927,7 +932,7 @@ private fun ScannerCard(
     Canvas(modifier = Modifier.fillMaxSize()) {
       drawRect(
         brush = Brush.radialGradient(
-          colors = listOf(Color(0x228152EC), Color.Transparent),
+          colors = listOf(colorScheme.primaryContainer.copy(alpha = 0.13f), Color.Transparent),
           radius = size.minDimension
         )
       )
@@ -971,7 +976,7 @@ private fun ScannerCard(
             .height(3.dp)
             .background(
               Brush.horizontalGradient(
-                colors = listOf(Color.Transparent, Color(0xAA6D3CD7), Color.Transparent)
+                colors = listOf(Color.Transparent, colorScheme.primary.copy(alpha = 0.67f), Color.Transparent)
               ),
               shape = RoundedCornerShape(999.dp)
             )
@@ -1030,9 +1035,8 @@ private fun SuccessHero(
   hostReachable: Boolean?,
   mappingCount: Int
 ) {
-  val gradient = remember {
-    Brush.linearGradient(listOf(Color(0xFF6D3CD7), Color(0xFF8152EC)))
-  }
+  val gradient = rememberPrimaryGradient()
+  val colorScheme = MaterialTheme.colorScheme
 
   Surface(
     color = Color.Transparent,
@@ -1058,7 +1062,7 @@ private fun SuccessHero(
           modifier = Modifier
             .size(164.dp)
             .clip(CircleShape)
-            .background(Color(0x196D3CD7))
+            .background(colorScheme.primary.copy(alpha = 0.1f))
         )
         Box(
           modifier = Modifier
@@ -1102,12 +1106,12 @@ private fun SuccessHero(
             null -> "Host non verificato"
           },
           background = when (hostReachable) {
-            true -> Color(0xFFE7F6EC)
+            true -> MaterialTheme.colorScheme.secondaryContainer
             false -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.18f)
             null -> MaterialTheme.colorScheme.surfaceContainerHighest
           },
           contentColor = when (hostReachable) {
-            true -> Color(0xFF1E8E3E)
+            true -> MaterialTheme.colorScheme.onSecondaryContainer
             false -> MaterialTheme.colorScheme.error
             null -> MaterialTheme.colorScheme.onSurfaceVariant
           }
@@ -1210,8 +1214,8 @@ private fun FolderCard(
         if (mapping.lastSyncedAt != null) {
           StatusPill(
             text = "Attiva",
-            background = Color(0xFFE7F6EC),
-            contentColor = Color(0xFF1E8E3E)
+            background = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
           )
         }
       }
@@ -1223,8 +1227,8 @@ private fun FolderCard(
 private fun ActivityCard(item: ActivityFeedItem) {
   val (background, content, label, icon) = when (item.status) {
     ActivityStatus.Completed -> ActivityBadgeSpec(
-      background = Color(0xFFE7F6EC),
-      content = Color(0xFF1E8E3E),
+      background = MaterialTheme.colorScheme.secondaryContainer,
+      content = MaterialTheme.colorScheme.onSecondaryContainer,
       label = "Completato",
       icon = Icons.Rounded.CheckCircle
     )
@@ -1488,11 +1492,7 @@ private fun PrimaryGradientButton(
   modifier: Modifier = Modifier,
   enabled: Boolean = true
 ) {
-  val gradient = remember {
-    Brush.linearGradient(
-      listOf(Color(0xFF6D3CD7), Color(0xFF8152EC))
-    )
-  }
+  val gradient = rememberPrimaryGradient()
 
   Button(
     onClick = onClick,
@@ -1510,7 +1510,13 @@ private fun PrimaryGradientButton(
       modifier = Modifier
         .fillMaxWidth()
         .background(
-          if (enabled) gradient else Brush.linearGradient(listOf(Color(0xFFCBC7D6), Color(0xFFCBC7D6))),
+          if (enabled) {
+            gradient
+          } else {
+            Brush.linearGradient(
+              listOf(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.colorScheme.surfaceContainerHigh)
+            )
+          },
           RoundedCornerShape(28.dp)
         )
         .padding(horizontal = 20.dp, vertical = 16.dp),
@@ -1660,7 +1666,7 @@ private fun FloatingBottomBar(
                 .clip(RoundedCornerShape(18.dp))
                 .background(
                   if (active) {
-                    Brush.linearGradient(listOf(Color(0xFF6D3CD7), Color(0xFF8152EC)))
+                    rememberPrimaryGradient()
                   } else {
                     Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
                   }
@@ -1806,6 +1812,7 @@ private fun CornerBracket(
 @Composable
 private fun SyncBackdrop() {
   val surfaceColor = MaterialTheme.colorScheme.surface
+  val colorScheme = MaterialTheme.colorScheme
   Canvas(
     modifier = Modifier
       .fillMaxSize()
@@ -1814,7 +1821,7 @@ private fun SyncBackdrop() {
     drawRect(surfaceColor)
     drawCircle(
       brush = Brush.radialGradient(
-        colors = listOf(Color(0x146D3CD7), Color.Transparent),
+        colors = listOf(colorScheme.primary.copy(alpha = 0.08f), Color.Transparent),
         radius = size.minDimension * 0.55f,
         center = androidx.compose.ui.geometry.Offset(size.width * 0.1f, size.height * 0.1f)
       ),
@@ -1823,7 +1830,7 @@ private fun SyncBackdrop() {
     )
     drawCircle(
       brush = Brush.radialGradient(
-        colors = listOf(Color(0x1A8152EC), Color.Transparent),
+        colors = listOf(colorScheme.primaryContainer.copy(alpha = 0.1f), Color.Transparent),
         radius = size.minDimension * 0.5f,
         center = androidx.compose.ui.geometry.Offset(size.width * 0.95f, size.height * 0.08f)
       ),
