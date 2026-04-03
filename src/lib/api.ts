@@ -31,6 +31,8 @@ import type {
   SyncUploadResponse,
   StreamRoomResponse,
   StreamRoomsResponse,
+  UpdateFeatureFlagsRequest,
+  UpdateFeatureFlagsResponse,
   UpdateSyncFoldersRequest,
   UpdateSyncFoldersResponse,
   UpdateStreamRoomPlaybackResponse,
@@ -84,7 +86,10 @@ function createAbortError() {
 }
 
 async function readJson<T>(resource: string, init?: RequestInit) {
-  const response = await fetch(resource, init);
+  const response = await fetch(resource, {
+    cache: "no-store",
+    ...init
+  });
 
   if (!response.ok) {
     throw new Error(`Request failed: ${response.status}`);
@@ -311,6 +316,16 @@ export function fetchChatSnapshot(viewerId?: string) {
 
 export function fetchClientProfile() {
   return readJson<ClientProfileResponse>("/api/me");
+}
+
+export function updateFeatureFlags(featureFlags: UpdateFeatureFlagsRequest["featureFlags"]) {
+  return readJson<UpdateFeatureFlagsResponse>("/api/settings/features", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ featureFlags } satisfies UpdateFeatureFlagsRequest)
+  });
 }
 
 export function fetchSyncOverview() {
@@ -690,6 +705,24 @@ export function openLanEvents(
   onOpen?: () => void
 ) {
   const source = new EventSource("/api/events");
+
+  source.addEventListener("settings-updated", (event) => {
+    let payload: { featureFlags?: unknown } = {};
+
+    if (event instanceof MessageEvent && typeof event.data === "string") {
+      try {
+        payload = JSON.parse(event.data) as { featureFlags?: unknown };
+      } catch {
+        payload = {};
+      }
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("routy-settings-updated", {
+        detail: payload
+      })
+    );
+  });
 
   Object.entries(handlers).forEach(([eventName, handler]) => {
     source.addEventListener(eventName, handler);

@@ -26,9 +26,10 @@ import { PageHeader } from "../components/PageHeader";
 import { QrCodeDialog } from "../components/QrCodeDialog";
 import { copyTextToClipboard } from "../lib/clipboard";
 import { buildStreamRoomShareUrl } from "../lib/share-links";
+import { useAppShell } from "../lib/app-shell-context";
 import { insetCardSx, pageCardSx } from "../lib/surfaces";
 import { useQrDialog } from "../lib/useQrDialog";
-import { createStreamRoom, deleteStreamRoom, fetchSession, fetchStreamRooms } from "../lib/api";
+import { createStreamRoom, deleteStreamRoom, fetchStreamRooms } from "../lib/api";
 import { useLanLiveState } from "../lib/useLanLiveState";
 
 function formatRoomTime(value: string) {
@@ -49,7 +50,8 @@ export function StreamRoomsPage() {
   const [deletingRoomId, setDeletingRoomId] = useState<string | null>(null);
   const [qrRoomTarget, setQrRoomTarget] = useState<StreamRoomSummary | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
-  const [sessionLanUrl, setSessionLanUrl] = useState<string | null>(null);
+  const { session } = useAppShell();
+  const sessionLanUrl = session?.lanUrl ?? null;
   const roomQrUrl = qrRoomTarget ? buildStreamRoomShareUrl(qrRoomTarget.id, sessionLanUrl) : null;
   const roomQrDialog = useQrDialog(roomQrUrl, { width: 256 });
   const roomQrHref = roomQrUrl ?? undefined;
@@ -81,11 +83,10 @@ export function StreamRoomsPage() {
   });
 
   async function syncData() {
-    const [roomsResponse, session] = await Promise.all([fetchStreamRooms(), fetchSession()]);
+    const roomsResponse = await fetchStreamRooms();
 
     startTransition(() => {
       setRooms(roomsResponse.rooms);
-      setSessionLanUrl(session.lanUrl);
       setLoading(false);
     });
   }

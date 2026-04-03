@@ -4,6 +4,7 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import {
   Avatar,
@@ -22,8 +23,9 @@ import {
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import { Link as RouterLink, useLocation } from "react-router-dom";
+import type { FeatureFlags } from "../../shared/types";
+import { getFeatureFlags, useAppShell } from "../lib/app-shell-context";
 import { useColorMode } from "../lib/color-mode";
-import { useIdentity } from "../lib/identity-context";
 
 type NetworkState = "live" | "fallback" | "connecting";
 
@@ -35,25 +37,32 @@ interface PageHeaderProps {
   trailingLinkTo?: string;
 }
 
-const navItems = [
-  { label: "Home", to: "/", matches: (pathname: string) => pathname === "/" },
+interface NavItem {
+  feature?: keyof FeatureFlags;
+  label: string;
+  matches: (pathname: string) => boolean;
+  to: string;
+}
+
+const navItems: NavItem[] = [
+  { label: "Home", to: "/", feature: "homepage", matches: (pathname: string) => pathname === "/" },
   { label: "App", to: "/app", matches: (pathname: string) => pathname.startsWith("/app") || pathname.startsWith("/player") },
-  { label: "Chat", to: "/chat/globale", matches: (pathname: string) => pathname.startsWith("/chat") },
-  { label: "Streaming", to: "/stream", matches: (pathname: string) => pathname.startsWith("/stream") },
-  { label: "Sync", to: "/sync", matches: (pathname: string) => pathname.startsWith("/sync") }
+  { label: "Chat", to: "/chat/globale", feature: "chat", matches: (pathname: string) => pathname.startsWith("/chat") },
+  { label: "Streaming", to: "/stream", feature: "streaming", matches: (pathname: string) => pathname.startsWith("/stream") },
+  { label: "Sync", to: "/sync", feature: "sync", matches: (pathname: string) => pathname.startsWith("/sync") }
 ];
 
 export function PageHeader({ title, subtitle, networkState, trailing, trailingLinkTo }: PageHeaderProps) {
   const location = useLocation();
   const theme = useTheme();
   const { mode, toggleColorMode } = useColorMode();
+  const { session } = useAppShell();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isDark = mode === "dark";
   const brandLogoSrc = isDark ? "/logo/logo-nero.png" : "/logo/logo-bianco.png";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { identity } = useIdentity();
-  const profilePath = identity ? `/utente/${identity.id}` : null;
-  const profileInitial = identity?.nickname.trim().charAt(0).toUpperCase() ?? "?";
+  const featureFlags = getFeatureFlags(session);
+  const visibleNavItems = navItems.filter((item) => !item.feature || featureFlags[item.feature]);
   const trailingContent =
     trailing ??
     (networkState ? (
@@ -71,31 +80,21 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
         {networkState === "live" ? <WifiRoundedIcon /> : <AutorenewRoundedIcon />}
       </Avatar>
     ) : null);
-  const trailingDestination = trailing ? trailingLinkTo : networkState ? trailingLinkTo ?? "/diagnostics" : trailingLinkTo;
+  const trailingDestination = trailing ? trailingLinkTo : trailingLinkTo;
   const mobileMenuItems = [
-    ...navItems.map((item) => ({
+    ...visibleNavItems.map((item) => ({
       label: item.label,
       to: item.to,
       selected: item.matches(location.pathname)
     })),
-    ...(trailingDestination
-      ? [
-          {
-            label: "Diagnostica",
-            to: trailingDestination,
-            selected: location.pathname.startsWith("/diagnostics")
-          }
-        ]
-      : []),
-    ...(profilePath
-      ? [
-          {
-            label: "Profilo",
-            to: profilePath,
-            selected: location.pathname.startsWith("/utente/")
-          }
-        ]
-      : [])
+    {
+      label: "Impostazioni",
+      to: "/settings",
+      selected:
+        location.pathname.startsWith("/settings") ||
+        location.pathname.startsWith("/utente/") ||
+        location.pathname.startsWith("/diagnostics")
+    }
   ];
   const panelBackground = alpha(theme.palette.background.paper, isDark ? 0.92 : 0.88);
 
@@ -121,18 +120,33 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
     );
   }
 
-  function getProfileAvatarStyles() {
-    const profileActive = location.pathname.startsWith("/utente/");
+function renderSettingsButton() {
+    const settingsActive =
+      location.pathname.startsWith("/settings") ||
+      location.pathname.startsWith("/utente/") ||
+      location.pathname.startsWith("/diagnostics");
 
-    return {
-      width: { xs: 38, md: 42 },
-      height: { xs: 38, md: 42 },
-      bgcolor: profileActive
-        ? alpha(theme.palette.primary.main, isDark ? 0.24 : 0.16)
-        : alpha(theme.palette.text.primary, isDark ? 0.16 : 0.08),
-      color: profileActive ? (isDark ? theme.palette.primary.light : "primary.main") : "text.primary",
-      fontWeight: 700
-    };
+    return (
+      <IconButton
+        component={RouterLink}
+        to="/settings"
+        aria-label="Impostazioni"
+        sx={{
+          minWidth: 0,
+          minHeight: { xs: 34, sm: 40 },
+          width: { xs: 34, sm: 40 },
+          height: { xs: 34, sm: 40 },
+          bgcolor: settingsActive ? alpha(theme.palette.primary.main, isDark ? 0.2 : 0.12) : "transparent",
+          color: settingsActive ? (isDark ? theme.palette.primary.light : "primary.main") : "text.secondary",
+          border: `1px solid ${alpha(theme.palette.primary.main, settingsActive ? (isDark ? 0.24 : 0.14) : 0)}`,
+          "&:hover": {
+            bgcolor: alpha(theme.palette.primary.main, isDark ? 0.14 : 0.08)
+          }
+        }}
+      >
+        <SettingsRoundedIcon />
+      </IconButton>
+    );
   }
 
   return (
@@ -221,7 +235,7 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
           ) : (
             <Stack direction="row" spacing={{ xs: 0.5, sm: 1 }} alignItems="center" sx={{ flexShrink: 0 }}>
               <Stack direction="row" spacing={{ xs: 0.25, sm: 0.75 }} sx={{ flexWrap: "nowrap" }}>
-                {navItems.map((item) => {
+                {visibleNavItems.map((item) => {
                   const isActive = item.matches(location.pathname);
 
                   return (
@@ -250,6 +264,7 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
               </Stack>
 
               {renderThemeToggleButton()}
+              {renderSettingsButton()}
 
               {trailingContent ? (
                 trailingDestination ? (
@@ -266,19 +281,6 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
                 ) : (
                   <Box sx={{ flexShrink: 0 }}>{trailingContent}</Box>
                 )
-              ) : null}
-
-              {profilePath ? (
-                <ButtonBase
-                  component={RouterLink}
-                  to={profilePath}
-                  sx={{
-                    borderRadius: 2,
-                    overflow: "hidden"
-                  }}
-                >
-                  <Avatar sx={getProfileAvatarStyles()}>{profileInitial}</Avatar>
-                </ButtonBase>
               ) : null}
             </Stack>
           )}

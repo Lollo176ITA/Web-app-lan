@@ -11,6 +11,7 @@ import { nanoid } from "nanoid";
 import { EventHub } from "./events.js";
 import { getSessionUrls } from "./network.js";
 import { CollaborationStore } from "./realtime.js";
+import { SettingsStore } from "./settings.js";
 import { SyncStore } from "./sync.js";
 import { LibraryStore } from "./storage.js";
 import { collectHostDiagnostics, HostRuntimeStatsMonitor } from "./diagnostics.js";
@@ -31,6 +32,7 @@ import type {
   HostDiagnosticsResponse,
   HostRuntimeStatsResponse,
   ItemPreview,
+  FeatureFlags,
   PlanSyncMappingRequest,
   PlanSyncMappingResponse,
   PostChatMessageRequest,
@@ -45,6 +47,8 @@ import type {
   SyncDeviceConfigResponse,
   SyncOverviewResponse,
   SyncUploadResponse,
+  UpdateFeatureFlagsRequest,
+  UpdateFeatureFlagsResponse,
   UpdateSyncUploadProgressRequest,
   UpdateSyncFoldersRequest,
   SessionInfo,
@@ -121,6 +125,49 @@ function normalizeRouteParam(value: string | string[] | undefined) {
 
 function normalizeArchiveFormat(value: unknown): ArchiveFormat | null {
   return value === "zip" || value === "7z" || value === "rar" ? value : null;
+}
+
+function normalizeFeatureFlagsUpdate(value: unknown): Partial<FeatureFlags> | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const raw = value as Record<string, unknown>;
+  const nextFlags: Partial<FeatureFlags> = {};
+
+  if ("homepage" in raw) {
+    if (typeof raw.homepage !== "boolean") {
+      return null;
+    }
+
+    nextFlags.homepage = raw.homepage;
+  }
+
+  if ("chat" in raw) {
+    if (typeof raw.chat !== "boolean") {
+      return null;
+    }
+
+    nextFlags.chat = raw.chat;
+  }
+
+  if ("streaming" in raw) {
+    if (typeof raw.streaming !== "boolean") {
+      return null;
+    }
+
+    nextFlags.streaming = raw.streaming;
+  }
+
+  if ("sync" in raw) {
+    if (typeof raw.sync !== "boolean") {
+      return null;
+    }
+
+    nextFlags.sync = raw.sync;
+  }
+
+  return nextFlags;
 }
 
 function normalizeClientIp(value: string | undefined) {
@@ -268,6 +315,7 @@ export async function createApp(options: CreateAppOptions = {}) {
   const urls = getSessionUrls(port);
   const store = new LibraryStore(storageRoot);
   const collaboration = new CollaborationStore(storageRoot);
+  const settings = new SettingsStore(storageRoot);
   const sync = new SyncStore(storageRoot);
   const events = new EventHub();
   const runtimeStats = new HostRuntimeStatsMonitor();
@@ -281,6 +329,7 @@ export async function createApp(options: CreateAppOptions = {}) {
 
   await store.init({ seedDemo: options.seedDemo });
   await collaboration.init();
+  await settings.init();
   await sync.init();
   await mkdir(syncUploadStageDir, { recursive: true });
   await collaboration.pruneMissingVideos((videoItemId) => {
@@ -476,6 +525,21 @@ export async function createApp(options: CreateAppOptions = {}) {
     });
   }
 
+  function broadcastSettingsUpdated() {
+    events.broadcast("settings-updated", {
+      featureFlags: settings.getFeatureFlags()
+    });
+  }
+
+  function ensureFeatureEnabled(feature: keyof FeatureFlags, response: express.Response) {
+    if (!settings.getFeatureFlags()[feature]) {
+      response.status(403).json({ message: "Funzione disattivata dall'host." });
+      return false;
+    }
+
+    return true;
+  }
+
   function readBearerToken(request: express.Request) {
     const authorization = request.get("authorization") ?? "";
 
@@ -498,6 +562,30 @@ export async function createApp(options: CreateAppOptions = {}) {
 
   app.use(runtimeStats.createTrafficMiddleware());
   app.use(express.json());
+
+  app.use("/api/chat", (_request, response, next) => {
+    if (!ensureFeatureEnabled("chat", response)) {
+      return;
+    }
+
+    next();
+  });
+
+  app.use("/api/stream", (_request, response, next) => {
+    if (!ensureFeatureEnabled("streaming", response)) {
+      return;
+    }
+
+    next();
+  });
+
+  app.use("/api/sync", (_request, response, next) => {
+    if (!ensureFeatureEnabled("sync", response)) {
+      return;
+    }
+
+    next();
+  });
 
   app.get("/api/health", (_request, response) => {
     response.json({ ok: true });
@@ -522,10 +610,34 @@ export async function createApp(options: CreateAppOptions = {}) {
       lanUrl: urls.lanUrl,
       storagePath: store.rootDir,
       availableArchiveFormats,
+      featureFlags: settings.getFeatureFlags(),
       ...summary
     };
 
     response.json(sessionInfo);
+  });
+
+  app.put("/api/settings/features", async (request, response) => {
+    if (!isHostRequest(request, hostIpAddresses)) {
+      response.status(403).json({ message: "Solo l'host puo aggiornare le impostazioni." });
+      return;
+    }
+
+    const payload = request.body as UpdateFeatureFlagsRequest | undefined;
+    const nextFlags = normalizeFeatureFlagsUpdate(payload?.featureFlags);
+
+    if (!nextFlags) {
+      response.status(400).json({ message: "Feature flags non valide." });
+      return;
+    }
+
+    const featureFlags = await settings.updateFeatureFlags(nextFlags);
+    broadcastSettingsUpdated();
+
+    const result: UpdateFeatureFlagsResponse = {
+      featureFlags
+    };
+    response.json(result);
   });
 
   app.get("/api/diagnostics", async (_request, response, next) => {

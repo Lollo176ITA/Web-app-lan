@@ -19,18 +19,19 @@ import {
   Typography
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
-import type { ClientProfileResponse, SessionInfo, SyncOverviewResponse } from "../../shared/types";
+import type { SyncOverviewResponse } from "../../shared/types";
 import { PageHeader } from "../components/PageHeader";
 import { QrCodeDialog } from "../components/QrCodeDialog";
 import {
   createSyncPairingCode,
-  fetchLatestAndroidAppRelease,
   fetchClientProfile,
+  fetchLatestAndroidAppRelease,
   fetchSession,
   fetchSyncOverview,
   revokeSyncDevice
 } from "../lib/api";
 import type { AndroidAppReleaseInfo } from "../lib/api";
+import { useAppShell } from "../lib/app-shell-context";
 import { copyTextToClipboard } from "../lib/clipboard";
 import { insetCardSx, pageCardSx } from "../lib/surfaces";
 import {
@@ -71,29 +72,33 @@ function buildSyncPairingQrValue(hostUrl: string | null, pairingCode: string | n
 export function SyncPage() {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
+  const { clientProfile, session } = useAppShell();
   const [overview, setOverview] = useState<SyncOverviewResponse | null>(null);
-  const [clientProfile, setClientProfile] = useState<ClientProfileResponse | null>(null);
+  const [resolvedClientProfile, setResolvedClientProfile] = useState(clientProfile);
   const [loading, setLoading] = useState(true);
   const [creatingPairingCode, setCreatingPairingCode] = useState(false);
   const [revokingDeviceId, setRevokingDeviceId] = useState<string | null>(null);
-  const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
+  const [resolvedSession, setResolvedSession] = useState(session);
   const [androidRelease, setAndroidRelease] = useState<AndroidAppReleaseInfo | null>(null);
   const [desktopReleases, setDesktopReleases] = useState<Partial<Record<WindowsDesktopBuildTarget, DesktopReleaseInfo>>>({});
   const [downloadingDesktopTarget, setDownloadingDesktopTarget] = useState<WindowsDesktopBuildTarget | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
-  const sessionLanUrl = sessionInfo?.lanUrl ?? null;
+  const sessionLanUrl = resolvedSession?.lanUrl ?? null;
   const pairingQrValue = buildSyncPairingQrValue(sessionLanUrl, overview?.activePairingCode?.code ?? null);
   const pairingQrDialog = useQrDialog(pairingQrValue, { width: 256 });
   const apkQrDialog = useQrDialog(androidRelease?.downloadUrl ?? null, { width: 256 });
 
   async function syncData() {
-    const [profile, session] = await Promise.all([fetchClientProfile(), fetchSession()]);
+    const [nextProfile, nextSession] = await Promise.all([
+      clientProfile ? Promise.resolve(clientProfile) : fetchClientProfile(),
+      session ? Promise.resolve(session) : fetchSession()
+    ]);
 
-    if (!profile.isHost) {
+    if (!nextProfile.isHost) {
       startTransition(() => {
-        setClientProfile(profile);
+        setResolvedClientProfile(nextProfile);
+        setResolvedSession(nextSession);
         setOverview(null);
-        setSessionInfo(session);
         setLoading(false);
       });
       return;
@@ -102,12 +107,24 @@ export function SyncPage() {
     const nextOverview = await fetchSyncOverview();
 
     startTransition(() => {
-      setClientProfile(profile);
+      setResolvedClientProfile(nextProfile);
+      setResolvedSession(nextSession);
       setOverview(nextOverview);
-      setSessionInfo(session);
       setLoading(false);
     });
   }
+
+  useEffect(() => {
+    if (clientProfile) {
+      setResolvedClientProfile(clientProfile);
+    }
+  }, [clientProfile]);
+
+  useEffect(() => {
+    if (session) {
+      setResolvedSession(session);
+    }
+  }, [session]);
 
   const liveState = useLanLiveState(
     {
@@ -184,7 +201,7 @@ export function SyncPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [clientProfile?.isHost, session?.lanUrl]);
 
   useEffect(() => {
     const handleVisibility = () => {
@@ -244,7 +261,7 @@ export function SyncPage() {
     },
     null
   );
-  const hostVersion = sessionInfo?.appVersion ?? null;
+  const hostVersion = resolvedSession?.appVersion ?? null;
   const webAppNeedsRefresh = hostVersion ? compareVersions(hostVersion, __APP_VERSION__) > 0 : false;
   const hostBehindPublishedVersion =
     hostVersion && publishedDesktopVersion ? compareVersions(publishedDesktopVersion, hostVersion) > 0 : false;
@@ -455,7 +472,7 @@ export function SyncPage() {
         <Stack spacing={3} sx={{ mt: 3 }}>
           {loading ? <Typography color="text.secondary">Caricamento area sync...</Typography> : null}
 
-          {!loading && !clientProfile?.isHost ? (
+          {!loading && !resolvedClientProfile?.isHost ? (
             <>
               <Alert severity="info">Solo l'host può creare codici e gestire i device.</Alert>
 
@@ -463,7 +480,7 @@ export function SyncPage() {
             </>
           ) : null}
 
-          {!loading && clientProfile?.isHost && overview ? (
+          {!loading && resolvedClientProfile?.isHost && overview ? (
             <>
               {liveState === "fallback" ? (
                 <Alert severity="warning">Connessione live non disponibile. Aggiornamento con polling.</Alert>

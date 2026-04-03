@@ -29,12 +29,13 @@ import type {
   ChatThreadSummary,
   PrivateChatMessage
 } from "../../shared/types";
+import { FeatureDisabledPage } from "../components/FeatureDisabledPage";
 import { PageHeader } from "../components/PageHeader";
+import { useAppShell } from "../lib/app-shell-context";
 import { useIdentity } from "../lib/identity-context";
 import {
   clearGlobalChat,
   fetchChatSnapshot,
-  fetchClientProfile,
   fetchDirectChatSnapshot,
   sendChatMessage,
   sendDirectChatMessage
@@ -111,6 +112,7 @@ export function ChatPage() {
   const showGlobalThread = new URLSearchParams(location.search).get("view") === "thread";
   const isConversationScreen = isDirectChat || showGlobalThread;
   const { identity } = useIdentity();
+  const { clientProfile, refresh } = useAppShell();
   const [overview, setOverview] = useState<ChatSnapshotResponse>({
     globalMessages: [],
     threads: [],
@@ -122,12 +124,13 @@ export function ChatPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [clearingGlobalChat, setClearingGlobalChat] = useState(false);
-  const [isHostClient, setIsHostClient] = useState(false);
+  const [chatDisabled, setChatDisabled] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const messagesViewportRef = useRef<HTMLDivElement | null>(null);
   const activeConversationKey = userId ? `user:${userId}` : "global";
   const showConversationList = !isMobile || !isConversationScreen;
   const showConversationPanel = !isMobile || isConversationScreen;
+  const isHostClient = clientProfile?.isHost === true;
   const globalChatHref = isMobile ? "/chat/globale?view=thread" : "/chat/globale";
   const listPageHref = "/chat/globale";
   const globalThreadActive = isMobile ? showGlobalThread : !isDirectChat;
@@ -174,7 +177,7 @@ export function ChatPage() {
       onFallback: () => {
         const pollingId = window.setInterval(() => {
           void syncChatState();
-        }, 15000);
+        }, 3000);
 
         return () => {
           window.clearInterval(pollingId);
@@ -205,12 +208,20 @@ export function ChatPage() {
       ]);
 
       startTransition(() => {
+        setChatDisabled(false);
         setOverview(nextOverview);
         setDirectParticipant(nextDirect?.participant ?? null);
         setDirectMessages(nextDirect?.messages ?? []);
         setLoading(false);
       });
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message === "Request failed: 403") {
+        setChatDisabled(true);
+        void refresh();
+        setLoading(false);
+        return;
+      }
+
       setLoading(false);
       setSnackbar("Caricamento chat non riuscito.");
     }
@@ -219,26 +230,6 @@ export function ChatPage() {
   useEffect(() => {
     void syncChatState();
   }, [identity?.id, userId]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    void fetchClientProfile()
-      .then((profile) => {
-        if (isMounted) {
-          setIsHostClient(profile.isHost);
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setIsHostClient(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   useEffect(() => {
     const viewport = messagesViewportRef.current;
@@ -317,6 +308,10 @@ export function ChatPage() {
     } finally {
       setClearingGlobalChat(false);
     }
+  }
+
+  if (chatDisabled) {
+    return <FeatureDisabledPage actionLabel="Apri la libreria" actionTo="/app" title="Chat LAN" />;
   }
 
   return (

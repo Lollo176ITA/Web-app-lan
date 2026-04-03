@@ -10,6 +10,13 @@ export type LibraryKind =
 export type LibraryLayoutMode = "minimal" | "compact";
 export type ArchiveFormat = "zip" | "7z" | "rar";
 
+export interface FeatureFlags {
+  homepage: boolean;
+  chat: boolean;
+  streaming: boolean;
+  sync: boolean;
+}
+
 export interface LibraryItem {
   id: string;
   name: string;
@@ -76,6 +83,7 @@ export interface SessionInfo {
   itemCount: number;
   totalBytes: number;
   availableArchiveFormats: ArchiveFormat[];
+  featureFlags: FeatureFlags;
 }
 
 export type HostDiagnosticStatus = "pass" | "warn" | "fail" | "info";
@@ -235,6 +243,14 @@ export interface ClientProfileResponse {
   clientIp: string | null;
   userAgent: string | null;
   isHost: boolean;
+}
+
+export interface UpdateFeatureFlagsRequest {
+  featureFlags: Partial<FeatureFlags>;
+}
+
+export interface UpdateFeatureFlagsResponse {
+  featureFlags: FeatureFlags;
 }
 
 export interface StreamRoomsResponse {

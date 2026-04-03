@@ -24,6 +24,7 @@ import {
 import { alpha, useTheme } from "@mui/material/styles";
 import { Link as RouterLink } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
+import { getFeatureFlags, useAppShell } from "../lib/app-shell-context";
 import { useLanLiveState } from "../lib/useLanLiveState";
 
 const featureCards = [
@@ -84,6 +85,8 @@ export function LandingPage() {
   const liveState = useLanLiveState({ source: "library" });
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
+  const { session } = useAppShell();
+  const featureFlags = getFeatureFlags(session);
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
   const selectedFeature = featureCards[selectedFeatureIndex];
 
@@ -132,9 +135,11 @@ export function LandingPage() {
                   >
                     Apri la libreria
                   </Button>
-                  <Button component={RouterLink} to="/stream" size="large" variant="outlined">
-                    Vai allo streaming
-                  </Button>
+                  {featureFlags.streaming ? (
+                    <Button component={RouterLink} to="/stream" size="large" variant="outlined">
+                      Vai allo streaming
+                    </Button>
+                  ) : null}
                 </Stack>
               </Stack>
 
