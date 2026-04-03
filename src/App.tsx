@@ -24,12 +24,6 @@ const StreamRoomsPage = lazy(async () => import("./routes/StreamRoomsPage").then
 const StreamRoomPage = lazy(async () => import("./routes/StreamRoomPage").then((module) => ({ default: module.StreamRoomPage })));
 const VideoPlayerPage = lazy(async () => import("./routes/VideoPlayerPage").then((module) => ({ default: module.VideoPlayerPage })));
 const SettingsPage = lazy(async () => import("./routes/SettingsPage").then((module) => ({ default: module.SettingsPage })));
-const UserProfilePage = lazy(async () =>
-  import("./routes/UserProfilePage").then((module) => ({ default: module.UserProfilePage }))
-);
-const DiagnosticsPage = lazy(async () =>
-  import("./routes/DiagnosticsPage").then((module) => ({ default: module.DiagnosticsPage }))
-);
 const SyncPage = lazy(async () => import("./routes/SyncPage").then((module) => ({ default: module.SyncPage })));
 
 interface AppUploadState {
@@ -380,8 +374,6 @@ export default function App() {
             />
             <Route path="/player/:itemId" element={<VideoPlayerPage />} />
             <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/utente/:userId" element={<UserProfilePage />} />
-            <Route path="/diagnostics" element={<DiagnosticsPage />} />
             <Route
               path="/sync"
               element={

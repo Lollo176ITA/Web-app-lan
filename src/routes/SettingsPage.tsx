@@ -47,7 +47,6 @@ import {
   updateFeatureFlags
 } from "../lib/api";
 import { cardRadii, pageCardSx } from "../lib/surfaces";
-import { useLanLiveState } from "../lib/useLanLiveState";
 
 type RuntimeState = "idle" | "loading" | "ready" | "error";
 type FeatureFlagKey = keyof FeatureFlags;
@@ -119,7 +118,6 @@ export function SettingsPage() {
   const [runtimeState, setRuntimeState] = useState<RuntimeState>("idle");
   const [updatingFeature, setUpdatingFeature] = useState<FeatureFlagKey | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
-  const liveState = useLanLiveState();
   const isHostClient = resolvedClientProfile?.isHost === true;
 
   useEffect(() => {
@@ -269,7 +267,7 @@ export function SettingsPage() {
   return (
     <Box sx={{ pb: 8 }}>
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
-        <PageHeader title="Impostazioni" subtitle="Profilo locale e controllo host" networkState={liveState} />
+        <PageHeader title="Impostazioni" subtitle="Profilo locale e controllo host" />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
           <Stack direction={{ xs: "column", lg: "row" }} spacing={2.5}>

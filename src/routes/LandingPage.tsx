@@ -25,7 +25,6 @@ import { alpha, useTheme } from "@mui/material/styles";
 import { Link as RouterLink } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
 import { getFeatureFlags, useAppShell } from "../lib/app-shell-context";
-import { useLanLiveState } from "../lib/useLanLiveState";
 
 const featureCards = [
   {
@@ -82,7 +81,6 @@ const featureCards = [
 
 
 export function LandingPage() {
-  const liveState = useLanLiveState({ source: "library" });
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
   const { session } = useAppShell();
@@ -93,7 +91,7 @@ export function LandingPage() {
   return (
     <Box sx={{ pb: 8 }}>
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
-        <PageHeader title="Routy" subtitle="media relay locale" networkState={liveState} />
+        <PageHeader title="Routy" subtitle="media relay locale" />
 
         <Card
           sx={{

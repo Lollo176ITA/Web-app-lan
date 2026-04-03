@@ -133,7 +133,7 @@ export function StreamRoomsPage() {
   return (
     <Box sx={{ pb: 7 }}>
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
-        <PageHeader title="Stanze Streaming" subtitle="Watch party locale" networkState={liveState} />
+        <PageHeader title="Stanze Streaming" subtitle="Watch party locale" />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
           <Box

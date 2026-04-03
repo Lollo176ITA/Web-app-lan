@@ -304,7 +304,7 @@ export function StreamRoomPage() {
   return (
     <Box sx={{ pb: 7 }}>
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
-        <PageHeader title={room.name} subtitle="Stanza streaming sincronizzata" networkState={liveState} />
+        <PageHeader title={room.name} subtitle="Stanza streaming sincronizzata" />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
           <Card sx={pageCardSx}>

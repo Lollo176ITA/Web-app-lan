@@ -14,7 +14,6 @@ import { alpha, useTheme } from "@mui/material/styles";
 import { Link as RouterLink } from "react-router-dom";
 import { PageHeader } from "./PageHeader";
 import { pageCardSx } from "../lib/surfaces";
-import { useLanLiveState } from "../lib/useLanLiveState";
 
 interface FeatureDisabledPageProps {
   actionLabel: string;
@@ -24,12 +23,11 @@ interface FeatureDisabledPageProps {
 
 export function FeatureDisabledPage({ actionLabel, actionTo, title }: FeatureDisabledPageProps) {
   const theme = useTheme();
-  const liveState = useLanLiveState();
 
   return (
     <Box sx={{ pb: 7 }}>
       <Container maxWidth="lg" sx={{ pt: { xs: 2, md: 3 } }}>
-        <PageHeader title={title} subtitle="Disponibilita gestita dall'host" networkState={liveState} />
+        <PageHeader title={title} subtitle="Disponibilita gestita dall'host" />
 
         <Card sx={{ mt: 3, ...pageCardSx }}>
           <CardContent>

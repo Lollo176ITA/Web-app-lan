@@ -320,7 +320,6 @@ export function ChatPage() {
         <PageHeader
           title="Chat LAN"
           subtitle={pageSubtitle}
-          networkState={liveState}
         />
 
         <Stack spacing={3} sx={{ mt: 3 }}>

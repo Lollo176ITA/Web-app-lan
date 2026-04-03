@@ -467,7 +467,7 @@ export function SyncPage() {
   return (
     <Box sx={{ pb: 7 }}>
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
-        <PageHeader title="Sync Host" subtitle="sync e update" networkState={liveState} />
+        <PageHeader title="Sync Host" subtitle="sync e update" />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
           {loading ? <Typography color="text.secondary">Caricamento area sync...</Typography> : null}

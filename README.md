@@ -34,7 +34,7 @@ L'idea del progetto e semplice:
 
 ### Client
 
-La SPA vive in `src/` ed e lazy-loaded in [src/App.tsx](src/App.tsx).
+La SPA vive in `src/` ed e orchestrata da [src/App.tsx](src/App.tsx).
 
 Rotte principali:
 
@@ -47,12 +47,11 @@ Rotte principali:
 | `/stream` | elenco stanze | crea e gestisce le stanze streaming |
 | `/stream/room/:roomId` | stanza | video condiviso, sync playback, chat |
 | `/player/:itemId` | player diretto | riproduzione di un contenuto specifico |
-| `/utente/:userId` | profilo | nickname e identita locale |
-| `/diagnostics` | diagnostica | stato host e suggerimenti operativi |
+| `/settings` | impostazioni | profilo locale, diagnostica host e feature flags |
 
 Componenti chiave:
 
-- `src/components/PageHeader.tsx`: header globale, navigazione, stato rete, profilo
+- `src/components/PageHeader.tsx`: header globale, navigazione e accesso alle impostazioni
 - `src/components/UploadSurface.tsx`: upload file e cartelle
 - `src/components/FolderExplorer.tsx`: navigazione gerarchica della libreria
 - `src/components/LibraryGrid.tsx`: griglia contenuti e filtri

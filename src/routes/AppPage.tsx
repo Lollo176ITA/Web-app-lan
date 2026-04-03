@@ -321,7 +321,7 @@ export function AppPage({
   return (
     <Box sx={{ pb: 7 }}>
       <Container maxWidth="xl" sx={{ pt: { xs: 2, md: 3 } }}>
-        <PageHeader title="Routy" subtitle="media relay locale" networkState={liveState} />
+        <PageHeader title="Routy" subtitle="media relay locale" />
 
         <Stack spacing={3} sx={{ mt: 3 }}>
           <Box

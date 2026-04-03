@@ -1,16 +1,13 @@
-import { useState, type ReactNode } from "react";
-import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
+import { useState } from "react";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
-import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
 import {
   Avatar,
   Box,
   Button,
-  ButtonBase,
   Drawer,
   IconButton,
   List,
@@ -27,14 +24,9 @@ import type { FeatureFlags } from "../../shared/types";
 import { getFeatureFlags, useAppShell } from "../lib/app-shell-context";
 import { useColorMode } from "../lib/color-mode";
 
-type NetworkState = "live" | "fallback" | "connecting";
-
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
-  networkState?: NetworkState;
-  trailing?: ReactNode;
-  trailingLinkTo?: string;
 }
 
 interface NavItem {
@@ -52,7 +44,7 @@ const navItems: NavItem[] = [
   { label: "Sync", to: "/sync", feature: "sync", matches: (pathname: string) => pathname.startsWith("/sync") }
 ];
 
-export function PageHeader({ title, subtitle, networkState, trailing, trailingLinkTo }: PageHeaderProps) {
+export function PageHeader({ title, subtitle }: PageHeaderProps) {
   const location = useLocation();
   const theme = useTheme();
   const { mode, toggleColorMode } = useColorMode();
@@ -63,24 +55,6 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const featureFlags = getFeatureFlags(session);
   const visibleNavItems = navItems.filter((item) => !item.feature || featureFlags[item.feature]);
-  const trailingContent =
-    trailing ??
-    (networkState ? (
-      <Avatar
-        sx={{
-          width: 40,
-          height: 40,
-          bgcolor:
-            networkState === "live"
-              ? alpha(theme.palette.secondary.main, isDark ? 0.28 : 0.18)
-              : alpha(theme.palette.text.primary, isDark ? 0.16 : 0.08),
-          color: networkState === "live" ? "secondary.main" : "text.secondary"
-        }}
-      >
-        {networkState === "live" ? <WifiRoundedIcon /> : <AutorenewRoundedIcon />}
-      </Avatar>
-    ) : null);
-  const trailingDestination = trailing ? trailingLinkTo : trailingLinkTo;
   const mobileMenuItems = [
     ...visibleNavItems.map((item) => ({
       label: item.label,
@@ -90,10 +64,7 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
     {
       label: "Impostazioni",
       to: "/settings",
-      selected:
-        location.pathname.startsWith("/settings") ||
-        location.pathname.startsWith("/utente/") ||
-        location.pathname.startsWith("/diagnostics")
+      selected: location.pathname.startsWith("/settings")
     }
   ];
   const panelBackground = alpha(theme.palette.background.paper, isDark ? 0.92 : 0.88);
@@ -120,11 +91,8 @@ export function PageHeader({ title, subtitle, networkState, trailing, trailingLi
     );
   }
 
-function renderSettingsButton() {
-    const settingsActive =
-      location.pathname.startsWith("/settings") ||
-      location.pathname.startsWith("/utente/") ||
-      location.pathname.startsWith("/diagnostics");
+  function renderSettingsButton() {
+    const settingsActive = location.pathname.startsWith("/settings");
 
     return (
       <IconButton
@@ -265,23 +233,6 @@ function renderSettingsButton() {
 
               {renderThemeToggleButton()}
               {renderSettingsButton()}
-
-              {trailingContent ? (
-                trailingDestination ? (
-                  <ButtonBase
-                    component={RouterLink}
-                    to={trailingDestination}
-                    sx={{
-                      borderRadius: 2,
-                      overflow: "hidden"
-                    }}
-                  >
-                    <Box sx={{ flexShrink: 0 }}>{trailingContent}</Box>
-                  </ButtonBase>
-                ) : (
-                  <Box sx={{ flexShrink: 0 }}>{trailingContent}</Box>
-                )
-              ) : null}
             </Stack>
           )}
         </Stack>
