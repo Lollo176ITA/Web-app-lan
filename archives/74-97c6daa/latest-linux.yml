@@ -1,0 +1,9 @@
+version: 2.10.1
+files:
+  - url: Routy-2.10.1.AppImage
+    sha512: 0QnDpPIVwyCaqENpSiP1XeYt2F1lBc4DTaZ9FMfXAJNtiuZ/0npMM1OdkbqcY2kLEi3yvt7h1/J/dPktA5RsKQ==
+    size: 124768248
+    blockMapSize: 131084
+path: Routy-2.10.1.AppImage
+sha512: 0QnDpPIVwyCaqENpSiP1XeYt2F1lBc4DTaZ9FMfXAJNtiuZ/0npMM1OdkbqcY2kLEi3yvt7h1/J/dPktA5RsKQ==
+releaseDate: '2026-04-03T23:59:50.410Z'
