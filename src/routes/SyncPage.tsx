@@ -472,20 +472,8 @@ export function SyncPage() {
         <Stack spacing={3} sx={{ mt: 3 }}>
           {loading ? <Typography color="text.secondary">Caricamento area sync...</Typography> : null}
 
-          {!loading && !resolvedClientProfile?.isHost ? (
-            <>
-              <Alert severity="info">Solo l'host può creare codici e gestire i device.</Alert>
-
-              {renderReleaseUtilities()}
-            </>
-          ) : null}
-
           {!loading && resolvedClientProfile?.isHost && overview ? (
             <>
-              {liveState === "fallback" ? (
-                <Alert severity="warning">Connessione live non disponibile. Aggiornamento con polling.</Alert>
-              ) : null}
-
               <Box
                 sx={{
                   display: "grid",
@@ -784,7 +772,7 @@ export function SyncPage() {
         }
         copyLabel="Copia link APK"
         actionHref={androidRelease?.downloadUrl}
-        actionLabel="Apri download"
+        actionLabel="Scarica"
         actionIcon={<DownloadRoundedIcon />}
       />
     </Box>

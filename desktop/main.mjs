@@ -87,8 +87,7 @@ async function createMainWindow() {
   }
 
   startDesktopAutoUpdater({
-    getParentWindow: () => mainWindow,
-    stopBeforeInstall: stopRouteroomServer
+    getParentWindow: () => mainWindow
   });
 }
 
