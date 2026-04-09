@@ -2,14 +2,14 @@
   "target": "linux-x64",
   "version": "2.10.2",
   "sourceBranch": "main",
-  "sourceCommit": "6b6c9f6aec7f8fb714b688ffc5051030d7e469a1",
-  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/23975725341",
+  "sourceCommit": "f11c86a990e5fb4cc5e48837dbd9a469479bb496",
+  "workflowRunUrl": "https://github.com/Lollo176ITA/Web-app-lan/actions/runs/24185272651",
   "files": [
     {
       "name": "Routy-2.10.2.AppImage",
       "originalName": "Routy-2.10.2.AppImage",
-      "size": 124764030,
-      "sha256": "9966fce2d7384c538cba5909243233e0b8a960d37a7f0935dc02d57d26cff651",
+      "size": 124783855,
+      "sha256": "e9e5bea491775435553bbb4e008807cfcbb0112b2394c1d7ed34a8e77aedcf76",
       "split": true,
       "parts": [
         {
@@ -18,7 +18,7 @@
         },
         {
           "name": "Routy-2.10.2.AppImage.part-001",
-          "size": 25149310
+          "size": 25169135
         }
       ]
     },
@@ -26,7 +26,7 @@
       "name": "latest-linux.yml",
       "originalName": "latest-linux.yml",
       "size": 365,
-      "sha256": "bf57f45f5523d741c9ba5f9c1fa1d63ff984a50ba9e4faab8556f790dffef20a",
+      "sha256": "4a1ad709e23ff5dbb2df3493a860dff48cbfe8f77b8e5ac33d6db2fdd4383c21",
       "split": false
     }
   ]
