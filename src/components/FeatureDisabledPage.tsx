@@ -43,15 +43,8 @@ export function FeatureDisabledPage({ actionLabel, actionTo, title }: FeatureDis
                 </Avatar>
                 <Box>
                   <Typography variant="h5">Funzione disattivata dall'host</Typography>
-                  <Typography color="text.secondary">
-                    Questa sezione non e disponibile in questo momento per i client LAN.
-                  </Typography>
                 </Box>
               </Stack>
-
-              <Alert severity="info">
-                Solo la pagina Impostazioni resta sempre disponibile per consentire all'host di riattivare le feature.
-              </Alert>
 
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
                 <Button component={RouterLink} to="/settings" variant="contained">

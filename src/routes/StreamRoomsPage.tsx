@@ -262,9 +262,6 @@ export function StreamRoomsPage() {
                                 <Typography variant="subtitle1" sx={{ wordBreak: "break-word", lineHeight: 1.2 }}>
                                   {room.name}
                                 </Typography>
-                                <Typography color="text.secondary" variant="caption">
-                                  Aggiornata {formatRoomTime(room.updatedAt)}
-                                </Typography>
                               </Box>
                             </Stack>
 

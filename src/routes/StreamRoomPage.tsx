@@ -322,9 +322,6 @@ export function StreamRoomPage() {
                     </Avatar>
                     <Typography variant="h5">{room.name}</Typography>
                   </Stack>
-                  <Typography color="text.secondary">
-                    Link diretto stanza: {shareUrl}
-                  </Typography>
                 </Box>
 
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }}>
@@ -388,10 +385,6 @@ export function StreamRoomPage() {
                           Chiunque nella stanza puo cambiare video, play, pausa e seek per tutti.
                         </Typography>
                       </Box>
-                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                        <Chip icon={<MovieRoundedIcon />} label={room.currentVideoName ?? "Nessun video"} />
-                        <Chip label={room.messageCount === 1 ? "1 messaggio" : `${room.messageCount} messaggi`} />
-                      </Stack>
                     </Stack>
 
                     <FormControl fullWidth>

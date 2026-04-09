@@ -9,7 +9,6 @@ let updaterStarted = false;
 let checkTimer = null;
 let checkInFlight = false;
 let resolveParentWindow = () => null;
-let stopBeforeInstall = async () => {};
 let notifiedAvailableVersion = null;
 let promptedDownloadedVersion = null;
 
@@ -47,7 +46,9 @@ async function maybePromptForDownloadedUpdate(version) {
   }
 
   try {
-    await stopBeforeInstall();
+    // Don't wait for the local desktop server here: the current BrowserWindow
+    // still owns open HTTP/SSE connections, so awaiting server shutdown before
+    // quitAndInstall can leave the update flow stuck indefinitely.
     autoUpdater.quitAndInstall(false, true);
   } catch (error) {
     promptedDownloadedVersion = null;
@@ -79,7 +80,6 @@ async function checkForUpdates() {
 
 export function startDesktopAutoUpdater(options = {}) {
   resolveParentWindow = typeof options.getParentWindow === "function" ? options.getParentWindow : () => null;
-  stopBeforeInstall = typeof options.stopBeforeInstall === "function" ? options.stopBeforeInstall : async () => {};
 
   if (updaterStarted || !supportsDesktopAutoUpdate()) {
     return;
